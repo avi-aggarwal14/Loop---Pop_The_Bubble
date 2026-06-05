@@ -63,7 +63,7 @@ Post 3 product demo Reels this week. It's your only
 channel with positive ROAS right now.
 ```
 
-Style this card to look like a real product UI — dark background, clean typography, subtle border. Make it feel like something you'd actually want to read.
+Style this card to look like a real product UI — dark background, clean typography, subtle border. Make it feel like something you'd actually want to read and something YC-level funded
 
 ### 3. How it works
 Three steps, horizontal on desktop, stacked on mobile. Keep copy tight.
@@ -189,6 +189,7 @@ A sharp hero beats a complete but mediocre full page every time.
 
 Newest entries at the top. Record meaningful developments here.
 
+- **2026-06-05** — **Brief engine switched from Claude → OpenAI.** Team has $1000 OpenAI credits, so the LLM provider moved off Anthropic. Only `lib/brief/generate.ts` changed: now uses the `openai` SDK with strict `json_schema` structured output, OpenAI's automatic prompt caching (stable system prompt first, volatile metrics+memory in the user turn), and env-driven model/reasoning (`OPENAI_MODEL` default `gpt-5`, `OPENAI_REASONING_EFFORT` default `medium`). Removed `@anthropic-ai/sdk`. **Schema, mubit, metrics, migration, and harness were untouched** — the engine was provider-isolated by design. Env is now `OPENAI_API_KEY` (+ `OPENAI_MODEL`, `OPENAI_REASONING_EFFORT`); run `npm run generate-brief`. Typecheck + smoke test pass. The mubit +10-points piece is provider-independent. ⚠️ The $1000 must be **platform.openai.com API credits**, not ChatGPT/Codex-app credits, to work from the backend.
 - **2026-06-05** — **Product engine (backend) scaffolded.** Approved plan at `~/.claude/plans/shimmering-strolling-scone.md`. Built the framework-agnostic engine that turns analytics → weekly Growth Brief → memory:
   - **Stack decisions locked:** Next.js + Supabase, **Shopify** first integration, **Claude `claude-opus-4-8`** brief engine, **mubit** (mubit.ai) as the operational-memory layer (worth +10 hackathon points — used heavily, not bolted on).
   - **Code (all new, TypeScript, runs via `tsx`):** `lib/brief/schema.ts` (Zod Growth Brief, enforces exactly one move), `lib/brief/prompt.ts` (stable cached system prompt), `lib/brief/generate.ts` (Claude call: structured output via `output_config.format`, adaptive thinking, prompt caching — stable prefix cached, volatile metrics+memory in user turn), `lib/mubit/client.ts` (REST `remember`/`recall`, defensive — never blocks a brief), `lib/metrics/` (DerivedMetrics + 2 seed weeks), `scripts/generate-brief.ts` (Phase-2 harness demoing week-1→action→week-2 compounding), `supabase/migrations/0001_init.sql` (founders/connections/metric_snapshots/briefs/actions + RLS).
