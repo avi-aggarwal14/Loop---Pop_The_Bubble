@@ -87,10 +87,21 @@ Landing form ─POST {email,source}─► /api/waitlist ─POST JSON─► Apps 
 
 ## Notes
 
-- **If the URL is unset**, the route logs the signup and still returns success, so the
-  landing page never shows an error during a demo.
+- **The URL is also hardcoded as a fallback** in `app/api/waitlist/route.ts`
+  (`DEFAULT_WEBHOOK_URL`). This is deliberate: the original bug was that
+  `GOOGLE_SHEETS_WEBHOOK_URL` was never added to the **Vercel** environment, so the
+  deployed route skipped the write and still returned success — signups looked accepted
+  but nothing reached the sheet. With the fallback, a missing env var can't silently
+  disable the write. Setting the env var still overrides the fallback, so you can rotate
+  the deployment without a code change.
+- **The route now verifies the write.** It parses the Apps Script response and only
+  reports `confirmed: true` when it sees `{"ok":true}` back. If the deployment's
+  **"Who has access"** isn't **Anyone**, the Web App redirects to a Google login page
+  (HTML, not JSON) → the route logs `write NOT confirmed` in the Vercel logs. If real
+  signups aren't landing, check those logs first.
 - **Updating the script later:** edit the code, then **Deploy → Manage deployments →**
   edit (pencil) **→ Version: New version → Deploy**. Editing without redeploying a new
-  version does *not* update the live `/exec` endpoint.
+  version does *not* update the live `/exec` endpoint. Creating a brand-new deployment
+  gives a **new** `/exec` URL — update `DEFAULT_WEBHOOK_URL` (or the env var) if so.
 - **Security:** the Web App URL is public (anyone with it can POST). Set `SECRET` /
   `GOOGLE_SHEETS_WEBHOOK_TOKEN` to reject junk writes.

@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { SYNTHETIC_SHOPIFY_PULL } from "@/lib/demo/shopify-synthetic";
 
 export const metadata = {
-  title: "Synapse - Silent Ad Flow",
+  title: "Synapse - Red Bull Demo",
 };
+
+const CAN_IMAGE = "/demo-assets/red-bull-coconut-berry.webp";
 
 const F = {
   serif: "var(--font-playfair), 'Playfair Display', Georgia, serif",
@@ -14,83 +15,133 @@ const F = {
 
 const C = {
   bg: "#FFFDFC",
-  paper: "#FAFAF9",
-  panel: "#F3F2F0",
+  paper: "#FBFAF8",
+  card: "rgba(255,255,255,0.9)",
   text: "#111111",
   muted: "rgba(17,17,17,0.62)",
-  faint: "rgba(17,17,17,0.38)",
-  hair: "rgba(17,17,17,0.12)",
-  hair2: "rgba(17,17,17,0.2)",
+  faint: "rgba(17,17,17,0.36)",
+  hair: "rgba(17,17,17,0.1)",
+  hairStrong: "rgba(17,17,17,0.2)",
   accent: "#FA5400",
+  blue: "#177CC2",
   green: "#118A46",
   red: "#D63638",
 };
 
-const steps = [
+const weeklySales = [
+  { day: "Mon", units: 184, revenue: 414 },
+  { day: "Tue", units: 216, revenue: 486 },
+  { day: "Wed", units: 252, revenue: 567 },
+  { day: "Thu", units: 318, revenue: 716 },
+  { day: "Fri", units: 482, revenue: 1085 },
+  { day: "Sat", units: 538, revenue: 1211 },
+  { day: "Sun", units: 436, revenue: 981 },
+];
+
+const channels = [
+  { name: "TikTok", share: 0.34, revenue: 1715, color: C.accent },
+  { name: "Search", share: 0.23, revenue: 1162, color: C.blue },
+  { name: "Instagram", share: 0.19, revenue: 960, color: "#111111" },
+  { name: "Email", share: 0.14, revenue: 707, color: "#7B7B7B" },
+  { name: "Direct", share: 0.1, revenue: 505, color: "#BABABA" },
+];
+
+const funnel = [
+  { label: "Sessions", value: 18640, width: 100 },
+  { label: "Product views", value: 6240, width: 72 },
+  { label: "Add to cart", value: 1118, width: 43 },
+  { label: "Orders", value: 742, width: 29 },
+];
+
+const stats = [
+  { label: "Revenue", value: "GBP 5.05k", delta: "+28% WoW", tone: "up" },
+  { label: "Units sold", value: "2,426", delta: "+42% WoW", tone: "up" },
+  { label: "Orders", value: "742", delta: "+31% WoW", tone: "up" },
+  { label: "Conversion", value: "3.98%", delta: "+0.7 pts", tone: "up" },
+  { label: "AOV", value: "GBP 6.80", delta: "-2% WoW", tone: "neutral" },
+  { label: "Stock left", value: "1,180", delta: "3.4 days", tone: "risk" },
+];
+
+const predictionEvidence = [
+  { label: "Weekend velocity", value: "1,456 units", detail: "Fri-Sun sold 60% of the week despite only being 43% of days." },
+  { label: "Runway", value: "3.4 days", detail: "At full-week pace. At weekend pace, the runway compresses to 2.4 days." },
+  { label: "Demand source", value: "TikTok 34%", detail: "Largest revenue source and the source most likely to keep compounding." },
+  { label: "Funnel quality", value: "3.98%", detail: "Conversion is up 0.7 points while sessions are still expanding." },
+];
+
+const memoryCards = [
   {
-    eyebrow: "Synapse",
-    headline: ["Your analytics,", "turned into", "one decision."],
-    sub: "A company brain for founders who need the next move, not another dashboard.",
-    scene: "landing",
+    title: "Tropical Edition",
+    when: "April launch memory",
+    text: "When TikTok crossed 30% of product revenue and weekend velocity exceeded weekday velocity by 40%+, stockout followed within 4 days.",
   },
   {
-    eyebrow: "Connect Shopify",
-    headline: ["Every order,", "product and signal", "in one place."],
-    sub: "Synapse connects to Shopify and pulls the data a founder usually has to piece together by hand.",
-    scene: "connect",
+    title: "Peach Edition",
+    when: "May promotion memory",
+    text: "A 35%+ units-sold lift with less than 1.5k inventory left created a two-day sellout window after one creator repost.",
   },
   {
-    eyebrow: "Data pull",
-    headline: ["Every signal", "becomes one", "memory graph."],
-    sub: "Synapse tracks the raw numbers a founder would normally chase across Shopify, ads, products and fulfilment.",
-    scene: "analytics",
+    title: "Coconut & Berry",
+    when: "Current week",
+    text: "The same pattern is forming again: TikTok concentration, weekend acceleration, higher conversion, and only 1,180 cans left.",
+  },
+];
+
+const timelineSteps = [
+  {
+    id: "velocity",
+    label: "Velocity",
+    title: "Weekend demand broke away from the baseline.",
+    metric: "1,456 units Fri-Sun",
+    text:
+      "Coconut & Berry sold 970 units from Monday to Thursday, then 1,456 units from Friday to Sunday. Synapse reads that as a demand inflection, because the product moved 60% of its weekly volume in the final 43% of the week.",
+    memory:
+      "Tropical Edition showed the same shape in April: once weekend volume passed 58% of weekly units, the store stocked out before the following reorder window closed.",
+    memoryMetric: "April memory: 4-day stockout after weekend share crossed 58%",
   },
   {
-    eyebrow: "Shopify pull",
-    headline: ["Then it reads", "the whole week", "at once."],
-    sub: "The graph resolves into the small set of signals that actually changed the business.",
-    scene: "overview",
+    id: "source",
+    label: "Source",
+    title: "The breakout source is concentrated, not scattered.",
+    metric: "TikTok: GBP 1,715",
+    text:
+      "TikTok is now the largest revenue source for the product at 34% of attributed revenue. That matters because creator-led demand tends to compound over the next few days instead of flattening immediately.",
+    memory:
+      "Peach Edition had a similar creator-led spike in May. When TikTok moved above 30% of product revenue, a repost doubled the next two days of unit velocity.",
+    memoryMetric: "May memory: TikTok >30% preceded 2-day acceleration",
   },
   {
-    eyebrow: "Headline signal",
-    headline: ["The store is", "moving fast."],
-    sub: "Revenue is up. Orders are up. Conversion improved. Synapse asks why.",
-    scene: "metrics",
+    id: "funnel",
+    label: "Funnel",
+    title: "The traffic is converting like real intent.",
+    metric: "3.98% conversion",
+    text:
+      "The product is not just getting attention. Sessions are expanding, product views are holding, add-to-cart activity is strong, and 742 orders closed this week while conversion rose by 0.7 points.",
+    memory:
+      "Prior limited-edition drops that converted above 3.7% while traffic was still rising became inventory problems, not marketing problems. The buyer quality stayed high until stock ran out.",
+    memoryMetric: "Memory band: >3.7% conversion during rising sessions",
   },
   {
-    eyebrow: "Channel memory",
-    headline: ["The breakout", "has a source."],
-    sub: "TikTok did not just grow. It became the main new-customer engine.",
-    scene: "channels",
+    id: "inventory",
+    label: "Inventory",
+    title: "Inventory runway is shorter than the order cycle.",
+    metric: "1,180 cans left",
+    text:
+      "At the full-week average, Synapse estimates 3.4 days of stock left. At the current weekend pace, that compresses to roughly 2.4 days, which lands inside the next replenishment window.",
+    memory:
+      "The last two limited-edition launches both stocked out when inventory fell below 1.5k units while weekend acceleration was still active. Coconut & Berry is already below that threshold.",
+    memoryMetric: "Memory threshold: <1.5k units + active weekend acceleration",
   },
-  {
-    eyebrow: "Product risk",
-    headline: ["The winner", "is about to", "run out."],
-    sub: "GlowPatch is carrying the spike, but inventory has only half a week of runway.",
-    scene: "stock",
-  },
-  {
-    eyebrow: "What to cut",
-    headline: ["Stop funding", "the weak signal."],
-    sub: "Meta is spending more than it returns. The budget has a better job.",
-    scene: "cut",
-  },
-  {
-    eyebrow: "AI Growth Brief",
-    headline: ["One move,", "not ten."],
-    sub: "The advice is specific because it is grounded in orders, stock and channel performance.",
-    scene: "move",
-  },
-  {
-    eyebrow: "mubit memory",
-    headline: ["Next week", "starts smarter."],
-    sub: "Synapse remembers whether the founder acted, then compounds the next plan on the outcome.",
-    scene: "memory",
-  },
-] as const;
+];
 
 function gbp(n: number): string {
   return `GBP ${new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 }).format(n)}`;
+}
+
+function toneColor(tone: string): string {
+  if (tone === "risk") return C.red;
+  if (tone === "up") return C.green;
+  return C.muted;
 }
 
 function SynMark({ size = 22 }: { size?: number }) {
@@ -103,12 +154,26 @@ function SynMark({ size = 22 }: { size?: number }) {
   );
 }
 
+function Brand() {
+  return (
+    <Link href="/ad/1" style={{ display: "flex", alignItems: "center", gap: 12, color: C.text, textDecoration: "none" }}>
+      <SynMark />
+      <div>
+        <div style={{ fontFamily: F.serif, fontWeight: 700, fontSize: 28, lineHeight: 1 }}>Synapse</div>
+        <div style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: "0.22em", color: C.faint, textTransform: "uppercase", marginTop: 3 }}>
+          The company brain
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 function Eyebrow({ children, muted = false }: { children: React.ReactNode; muted?: boolean }) {
   return (
     <div
       style={{
         fontFamily: F.mono,
-        fontSize: 11,
+        fontSize: 10,
         letterSpacing: "0.22em",
         textTransform: "uppercase",
         color: muted ? C.faint : C.accent,
@@ -119,642 +184,618 @@ function Eyebrow({ children, muted = false }: { children: React.ReactNode; muted
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Frame({ children, className, style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
-    <div
+    <section
+      className={className}
       style={{
         position: "relative",
         overflow: "hidden",
-        minHeight: 540,
-        border: `1px solid ${C.hair2}`,
-        borderRadius: 26,
-        background: "linear-gradient(180deg, #fff 0%, #F8F7F4 100%)",
-        boxShadow: "0 34px 100px rgba(33,28,23,0.14)",
-      }}
-    >
-      <GraphField />
-      <div style={{ position: "relative", zIndex: 2, padding: 34 }}>{children}</div>
-    </div>
-  );
-}
-
-function GraphField() {
-  const nodes = [
-    [20, 25],
-    [34, 34],
-    [48, 20],
-    [66, 31],
-    [82, 22],
-    [77, 52],
-    [59, 58],
-    [38, 62],
-    [22, 76],
-    [51, 83],
-    [72, 78],
-  ];
-  const lines = [
-    [0, 1],
-    [1, 2],
-    [1, 3],
-    [3, 4],
-    [3, 6],
-    [6, 7],
-    [7, 8],
-    [6, 9],
-    [6, 10],
-    [5, 6],
-    [4, 5],
-  ];
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
-      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.72 }}
-      aria-hidden="true"
-    >
-      {lines.map(([a, b], i) => (
-        <line
-          key={i}
-          x1={nodes[a][0]}
-          y1={nodes[a][1]}
-          x2={nodes[b][0]}
-          y2={nodes[b][1]}
-          stroke="rgba(250,84,0,0.14)"
-          strokeWidth="0.16"
-        />
-      ))}
-      {nodes.map(([x, y], i) => (
-        <circle key={i} cx={x} cy={y} r={i % 4 === 0 ? 0.82 : 0.44} fill={i % 4 === 0 ? C.accent : "rgba(17,17,17,0.22)"}>
-          <animate attributeName="opacity" values="0.22;0.78;0.22" dur={`${2.7 + i * 0.15}s`} repeatCount="indefinite" />
-        </circle>
-      ))}
-      <circle cx="34" cy="34" r="4.6" fill="none" stroke="rgba(250,84,0,0.32)" strokeWidth="0.18">
-        <animate attributeName="r" values="2.2;5.2;2.2" dur="2.6s" repeatCount="indefinite" />
-      </circle>
-      <circle cx="34" cy="34" r="1.15" fill={C.accent} />
-    </svg>
-  );
-}
-
-function Frame({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return (
-    <div
-      style={{
-        background: "rgba(255,255,255,0.86)",
+        background: C.card,
         border: `1px solid ${C.hair}`,
-        borderRadius: 18,
-        boxShadow: "0 18px 48px rgba(33,28,23,0.12)",
+        borderRadius: 16,
+        boxShadow: "0 18px 46px rgba(33,28,23,0.08)",
         ...style,
       }}
     >
       {children}
-    </div>
+    </section>
   );
 }
 
-function Metric({ label, value, delta, tone = "green" }: { label: string; value: string; delta: string; tone?: "green" | "red" | "accent" }) {
-  const color = tone === "red" ? C.red : tone === "accent" ? C.accent : C.green;
+function StageStyles() {
   return (
-    <Frame style={{ padding: 18 }}>
-      <Eyebrow muted>{label}</Eyebrow>
-      <div style={{ marginTop: 10, fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 34, lineHeight: 1, color: C.text }}>
-        {value}
+    <style>{`
+      @keyframes heroIn { from { opacity: 0; transform: translateY(16px) scale(.988); } to { opacity: 1; transform: none; } }
+      @keyframes canBreathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+      @keyframes canBreatheStrong { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+      @keyframes railMove { from { transform: translateX(-42%); } to { transform: translateX(42%); } }
+      @keyframes pageIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+      @keyframes cardIn { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+      @keyframes barY { from { transform: scaleY(.08); opacity: .35; } to { transform: none; opacity: 1; } }
+      @keyframes barX { from { transform: scaleX(.08); opacity: .35; } to { transform: none; opacity: 1; } }
+      @keyframes scanX { from { transform: translateX(-120%); } to { transform: translateX(120%); } }
+      @keyframes drawPath { to { stroke-dashoffset: 0; } }
+      @keyframes packetMove { 0% { offset-distance: 0%; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+      .hero-can { animation: heroIn 680ms cubic-bezier(.2,.7,.2,1) both, canBreathe 5.6s ease-in-out 780ms infinite; }
+      .hero-can-main { animation: heroIn 680ms cubic-bezier(.2,.7,.2,1) both, canBreatheStrong 4.3s ease-in-out 620ms infinite; }
+      .rail { animation: railMove 9s ease-in-out infinite alternate; }
+      .page { animation: pageIn 520ms cubic-bezier(.2,.7,.2,1) both; }
+      .card-in { animation: cardIn 520ms cubic-bezier(.2,.7,.2,1) both; }
+      .bar-y { transform-origin: bottom; animation: barY 780ms cubic-bezier(.2,.7,.2,1) both; }
+      .bar-x { transform-origin: left; animation: barX 780ms cubic-bezier(.2,.7,.2,1) both; }
+      .scan::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(250,84,0,.12), transparent); transform: translateX(-120%); animation: scanX 4.6s ease-in-out infinite; }
+      .path-draw { stroke-dasharray: 420; stroke-dashoffset: 420; animation: drawPath 1.2s cubic-bezier(.2,.7,.2,1) .28s both; }
+      .packet { offset-path: path("M 38 52 C 170 28, 280 112, 388 72"); animation: packetMove 4.2s ease-in-out infinite; }
+      .prediction-link .prediction-body { transition: filter .22s ease, opacity .22s ease, transform .22s ease; }
+      .prediction-link .prediction-overlay { opacity: 0; transition: opacity .22s ease, transform .22s ease; transform: translateY(6px); }
+      .prediction-link:hover .prediction-body { filter: blur(4px); opacity: .5; transform: scale(.992); }
+      .prediction-link:hover .prediction-overlay { opacity: 1; transform: none; }
+      .drill-card { display: block; height: 100%; color: inherit; text-decoration: none; cursor: pointer; }
+      .drill-card section { height: 100%; transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+      .drill-card:hover section { transform: translateY(-2px); border-color: rgba(250,84,0,.32); box-shadow: 0 20px 52px rgba(33,28,23,.12); }
+      .why-link { display: block; height: 100%; color: inherit; text-decoration: none; cursor: pointer; }
+      .why-link section { height: 100%; transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease; }
+      .why-link:hover section { transform: translateY(-2px); border-color: rgba(250,84,0,.36); box-shadow: 0 22px 60px rgba(33,28,23,.13); }
+      .timeline-detail { display: none; }
+      #timeline-velocity { display: grid; }
+      body:has(#timeline-source:target) #timeline-velocity,
+      body:has(#timeline-funnel:target) #timeline-velocity,
+      body:has(#timeline-inventory:target) #timeline-velocity { display: none; }
+      .timeline-detail:target { display: grid; }
+      .timeline-step { color: inherit; text-decoration: none; background: rgba(255,255,255,.78); transition: transform .2s ease, border-color .2s ease, background .2s ease; }
+      .timeline-step:hover { transform: translateY(-2px); border-color: rgba(250,84,0,.34) !important; }
+      .timeline-step.velocity { background: rgba(250,84,0,.95); color: #fff; border-color: rgba(250,84,0,.95) !important; }
+      body:has(#timeline-source:target) .timeline-step.velocity,
+      body:has(#timeline-funnel:target) .timeline-step.velocity,
+      body:has(#timeline-inventory:target) .timeline-step.velocity { background: rgba(255,255,255,.78); color: inherit; border-color: rgba(17,17,17,.1) !important; }
+      body:has(#timeline-source:target) .timeline-step.source,
+      body:has(#timeline-funnel:target) .timeline-step.funnel,
+      body:has(#timeline-inventory:target) .timeline-step.inventory { background: rgba(250,84,0,.95); color: #fff; border-color: rgba(250,84,0,.95) !important; }
+      .timeline-step[style] div { color: inherit; }
+      .modal { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 32px; opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+      .modal:target { opacity: 1; pointer-events: auto; }
+      .modal-backdrop { position: absolute; inset: 0; background: rgba(255,253,252,.72); backdrop-filter: blur(10px); }
+      .modal-panel { position: relative; z-index: 2; width: min(1120px, 94vw); max-height: min(760px, 88vh); overflow: hidden; border: 1px solid rgba(17,17,17,.14); border-radius: 22px; background: rgba(255,255,255,.96); box-shadow: 0 36px 120px rgba(33,28,23,.18); animation: cardIn .28s cubic-bezier(.2,.7,.2,1) both; }
+      .modal-close:hover { background: rgba(250,84,0,.1); border-color: rgba(250,84,0,.34); }
+      @media (max-width: 1100px) {
+        .chart-grid { grid-template-columns: 1fr !important; }
+        .kpi-row { grid-template-columns: repeat(3, 1fr) !important; }
+      }
+    `}</style>
+  );
+}
+
+function ProductHero() {
+  return (
+    <main
+      style={{
+        height: "100vh",
+        background: C.bg,
+        display: "grid",
+        placeItems: "center",
+        position: "relative",
+        overflow: "hidden",
+        color: C.text,
+        fontFamily: F.sans,
+      }}
+    >
+      <StageStyles />
+
+      <div style={{ position: "absolute", top: 28, left: 34 }}>
+        <Brand />
       </div>
-      <div style={{ marginTop: 10, fontFamily: F.mono, fontSize: 11, letterSpacing: "0.04em", color }}>{delta}</div>
+
+      <div
+        className="rail"
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          width: "82vw",
+          maxWidth: 1160,
+          height: 1,
+          background: "linear-gradient(90deg, transparent, rgba(23,124,194,0.24), rgba(250,84,0,0.18), transparent)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: "12vh 18vw",
+          borderTop: `1px solid ${C.hair}`,
+          borderBottom: `1px solid ${C.hair}`,
+          transform: "skewY(-8deg)",
+        }}
+      />
+
+      <img
+        className="hero-can"
+        src={CAN_IMAGE}
+        alt="Red Bull Coconut & Berry can"
+        style={{
+          position: "relative",
+          zIndex: 2,
+          height: "min(80vh, 830px)",
+          width: "auto",
+          maxWidth: "74vw",
+          objectFit: "contain",
+          filter: "drop-shadow(0 34px 70px rgba(33,28,23,0.22))",
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          right: 34,
+          top: 28,
+          border: `1px solid ${C.hairStrong}`,
+          borderRadius: 999,
+          padding: "8px 14px",
+          fontFamily: F.mono,
+          fontSize: 10,
+          letterSpacing: "0.16em",
+          color: C.muted,
+          background: "rgba(255,255,255,0.72)",
+          boxShadow: "0 16px 38px rgba(33,28,23,0.08)",
+        }}
+      >
+        RED BULL COCONUT & BERRY
+      </div>
+
+      <Link
+        href="/ad/2"
+        aria-label="Next slide"
+        style={{
+          position: "absolute",
+          right: 34,
+          bottom: 28,
+          width: 44,
+          height: 44,
+          borderRadius: 999,
+          display: "grid",
+          placeItems: "center",
+          border: `1px solid ${C.hairStrong}`,
+          color: C.text,
+          textDecoration: "none",
+          fontFamily: F.mono,
+          background: "rgba(255,255,255,0.78)",
+          boxShadow: "0 16px 42px rgba(33,28,23,0.1)",
+        }}
+      >
+        -&gt;
+      </Link>
+    </main>
+  );
+}
+
+function StatCard({ label, value, delta, tone, index }: { label: string; value: string; delta: string; tone: string; index: number }) {
+  return (
+    <Frame className="card-in" style={{ padding: "14px 15px", animationDelay: `${index * 45}ms` } as React.CSSProperties}>
+      <Eyebrow muted>{label}</Eyebrow>
+      <div style={{ marginTop: 8, fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 29, lineHeight: 0.96 }}>{value}</div>
+      <div style={{ marginTop: 9, fontFamily: F.mono, fontSize: 10, letterSpacing: "0.04em", color: toneColor(tone) }}>{delta}</div>
     </Frame>
   );
 }
 
-function ProductPack() {
+function SalesBars() {
+  const max = Math.max(...weeklySales.map((day) => day.units));
+  const points = weeklySales
+    .map((day, i) => `${35 + i * 58},${178 - (day.units / max) * 125}`)
+    .join(" ");
+
   return (
-    <div className="ad-float" style={{ position: "relative", width: 270, height: 330, margin: "0 auto" }}>
-      <div
-        style={{
-          position: "absolute",
-          inset: "38px 36px 24px",
-          borderRadius: 28,
-          background: "linear-gradient(145deg, #FFFFFF 0%, #FFE7DA 100%)",
-          border: `1px solid ${C.hair2}`,
-          boxShadow: "0 28px 70px rgba(250,84,0,0.24)",
-          transform: "rotate(-4deg)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          left: 62,
-          top: 74,
-          width: 146,
-          height: 178,
-          borderRadius: 22,
-          border: `1px solid rgba(250,84,0,0.36)`,
-          background: "linear-gradient(180deg, #FA5400 0%, #FF8A4B 100%)",
-          display: "grid",
-          placeItems: "center",
-          color: "#fff",
-          fontFamily: F.mono,
-          letterSpacing: "0.18em",
-          fontSize: 12,
-          textAlign: "center",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.28)",
-        }}
-      >
-        GLOW<br />PATCH
+    <Frame className="scan" style={{ padding: 22, minHeight: 286 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+        <Eyebrow>Unit velocity</Eyebrow>
+        <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>7-DAY SHOPIFY PULL</span>
       </div>
-      <div
-        style={{
-          position: "absolute",
-          left: 30,
-          right: 30,
-          bottom: 4,
-          height: 18,
-          borderRadius: "50%",
-          background: "rgba(17,17,17,0.14)",
-          filter: "blur(12px)",
-        }}
-      />
-    </div>
+      <div style={{ position: "relative", height: 205, marginTop: 18 }}>
+        <svg viewBox="0 0 420 205" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} aria-hidden="true">
+          <path d="M 8 176 H 412" stroke="rgba(17,17,17,0.1)" strokeWidth="1" />
+          <polyline className="path-draw" points={points} fill="none" stroke={C.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <circle className="packet" r="4" fill={C.accent} />
+        </svg>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 10, height: 182, alignItems: "end", padding: "0 12px" }}>
+          {weeklySales.map((day, i) => (
+            <div key={day.day} style={{ display: "grid", gap: 8, alignItems: "end" }}>
+              <div
+                className="bar-y"
+                style={{
+                  height: `${Math.max(18, (day.units / max) * 136)}px`,
+                  borderRadius: "8px 8px 3px 3px",
+                  background: i >= 4 ? "rgba(250,84,0,0.82)" : "rgba(17,17,17,0.2)",
+                  animationDelay: `${i * 58}ms`,
+                }}
+              />
+              <div style={{ textAlign: "center", fontFamily: F.mono, fontSize: 10, color: C.muted }}>{day.day}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Frame>
   );
 }
 
-function Bars() {
-  const data = SYNTHETIC_SHOPIFY_PULL;
-  const max = Math.max(...data.channels.map((c) => c.revenue));
+function ChannelBars() {
   return (
-    <Frame style={{ padding: 22 }}>
-      <Eyebrow muted>Channel revenue</Eyebrow>
-      <div style={{ display: "grid", gap: 18, marginTop: 22 }}>
-        {data.channels.map((channel) => {
-          const isTikTok = channel.name.includes("TikTok");
-          const isMeta = channel.name === "Meta ads";
-          return (
+    <a href="#source-modal" className="drill-card" aria-label="Open revenue by source drilldown">
+      <Frame style={{ padding: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
+          <Eyebrow>Revenue by source</Eyebrow>
+          <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: "0.1em" }}>OPEN</span>
+        </div>
+        <div style={{ display: "grid", gap: 12, marginTop: 18 }}>
+          {channels.map((channel, i) => (
             <div key={channel.name}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontFamily: F.mono, fontSize: 12, color: C.muted }}>
-                <span style={{ color: isTikTok ? C.text : C.muted }}>{channel.name}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: F.mono, fontSize: 10.5, color: C.muted }}>
+                <span>{channel.name}</span>
                 <span>{gbp(channel.revenue)}</span>
               </div>
-              <div style={{ height: 9, background: "rgba(17,17,17,0.06)", borderRadius: 99, marginTop: 8, overflow: "hidden" }}>
+              <div style={{ height: 9, borderRadius: 999, background: "rgba(17,17,17,0.06)", overflow: "hidden", marginTop: 7 }}>
                 <div
-                  className="ad-bar"
+                  className="bar-x"
                   style={{
-                    width: `${Math.max(3, (channel.revenue / max) * 100)}%`,
+                    width: `${channel.share * 100}%`,
                     height: "100%",
-                    borderRadius: 99,
-                    background: isMeta ? C.red : isTikTok ? C.accent : "rgba(17,17,17,0.34)",
+                    borderRadius: 999,
+                    background: channel.color,
+                    animationDelay: `${i * 60}ms`,
                   }}
                 />
               </div>
             </div>
-          );
-        })}
-      </div>
-    </Frame>
+          ))}
+        </div>
+      </Frame>
+    </a>
   );
 }
 
-function toneColor(tone: string) {
-  if (tone === "down") return C.red;
-  if (tone === "up") return C.accent;
-  return "rgba(17,17,17,0.46)";
+function Funnel() {
+  return (
+    <a href="#conversion-modal" className="drill-card" aria-label="Open conversion path drilldown">
+      <Frame style={{ padding: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
+          <Eyebrow>Conversion path</Eyebrow>
+          <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: "0.1em" }}>OPEN</span>
+        </div>
+        <div style={{ display: "grid", gap: 10, marginTop: 18 }}>
+          {funnel.map((step, i) => (
+            <div key={step.label}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontFamily: F.mono, fontSize: 10.5, color: C.muted }}>
+                <span>{step.label}</span>
+                <span>{step.value.toLocaleString()}</span>
+              </div>
+              <div style={{ height: 17, borderRadius: 5, background: "rgba(17,17,17,0.06)", marginTop: 6, overflow: "hidden" }}>
+                <div
+                  className="bar-x"
+                  style={{
+                    width: `${step.width}%`,
+                    height: "100%",
+                    borderRadius: 5,
+                    background: i === funnel.length - 1 ? C.accent : `rgba(23,124,194,${0.68 - i * 0.1})`,
+                    animationDelay: `${i * 80}ms`,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Frame>
+    </a>
+  );
 }
 
-function AnalyticsGraph() {
-  const data = SYNTHETIC_SHOPIFY_PULL.analytics_catalog;
-  const center = { x: 50, y: 52 };
-  const groups = Array.from(new Set(data.map((metric) => metric.group)));
-
+function SourceDrilldownModal() {
+  const total = channels.reduce((sum, channel) => sum + channel.revenue, 0);
   return (
-    <Shell>
-      <div style={{ position: "relative", height: 510 }}>
-        <div style={{ position: "absolute", left: 28, top: 24, zIndex: 3 }}>
-          <Eyebrow>Shopify analytics pull</Eyebrow>
-          <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap", maxWidth: 540 }}>
-            {groups.map((group) => (
-              <span
-                key={group}
+    <div id="source-modal" className="modal" aria-label="Revenue by source detail">
+      <a href="#" className="modal-backdrop" aria-label="Close revenue by source popup" />
+      <div className="modal-panel">
+        <div style={{ padding: 28 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
+            <div>
+              <Eyebrow>Revenue by source</Eyebrow>
+              <h2 style={{ margin: "10px 0 0", fontFamily: F.serif, fontStyle: "italic", fontSize: 58, lineHeight: 0.92 }}>TikTok is carrying the breakout.</h2>
+            </div>
+            <a
+              href="#"
+              className="modal-close"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 999,
+                border: `1px solid ${C.hairStrong}`,
+                display: "grid",
+                placeItems: "center",
+                color: C.text,
+                textDecoration: "none",
+                fontFamily: F.mono,
+                background: "#fff",
+              }}
+            >
+              x
+            </a>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "0.36fr 0.64fr", gap: 24, alignItems: "center", marginTop: 24 }}>
+            <Frame style={{ padding: 24, display: "grid", placeItems: "center", minHeight: 300 }}>
+              <div
                 style={{
-                  fontFamily: F.mono,
-                  fontSize: 9,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  color: C.muted,
-                  border: `1px solid ${C.hair}`,
-                  borderRadius: 999,
-                  padding: "5px 8px",
-                  background: "rgba(255,255,255,0.7)",
+                  width: 224,
+                  aspectRatio: "1",
+                  borderRadius: "50%",
+                  background:
+                    "conic-gradient(#FA5400 0deg 122deg, #177CC2 122deg 205deg, #111111 205deg 273deg, #7B7B7B 273deg 323deg, #BABABA 323deg 360deg)",
+                  boxShadow: "inset 0 0 0 34px #fff, 0 18px 50px rgba(33,28,23,0.12)",
                 }}
-              >
-                {group}
-              </span>
-            ))}
+              />
+              <div style={{ marginTop: 18, textAlign: "center" }}>
+                <div style={{ fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 42, lineHeight: 1 }}>{gbp(total)}</div>
+                <div style={{ marginTop: 6, fontFamily: F.mono, color: C.faint, fontSize: 10, letterSpacing: "0.12em" }}>SOURCE-ATTRIBUTED REVENUE</div>
+              </div>
+            </Frame>
+
+            <div style={{ display: "grid", gap: 14 }}>
+              {channels.map((channel, i) => (
+                <Frame key={channel.name} style={{ padding: 16 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "0.28fr 1fr 0.22fr", gap: 14, alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontFamily: F.sans, fontWeight: 700, fontSize: 16 }}>{channel.name}</div>
+                      <div style={{ marginTop: 4, fontFamily: F.mono, color: C.faint, fontSize: 10 }}>{Math.round(channel.share * 100)}% share</div>
+                    </div>
+                    <div style={{ height: 14, borderRadius: 999, background: "rgba(17,17,17,0.06)", overflow: "hidden" }}>
+                      <div className="bar-x" style={{ width: `${channel.share * 100}%`, height: "100%", borderRadius: 999, background: channel.color, animationDelay: `${i * 70}ms` }} />
+                    </div>
+                    <div style={{ textAlign: "right", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 24 }}>{gbp(channel.revenue)}</div>
+                  </div>
+                </Frame>
+              ))}
+              <Frame style={{ padding: 18, borderColor: "rgba(250,84,0,0.3)", background: "rgba(255,249,245,0.9)" }}>
+                <Eyebrow>Read</Eyebrow>
+                <p style={{ margin: "9px 0 0", color: C.muted, lineHeight: 1.5, fontSize: 15 }}>
+                  TikTok is 34% of product revenue and already ahead of search. In Synapse memory, limited-edition products that crossed 30% TikTok concentration while inventory was under 1.5k units usually sold out before replenishment landed.
+                </p>
+              </Frame>
+            </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
 
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 1 }}>
-          {data.map((metric, i) => (
-            <line
-              key={`${metric.label}-line`}
-              x1={center.x}
-              y1={center.y}
-              x2={metric.x}
-              y2={metric.y}
-              stroke={toneColor(metric.tone)}
-              strokeWidth="0.11"
-              strokeOpacity={metric.tone === "neutral" ? 0.18 : 0.32}
+function ConversionDrilldownModal() {
+  const viewRate = funnel[1].value / funnel[0].value;
+  const cartRate = funnel[2].value / funnel[1].value;
+  const orderRate = funnel[3].value / funnel[2].value;
+  return (
+    <div id="conversion-modal" className="modal" aria-label="Conversion path detail">
+      <a href="#" className="modal-backdrop" aria-label="Close conversion path popup" />
+      <div className="modal-panel">
+        <div style={{ padding: 28 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
+            <div>
+              <Eyebrow>Conversion path</Eyebrow>
+              <h2 style={{ margin: "10px 0 0", fontFamily: F.serif, fontStyle: "italic", fontSize: 58, lineHeight: 0.92 }}>The traffic is converting cleanly.</h2>
+            </div>
+            <a
+              href="#"
+              className="modal-close"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 999,
+                border: `1px solid ${C.hairStrong}`,
+                display: "grid",
+                placeItems: "center",
+                color: C.text,
+                textDecoration: "none",
+                fontFamily: F.mono,
+                background: "#fff",
+              }}
             >
-              <animate attributeName="stroke-opacity" values="0.08;0.36;0.08" dur={`${3.2 + i * 0.04}s`} repeatCount="indefinite" />
-            </line>
-          ))}
-        </svg>
+              x
+            </a>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 0.92fr", gap: 24, marginTop: 24, alignItems: "stretch" }}>
+            <Frame style={{ padding: 24 }}>
+              <div style={{ display: "grid", gap: 18 }}>
+                {funnel.map((step, i) => (
+                  <div key={step.label}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontFamily: F.mono, color: C.muted, fontSize: 12 }}>
+                      <span>{step.label}</span>
+                      <span>{step.value.toLocaleString()}</span>
+                    </div>
+                    <div style={{ height: 30, borderRadius: 7, background: "rgba(17,17,17,0.06)", marginTop: 8, overflow: "hidden" }}>
+                      <div
+                        className="bar-x"
+                        style={{
+                          width: `${step.width}%`,
+                          height: "100%",
+                          borderRadius: 7,
+                          background: i === funnel.length - 1 ? C.accent : `rgba(23,124,194,${0.7 - i * 0.11})`,
+                          animationDelay: `${i * 90}ms`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Frame>
+
+            <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+                {[
+                  ["View rate", `${(viewRate * 100).toFixed(1)}%`, "sessions to product views"],
+                  ["Cart rate", `${(cartRate * 100).toFixed(1)}%`, "views to carts"],
+                  ["Cart close", `${(orderRate * 100).toFixed(1)}%`, "carts to orders"],
+                ].map(([label, value, detail], i) => (
+                  <Frame key={label} className="card-in" style={{ padding: 16, animationDelay: `${i * 70}ms` } as React.CSSProperties}>
+                    <Eyebrow muted>{label}</Eyebrow>
+                    <div style={{ marginTop: 8, fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 32 }}>{value}</div>
+                    <div style={{ marginTop: 8, color: C.faint, fontFamily: F.mono, fontSize: 9, letterSpacing: "0.08em" }}>{detail}</div>
+                  </Frame>
+                ))}
+              </div>
+              <Frame style={{ padding: 20, borderColor: "rgba(23,124,194,0.24)", background: "rgba(247,251,254,0.9)" }}>
+                <Eyebrow>Read</Eyebrow>
+                <p style={{ margin: "9px 0 0", color: C.muted, lineHeight: 1.5, fontSize: 15 }}>
+                  Conversion is up to 3.98% while sessions are still rising. That combination means the demand spike is not low-quality traffic. Synapse treats the product velocity as real buyer intent, not just awareness.
+                </p>
+                <div style={{ marginTop: 18, borderTop: `1px solid ${C.hair}`, paddingTop: 16 }}>
+                  <Eyebrow>Risk</Eyebrow>
+                  <p style={{ margin: "8px 0 0", color: C.muted, lineHeight: 1.45, fontSize: 15 }}>
+                    If the conversion rate holds and sessions continue at the current pace, projected orders exceed available stock before the next reorder cycle.
+                  </p>
+                </div>
+              </Frame>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InsightPanel() {
+  return (
+    <Link href="/ad/3" className="prediction-link" style={{ display: "block", color: C.text, textDecoration: "none", height: "100%" }}>
+      <Frame style={{ height: "100%", minHeight: 0, padding: 20, borderColor: "rgba(250,84,0,0.3)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
+        <div className="prediction-body">
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "center" }}>
+            <Eyebrow>Synapse prediction</Eyebrow>
+            <span style={{ fontFamily: F.mono, color: C.green, fontSize: 10, letterSpacing: "0.08em" }}>CONFIDENCE 91%</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "88px 1fr", gap: 16, alignItems: "center", marginTop: 15 }}>
+            <img
+              src={CAN_IMAGE}
+              alt=""
+              style={{
+                width: 76,
+                height: 126,
+                objectFit: "cover",
+                objectPosition: "center 18%",
+                borderRadius: 13,
+                boxShadow: "0 12px 28px rgba(33,28,23,0.12)",
+              }}
+            />
+            <div>
+              <h3 style={{ margin: 0, fontFamily: F.serif, fontStyle: "italic", fontSize: 32, lineHeight: 0.98 }}>Coconut & Berry will likely sell out in 3-4 days.</h3>
+              <p style={{ margin: "11px 0 0", color: C.muted, lineHeight: 1.42, fontSize: 14 }}>
+                Weekend unit velocity is climbing faster than inventory, TikTok is now the leading revenue source, and past limited-edition drops with this same pattern stocked out within the next order cycle.
+              </p>
+            </div>
+          </div>
+        </div>
 
         <div
-          className="ad-hub-float"
+          className="prediction-overlay"
           style={{
             position: "absolute",
-            left: `${center.x}%`,
-            top: `${center.y}%`,
-            transform: "translate(-50%, -50%)",
-            zIndex: 4,
-            width: 190,
-            minHeight: 118,
-            borderRadius: 24,
-            border: `1px solid rgba(250,84,0,0.38)`,
-            background: "rgba(255,255,255,0.94)",
-            boxShadow: "0 24px 60px rgba(250,84,0,0.18)",
+            inset: 0,
             display: "grid",
             placeItems: "center",
-            textAlign: "center",
-            padding: 18,
+            background: "rgba(255,255,255,0.58)",
+            backdropFilter: "blur(3px)",
+            zIndex: 4,
           }}
         >
-          <Eyebrow>Synapse</Eyebrow>
-          <div style={{ marginTop: 8, fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 38, lineHeight: 0.95 }}>{data.length} signals</div>
-          <div style={{ marginTop: 8, fontFamily: F.mono, fontSize: 10, color: C.muted, letterSpacing: "0.08em" }}>ONE GROWTH MODEL</div>
-        </div>
-
-        {data.map((metric, i) => (
-          <div
-            key={metric.label}
+          <span
             style={{
-              position: "absolute",
-              left: `${metric.x}%`,
-              top: `${metric.y}%`,
-              transform: "translate(-50%, -50%)",
-              zIndex: 2,
-              width: 112,
-              minHeight: 58,
-              borderRadius: 12,
-              border: `1px solid ${metric.tone === "neutral" ? C.hair : `${toneColor(metric.tone)}55`}`,
-              background: "rgba(255,255,255,0.88)",
-              boxShadow: "0 10px 30px rgba(33,28,23,0.08)",
-              padding: "8px 9px",
-              animation: `adMetricIn 520ms cubic-bezier(.2,.7,.2,1) ${Math.min(i * 28, 520)}ms both`,
+              borderRadius: 999,
+              background: C.accent,
+              color: "#fff",
+              padding: "12px 18px",
+              fontFamily: F.sans,
+              fontWeight: 700,
+              fontSize: 14,
+              boxShadow: "0 14px 34px rgba(250,84,0,0.24)",
             }}
-            title={`${metric.source}: ${metric.insight}`}
           >
-            <div
-              style={{
-                fontFamily: F.mono,
-                fontSize: 7.5,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                color: C.faint,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {metric.group}
-            </div>
-            <div
-              style={{
-                marginTop: 3,
-                fontFamily: F.sans,
-                fontWeight: 700,
-                fontSize: 10.5,
-                lineHeight: 1.05,
-                color: C.text,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {metric.label}
-            </div>
-            <div style={{ marginTop: 4, display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 6 }}>
-              <span style={{ fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 16, lineHeight: 1, color: C.text }}>{metric.value}</span>
-              <span style={{ fontFamily: F.mono, fontSize: 7.5, color: toneColor(metric.tone), whiteSpace: "nowrap" }}>{metric.delta}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </Shell>
+            View full prediction
+          </span>
+        </div>
+      </Frame>
+    </Link>
   );
 }
 
-function MiniBrief() {
-  const brief = SYNTHETIC_SHOPIFY_PULL.synthetic_growth_brief;
-  return (
-    <Frame style={{ padding: 28, maxWidth: 760, margin: "0 auto" }}>
-      <Eyebrow>AI Growth Brief</Eyebrow>
-      <h2 style={{ margin: "10px 0 22px", fontFamily: F.serif, fontStyle: "italic", fontSize: 42, lineHeight: 1 }}>
-        {brief.week_of}
-      </h2>
-      <div style={{ display: "grid", gap: 20 }}>
-        <div>
-          <Eyebrow muted>What's working</Eyebrow>
-          <p style={{ margin: "8px 0 0", lineHeight: 1.55, color: C.muted }}>{brief.whats_working}</p>
-        </div>
-        <div>
-          <Eyebrow muted>What to cut</Eyebrow>
-          <p style={{ margin: "8px 0 0", lineHeight: 1.55, color: C.muted }}>{brief.what_to_cut}</p>
-        </div>
-        <div style={{ border: `1px solid rgba(250,84,0,0.42)`, borderRadius: 16, padding: 20, background: "rgba(250,84,0,0.08)" }}>
-          <Eyebrow>Your one move this week</Eyebrow>
-          <div style={{ marginTop: 10, fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 32, lineHeight: 1.14 }}>
-            {brief.one_move.action}
-          </div>
-        </div>
-      </div>
-    </Frame>
-  );
-}
-
-function Scene({ name }: { name: (typeof steps)[number]["scene"] }) {
-  const data = SYNTHETIC_SHOPIFY_PULL;
-  const glowPatch = data.products[0];
-  const meta = data.channels.find((channel) => channel.name === "Meta ads")!;
-
-  if (name === "landing") {
-    return (
-      <Shell>
-        <div style={{ maxWidth: 650, paddingTop: 64 }}>
-          <Eyebrow>Company brain</Eyebrow>
-          <h2 style={{ margin: "22px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 74, lineHeight: 0.94 }}>
-            It knows what your store is trying to tell you.
-          </h2>
-          <p style={{ margin: "24px 0 0", maxWidth: 520, fontSize: 19, lineHeight: 1.55, color: C.muted }}>
-            Shopify becomes a living memory of products, channels and decisions.
-          </p>
-        </div>
-        <div style={{ position: "absolute", right: 58, bottom: 38, width: 310 }}>
-          <ProductPack />
-        </div>
-      </Shell>
-    );
-  }
-
-  if (name === "connect") {
-    return (
-      <Shell>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, maxWidth: 820, marginLeft: "auto" }}>
-          {[
-            ["Shopify", "Orders, products, inventory, conversion.", true],
-            ["Google Analytics", "Traffic and channel context.", false],
-            ["Vercel", "Page speed and event signal.", false],
-            ["Website Context", "What the business sells.", false],
-          ].map(([title, body, active]) => (
-            <Frame key={String(title)} style={{ padding: 24, minHeight: 170, borderColor: active ? "rgba(250,84,0,0.58)" : C.hair }}>
-              <Eyebrow muted>{active ? "Connected" : "Ready"}</Eyebrow>
-              <h3 style={{ margin: "18px 0 8px", fontFamily: F.serif, fontStyle: "italic", fontSize: 34 }}>{title}</h3>
-              <p style={{ margin: 0, color: C.muted, lineHeight: 1.5 }}>{body}</p>
-            </Frame>
-          ))}
-        </div>
-      </Shell>
-    );
-  }
-
-  if (name === "analytics") {
-    return <AnalyticsGraph />;
-  }
-
-  if (name === "overview") {
-    return (
-      <Shell>
-        <div style={{ display: "grid", gridTemplateColumns: "0.8fr 1.2fr", gap: 34, alignItems: "center" }}>
-          <div>
-            <Eyebrow>Shopify connected</Eyebrow>
-            <h2 style={{ margin: "12px 0 10px", fontFamily: F.serif, fontStyle: "italic", fontSize: 70, lineHeight: 0.94 }}>{data.shop.name}</h2>
-            <p style={{ margin: 0, color: C.muted, fontSize: 18, lineHeight: 1.5 }}>{data.shop.domain}</p>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
-            <Metric label="Revenue" value={gbp(data.summary.revenue.current)} delta="+39% WoW" />
-            <Metric label="Orders" value="312" delta="+37% WoW" />
-            <Metric label="Conversion" value="2.47%" delta="was 2.05%" tone="accent" />
-            <Metric label="New customers" value="196" delta="+49% WoW" />
-          </div>
-        </div>
-      </Shell>
-    );
-  }
-
-  if (name === "metrics") {
-    return (
-      <Shell>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginTop: 135 }}>
-          <Metric label="Revenue" value={gbp(data.summary.revenue.current)} delta="+39% week over week" />
-          <Metric label="Orders" value="312" delta="+37% week over week" />
-          <Metric label="Conversion" value="2.47%" delta="up from 2.05%" tone="accent" />
-        </div>
-      </Shell>
-    );
-  }
-
-  if (name === "channels") {
-    return (
-      <Shell>
-        <div style={{ display: "grid", gridTemplateColumns: "0.82fr 1.18fr", gap: 32, alignItems: "center" }}>
-          <div>
-            <Eyebrow>Cause</Eyebrow>
-            <h2 style={{ margin: "12px 0", fontFamily: F.serif, fontStyle: "italic", fontSize: 62, lineHeight: 0.96 }}>
-              TikTok became the new-customer engine.
-            </h2>
-            <p style={{ color: C.muted, fontSize: 18, lineHeight: 1.55 }}>From 12% to 31% of new customers in one week.</p>
-          </div>
-          <Bars />
-        </div>
-      </Shell>
-    );
-  }
-
-  if (name === "stock") {
-    return (
-      <Shell>
-        <div style={{ display: "grid", gridTemplateColumns: "0.92fr 1.08fr", gap: 32, alignItems: "center" }}>
-          <ProductPack />
-          <Frame style={{ padding: 28, borderColor: "rgba(214,54,56,0.42)" }}>
-            <Eyebrow>Product velocity</Eyebrow>
-            <h2 style={{ margin: "12px 0", fontFamily: F.serif, fontStyle: "italic", fontSize: 58, lineHeight: 0.96 }}>{glowPatch.title}</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 26 }}>
-              <Metric label="Units sold" value="790" delta="+155% WoW" />
-              <Metric label="Inventory" value="410" delta="left" tone="accent" />
-              <Metric label="Runway" value="0.5w" delta="stockout risk" tone="red" />
-            </div>
-          </Frame>
-        </div>
-      </Shell>
-    );
-  }
-
-  if (name === "cut") {
-    return (
-      <Shell>
-        <div style={{ maxWidth: 780, margin: "94px auto 0" }}>
-          <Frame style={{ padding: 34, borderColor: "rgba(214,54,56,0.42)" }}>
-            <Eyebrow>What to cut</Eyebrow>
-            <h2 style={{ margin: "12px 0 26px", fontFamily: F.serif, fontStyle: "italic", fontSize: 66, lineHeight: 0.96 }}>Meta ads</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-              <Metric label="Spend" value={gbp(meta.ad_spend ?? 0)} delta="this week" tone="red" />
-              <Metric label="Revenue" value={gbp(meta.revenue)} delta="below spend" tone="red" />
-              <Metric label="ROAS" value="0.85" delta="unprofitable" tone="red" />
-            </div>
-          </Frame>
-        </div>
-      </Shell>
-    );
-  }
-
-  if (name === "move") {
-    return (
-      <Shell>
-        <div style={{ paddingTop: 28 }}>
-          <MiniBrief />
-        </div>
-      </Shell>
-    );
-  }
-
-  return (
-    <Shell>
-      <div style={{ textAlign: "center", maxWidth: 720, margin: "132px auto 0" }}>
-        <Eyebrow>Memory loop</Eyebrow>
-        <h2 style={{ margin: "18px 0 18px", fontFamily: F.serif, fontStyle: "italic", fontSize: 84, lineHeight: 0.9 }}>
-          Advice that compounds.
-        </h2>
-        <p style={{ color: C.muted, fontSize: 19, lineHeight: 1.55 }}>
-          Synapse remembers whether the move worked, then weighs next week against everything it has learned.
-        </p>
-      </div>
-    </Shell>
-  );
-}
-
-export default async function AdStepPage({ params }: { params: Promise<{ step: string }> }) {
-  const { step } = await params;
-  const stepNumber = Number(step);
-  if (!Number.isInteger(stepNumber) || stepNumber < 1 || stepNumber > steps.length) notFound();
-
-  const current = steps[stepNumber - 1];
-  const next = stepNumber < steps.length ? `/ad/${stepNumber + 1}` : "/ad/1";
-  const prev = stepNumber > 1 ? `/ad/${stepNumber - 1}` : "/ad/1";
-
+function StatsSlide() {
   return (
     <main
       style={{
-        minHeight: "100vh",
+        height: "100vh",
         background: C.bg,
         color: C.text,
         fontFamily: F.sans,
-        padding: "22px clamp(24px, 4vw, 70px)",
+        padding: "22px clamp(24px, 4vw, 64px)",
+        overflow: "hidden",
       }}
     >
-      <style>{`
-        @keyframes adEnter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-        @keyframes adFloat { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-10px) rotate(1deg); } }
-        @keyframes adHubFloat { 0%, 100% { transform: translate(-50%, -50%) translateY(0); } 50% { transform: translate(-50%, -50%) translateY(-8px); } }
-        @keyframes adBar { from { transform: scaleX(.18); } to { transform: scaleX(1); } }
-        @keyframes adMetricIn { from { opacity: 0; transform: translate(-50%, -42%) scale(.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
-        .ad-page { animation: adEnter 520ms cubic-bezier(.2,.7,.2,1) both; }
-        .ad-float { animation: adFloat 5s ease-in-out infinite; }
-        .ad-hub-float { animation: adHubFloat 5.8s ease-in-out infinite; }
-        .ad-bar { transform-origin: left center; animation: adBar 900ms cubic-bezier(.2,.7,.2,1) both; }
-        .ad-next:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(250,84,0,.22); }
-        @media (max-width: 900px) {
-          .ad-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+      <StageStyles />
 
-      <div className="ad-page" style={{ maxWidth: 1780, margin: "0 auto" }}>
-        <header style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start", marginBottom: 28 }}>
-          <Link href="/ad/1" style={{ display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: C.text }}>
-            <SynMark />
-            <div>
-              <div style={{ fontFamily: F.serif, fontWeight: 700, fontSize: 30, lineHeight: 1 }}>Synapse</div>
-              <div style={{ fontFamily: F.mono, color: C.faint, fontSize: 11, letterSpacing: "0.22em", textTransform: "uppercase", marginTop: 4 }}>
-                The company brain
-              </div>
-            </div>
-          </Link>
-
-          <nav
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              border: `1px solid ${C.hair2}`,
-              borderRadius: 100,
-              padding: 5,
-              background: "rgba(255,255,255,0.72)",
-              boxShadow: "0 18px 44px rgba(33,28,23,0.12)",
-            }}
-          >
-            {["SHOPIFY", "ANALYTICS", "AI PLAN"].map((item, i) => (
-              <span
-                key={item}
-                style={{
-                  fontFamily: F.mono,
-                  fontSize: 11,
-                  letterSpacing: "0.12em",
-                  color: i === Math.min(2, Math.floor((stepNumber - 1) / 3)) ? "#fff" : C.muted,
-                  background: i === Math.min(2, Math.floor((stepNumber - 1) / 3)) ? C.accent : "transparent",
-                  borderRadius: 100,
-                  padding: "8px 13px",
-                }}
-              >
-                {item}
-              </span>
-            ))}
-          </nav>
+      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px 19vh 1fr 36px", gap: 14 }}>
+        <header style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
+          <Brand />
+          <SegmentedNav active="SHOPIFY" />
         </header>
 
-        <section className="ad-grid" style={{ display: "grid", gridTemplateColumns: "0.45fr 0.55fr", gap: 42, alignItems: "center" }}>
-          <div style={{ minHeight: 560, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <Eyebrow>{current.eyebrow}</Eyebrow>
-            <h1 style={{ margin: "28px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(54px, 6.7vw, 112px)", lineHeight: 0.91, letterSpacing: "0" }}>
-              {current.headline.map((line) => (
-                <span key={line} style={{ display: "block" }}>
-                  {line}
-                </span>
-              ))}
+        <section
+          style={{
+            borderTop: `1px solid ${C.hair}`,
+            borderBottom: `1px solid ${C.hair}`,
+            display: "grid",
+            gridTemplateColumns: "0.58fr 0.42fr",
+            gap: 26,
+            alignItems: "center",
+            minHeight: 0,
+          }}
+        >
+          <div>
+            <Eyebrow>Product-level pull</Eyebrow>
+            <h1 style={{ margin: "10px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(38px, 4.2vw, 76px)", lineHeight: 0.92 }}>
+              Red Bull Coconut & Berry is about to sell out.
             </h1>
-            <p style={{ margin: "26px 0 0", color: C.muted, fontSize: 21, lineHeight: 1.55, maxWidth: 550 }}>{current.sub}</p>
           </div>
-
-          <Scene name={current.scene} />
+          <p style={{ margin: 0, color: C.muted, fontSize: 18, lineHeight: 1.48 }}>
+            Synapse pulled product sales, source mix, conversion movement, inventory runway, and past launch memory into one prediction.
+          </p>
         </section>
 
-        <footer style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "center", marginTop: 26 }}>
-          <Link href={prev} style={{ color: C.muted, textDecoration: "none", fontFamily: F.mono, fontSize: 12, letterSpacing: "0.05em" }}>
+        <section style={{ position: "relative", minHeight: 0 }}>
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.72 }}>
+            <polyline className="path-draw" points="4,16 22,24 34,18 51,31 66,21 84,34 96,24" fill="none" stroke="rgba(250,84,0,0.16)" strokeWidth="0.2" />
+            <polyline className="path-draw" points="6,82 18,72 31,80 46,66 62,71 78,58 96,64" fill="none" stroke="rgba(23,124,194,0.14)" strokeWidth="0.2" />
+          </svg>
+
+          <div style={{ position: "relative", zIndex: 2, height: "100%", display: "grid", gridTemplateRows: "auto 1fr", gap: 12 }}>
+            <div className="kpi-row" style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 10 }}>
+              {stats.map((stat, index) => (
+                <StatCard key={stat.label} {...stat} index={index} />
+              ))}
+            </div>
+
+            <div className="chart-grid" style={{ display: "grid", gridTemplateColumns: "1.08fr 0.92fr", gap: 12, minHeight: 0 }}>
+              <SalesBars />
+              <div style={{ display: "grid", gridTemplateRows: "0.82fr 0.82fr 1fr", gap: 12, minHeight: 0 }}>
+                <ChannelBars />
+                <Funnel />
+                <InsightPanel />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Link href="/ad/1" style={{ color: C.muted, textDecoration: "none", fontFamily: F.mono, fontSize: 12 }}>
             Back
           </Link>
-          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-            {steps.map((_, i) => (
-              <span
-                key={i}
-                style={{
-                  width: i + 1 === stepNumber ? 28 : 7,
-                  height: 7,
-                  borderRadius: 999,
-                  background: i + 1 === stepNumber ? C.accent : "rgba(17,17,17,0.18)",
-                  transition: "width .3s ease, background-color .3s ease",
-                }}
-              />
-            ))}
-          </div>
+          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.faint }}>Mock values shaped like a real Shopify product pull</div>
           <Link
-            className="ad-next"
-            href={next}
+            href="/ad/3"
             style={{
               color: "#fff",
               background: C.accent,
@@ -762,15 +803,218 @@ export default async function AdStepPage({ params }: { params: Promise<{ step: s
               fontFamily: F.sans,
               fontSize: 14,
               fontWeight: 700,
-              borderRadius: 11,
-              padding: "12px 20px",
-              transition: "transform .2s ease, box-shadow .2s ease",
+              borderRadius: 10,
+              padding: "10px 18px",
             }}
           >
-            {stepNumber === steps.length ? "Restart" : "Next"}
+            Full prediction
+          </Link>
+        </footer>
+      </div>
+      <SourceDrilldownModal />
+      <ConversionDrilldownModal />
+    </main>
+  );
+}
+
+function SegmentedNav({ active }: { active: "PRODUCT" | "SHOPIFY" | "AI READ" }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        border: `1px solid ${C.hairStrong}`,
+        borderRadius: 999,
+        padding: 5,
+        background: "rgba(255,255,255,0.72)",
+        boxShadow: "0 18px 44px rgba(33,28,23,0.08)",
+      }}
+    >
+      {["PRODUCT", "SHOPIFY", "AI READ"].map((item) => {
+        const isActive = item === active;
+        return (
+          <span
+            key={item}
+            style={{
+              borderRadius: 999,
+              padding: "7px 11px",
+              background: isActive ? C.accent : "transparent",
+              color: isActive ? "#fff" : C.muted,
+              fontFamily: F.mono,
+              fontSize: 10,
+              letterSpacing: "0.11em",
+            }}
+          >
+            {item}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function EvidenceCard({ label, value, detail, index }: { label: string; value: string; detail: string; index: number }) {
+  return (
+    <Frame className="card-in" style={{ padding: 18, animationDelay: `${index * 70}ms` } as React.CSSProperties}>
+      <Eyebrow muted>{label}</Eyebrow>
+      <div style={{ marginTop: 9, fontFamily: F.serif, fontStyle: "italic", fontSize: 34, fontWeight: 700, lineHeight: 0.95 }}>{value}</div>
+      <p style={{ margin: "10px 0 0", color: C.muted, lineHeight: 1.42, fontSize: 14 }}>{detail}</p>
+    </Frame>
+  );
+}
+
+function MemoryCard({ title, when, text, index }: { title: string; when: string; text: string; index: number }) {
+  return (
+    <Frame className="card-in" style={{ padding: 18, borderColor: index === 2 ? "rgba(250,84,0,0.34)" : C.hair, animationDelay: `${220 + index * 80}ms` } as React.CSSProperties}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
+        <h3 style={{ margin: 0, fontFamily: F.serif, fontStyle: "italic", fontSize: 28, lineHeight: 1 }}>{title}</h3>
+        <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: "0.1em", textTransform: "uppercase" }}>{when}</span>
+      </div>
+      <p style={{ margin: "12px 0 0", color: C.muted, lineHeight: 1.44, fontSize: 14.5 }}>{text}</p>
+    </Frame>
+  );
+}
+
+function PredictionSlide() {
+  return (
+    <main
+      style={{
+        height: "100vh",
+        background: C.bg,
+        color: C.text,
+        fontFamily: F.sans,
+        padding: "22px clamp(24px, 4vw, 64px)",
+        overflow: "hidden",
+      }}
+    >
+      <StageStyles />
+
+      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px 1fr 36px", gap: 16 }}>
+        <header style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
+          <Brand />
+          <SegmentedNav active="AI READ" />
+        </header>
+
+        <section style={{ display: "grid", gridTemplateColumns: "0.42fr 0.58fr", gap: 22, minHeight: 0 }}>
+          <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 18, minHeight: 0 }}>
+            <Frame style={{ padding: 28, borderColor: "rgba(250,84,0,0.32)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
+              <Eyebrow>Full prediction</Eyebrow>
+              <h1 style={{ margin: "16px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(54px, 5.4vw, 96px)", lineHeight: 0.9 }}>
+                Stockout likely inside the next order cycle.
+              </h1>
+              <p style={{ margin: "22px 0 0", color: C.muted, fontSize: 18, lineHeight: 1.5 }}>
+                Synapse predicts Red Bull Coconut & Berry will run out in 3-4 days unless replenishment is confirmed or promotion is slowed. The prediction is not just based on this week: it matches the store's remembered pattern from prior limited-edition launches.
+              </p>
+            </Frame>
+
+            <Frame style={{ padding: 22, minHeight: 0 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                <Eyebrow>Past memory</Eyebrow>
+                <span style={{ fontFamily: F.mono, fontSize: 10, color: C.green, letterSpacing: "0.08em" }}>mubit recall</span>
+              </div>
+              <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
+                {memoryCards.map((memory, index) => (
+                  <MemoryCard key={memory.title} {...memory} index={index} />
+                ))}
+              </div>
+            </Frame>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 12, minHeight: 0 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
+              {predictionEvidence.map((item, index) => (
+                <EvidenceCard key={item.label} {...item} index={index} />
+              ))}
+            </div>
+            <Frame className="scan" style={{ padding: 26, minHeight: 0 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+                <Eyebrow>Why Synapse believes this</Eyebrow>
+                <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>current stats + remembered outcomes</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "0.34fr 0.66fr", gap: 24, alignItems: "center", marginTop: 22 }}>
+                <img
+                  className="hero-can"
+                  src={CAN_IMAGE}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    maxHeight: 360,
+                    objectFit: "contain",
+                    filter: "drop-shadow(0 28px 58px rgba(33,28,23,0.18))",
+                  }}
+                />
+                <div>
+                  <div style={{ display: "grid", gap: 14 }}>
+                    {[
+                      "Units sold are up 42% while AOV is down 2%, which means the spike is volume-led rather than price-led.",
+                      "Friday through Sunday produced 1,456 units, enough to compress inventory from 3.4 days at average pace to about 2.4 days at weekend pace.",
+                      "TikTok now drives GBP 1,715 of product revenue, the same concentration level that preceded previous limited-edition stockouts.",
+                      "The memory layer recalls two prior launches where creator-led weekend acceleration turned into sellout before the next reorder landed.",
+                    ].map((line, index) => (
+                      <div key={line} style={{ display: "grid", gridTemplateColumns: "34px 1fr", gap: 12, alignItems: "start" }}>
+                        <div
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: 999,
+                            display: "grid",
+                            placeItems: "center",
+                            background: index === 3 ? C.accent : "rgba(17,17,17,0.08)",
+                            color: index === 3 ? "#fff" : C.text,
+                            fontFamily: F.mono,
+                            fontSize: 11,
+                          }}
+                        >
+                          {index + 1}
+                        </div>
+                        <p style={{ margin: 0, color: C.muted, lineHeight: 1.46, fontSize: 16 }}>{line}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 24, borderTop: `1px solid ${C.hair}`, paddingTop: 18 }}>
+                    <Eyebrow>Recommended move</Eyebrow>
+                    <div style={{ marginTop: 8, fontFamily: F.serif, fontStyle: "italic", fontSize: 38, fontWeight: 700, lineHeight: 1 }}>
+                      Confirm reorder first, then keep TikTok live.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Frame>
+          </div>
+        </section>
+
+        <footer style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Link href="/ad/2" style={{ color: C.muted, textDecoration: "none", fontFamily: F.mono, fontSize: 12 }}>
+            Back
+          </Link>
+          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.faint }}>Prediction backed by product stats and past memory</div>
+          <Link
+            href="/ad/1"
+            style={{
+              color: "#fff",
+              background: C.accent,
+              textDecoration: "none",
+              fontFamily: F.sans,
+              fontSize: 14,
+              fontWeight: 700,
+              borderRadius: 10,
+              padding: "10px 18px",
+            }}
+          >
+            Restart
           </Link>
         </footer>
       </div>
     </main>
   );
+}
+
+export default async function AdStepPage({ params }: { params: Promise<{ step: string }> }) {
+  const { step } = await params;
+  const stepNumber = Number(step);
+  if (!Number.isInteger(stepNumber) || stepNumber < 1 || stepNumber > 3) notFound();
+  if (stepNumber === 1) return <ProductHero />;
+  if (stepNumber === 2) return <StatsSlide />;
+  return <PredictionSlide />;
 }
