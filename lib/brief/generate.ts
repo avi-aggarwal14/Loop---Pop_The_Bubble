@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { GrowthBriefSchema, type GrowthBrief } from "./schema";
 import { SYSTEM_PROMPT } from "./prompt";
 import { formatWeeklyDataForPrompt, type WeeklyData } from "../metrics/types";
@@ -7,21 +7,24 @@ import { formatWeeklyDataForPrompt, type WeeklyData } from "../metrics/types";
  * Generates a Growth Brief from this week's metrics plus what mubit recalled
  * about the founder.
  *
- * Provider: OpenAI (the team has OpenAI credits). This is the ONLY provider-
- * specific file — schema, mubit, metrics, and the harness are all neutral.
+ * Provider: Anthropic Claude (the team's credits are on the Anthropic API). This
+ * is the ONLY provider-specific file for the brief engine — schema, mubit,
+ * metrics, and the harness are all neutral.
  *
- * - Structured output: strict json_schema → the model must return our exact shape,
- *   and we still validate with the zod schema as a backstop.
- * - Caching: OpenAI caches long prompt prefixes automatically (no cache_control
- *   needed). We keep the stable SYSTEM_PROMPT first and the volatile metrics +
- *   recalled memory in the user turn, so the cached prefix stays byte-stable.
+ * - Structured output: `output_config.format` (json_schema) → the model must
+ *   return our exact shape, and we still validate with the zod schema as a backstop.
+ * - Caching: a `cache_control` breakpoint pins the stable SYSTEM_PROMPT as the
+ *   cacheable prefix; the volatile metrics + recalled memory go in the user turn.
+ *   (The prompt is short, so a cache write only actually happens once the prefix
+ *   crosses Opus's ~4K-token minimum — the breakpoint is harmless either way.)
+ * - Thinking: adaptive (Claude decides depth); `ANTHROPIC_EFFORT` tunes spend.
  */
 
-// Model is env-driven so you can point it at whatever your credits cover.
-export const BRIEF_MODEL = process.env.OPENAI_MODEL ?? "gpt-5";
-// Reasoning models (gpt-5, o-series) accept reasoning_effort; set to "none" to omit
-// (e.g. if you switch OPENAI_MODEL to a non-reasoning model like gpt-4.1).
-const REASONING_EFFORT = process.env.OPENAI_REASONING_EFFORT ?? "medium";
+// Model is env-driven; defaults to the most capable Claude model.
+export const BRIEF_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-4-8";
+// Effort controls thinking depth + overall token spend: low | medium | high | xhigh | max.
+// Set ANTHROPIC_EFFORT="none" to omit it entirely (falls back to the model default).
+const EFFORT = process.env.ANTHROPIC_EFFORT ?? "high";
 
 export interface GenerateBriefInput {
   /** The full merged picture for the week (commerce + traffic + business profile). */
@@ -41,8 +44,8 @@ export interface GenerateBriefResult {
 }
 
 /**
- * Wire contract for the model's JSON output. Mirrors GrowthBriefSchema; strict
- * mode requires additionalProperties:false and every property listed in required.
+ * Wire contract for the model's JSON output. Mirrors GrowthBriefSchema; structured
+ * outputs require additionalProperties:false and every property listed in required.
  * The zod parse below catches any drift between the two immediately.
  */
 const BRIEF_JSON_SCHEMA = {
@@ -99,55 +102,57 @@ function buildUserMessage(input: GenerateBriefInput): string {
 
 export async function generateBrief(
   input: GenerateBriefInput,
-  client?: OpenAI,
+  client?: Anthropic,
 ): Promise<GenerateBriefResult> {
-  const openai = client ?? new OpenAI();
+  const anthropic = client ?? new Anthropic();
 
-  const params: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming = {
-    model: BRIEF_MODEL,
-    max_completion_tokens: 16000,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT }, // stable → auto-cached prefix
-      { role: "user", content: buildUserMessage(input) }, // volatile → after prefix
-    ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "growth_brief",
-        strict: true,
-        schema: BRIEF_JSON_SCHEMA,
-      },
-    },
+  const outputConfig: Anthropic.OutputConfig = {
+    format: { type: "json_schema", schema: BRIEF_JSON_SCHEMA as Record<string, unknown> },
   };
-  if (REASONING_EFFORT !== "none") {
-    // Cast: not every model in the type union accepts this, but reasoning models do.
-    (params as { reasoning_effort?: string }).reasoning_effort = REASONING_EFFORT;
+  if (EFFORT !== "none") {
+    outputConfig.effort = EFFORT as Anthropic.OutputConfig["effort"];
   }
 
-  const completion = await openai.chat.completions.create(params);
-  const choice = completion.choices[0];
+  const message = await anthropic.messages.create({
+    model: BRIEF_MODEL,
+    max_tokens: 16000,
+    // Stable prefix → cacheable. Never interpolate per-request data here.
+    system: [
+      { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+    ],
+    // Adaptive thinking lets Claude decide how much to reason per brief.
+    thinking: { type: "adaptive" },
+    output_config: outputConfig,
+    // Volatile content (metrics + recalled memory) sits after the cached prefix.
+    messages: [{ role: "user", content: buildUserMessage(input) }],
+  });
 
-  if (choice?.message.refusal) {
-    throw new Error(`Model refused to generate the brief: ${choice.message.refusal}`);
+  if (message.stop_reason === "refusal") {
+    throw new Error("Model refused to generate the brief.");
   }
-  const content = choice?.message.content;
+
+  // With structured output, the JSON arrives in the text block(s). (Thinking
+  // blocks may precede it; we skip those.)
+  const content = message.content
+    .map((block) => (block.type === "text" ? block.text : ""))
+    .join("");
   if (!content) {
     throw new Error(
-      `Empty brief (finish_reason=${choice?.finish_reason}). Likely hit max_completion_tokens.`,
+      `Empty brief (stop_reason=${message.stop_reason}). Likely hit max_tokens.`,
     );
   }
 
-  // Strict schema guarantees the shape, but validate anyway — single source of truth.
+  // Structured output guarantees the shape, but validate anyway — single source of truth.
   const brief: GrowthBrief = GrowthBriefSchema.parse(JSON.parse(content));
 
-  const u = completion.usage;
+  const u = message.usage;
   return {
     brief,
     usage: {
-      inputTokens: u?.prompt_tokens ?? 0,
-      outputTokens: u?.completion_tokens ?? 0,
-      cacheReadInputTokens: u?.prompt_tokens_details?.cached_tokens ?? 0,
-      cacheCreationInputTokens: 0, // OpenAI caching is automatic; no separate write count.
+      inputTokens: u.input_tokens,
+      outputTokens: u.output_tokens,
+      cacheReadInputTokens: u.cache_read_input_tokens ?? 0,
+      cacheCreationInputTokens: u.cache_creation_input_tokens ?? 0,
     },
   };
 }

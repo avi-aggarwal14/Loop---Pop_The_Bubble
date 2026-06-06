@@ -1,14 +1,15 @@
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { BusinessProfileSchema, type BusinessProfile } from "./schema";
 import type { FetchedSite } from "./fetch";
 
 /**
- * Extract a structured BusinessProfile from scraped website text using OpenAI
- * structured output. Same strict-json_schema approach as lib/brief/generate.ts.
- * Extraction isn't reasoning-heavy, so reasoning_effort is left off by default.
+ * Extract a structured BusinessProfile from scraped website text using Claude's
+ * structured outputs. Same `output_config.format` + zod-backstop approach as
+ * lib/brief/generate.ts. Extraction isn't reasoning-heavy, so thinking is left off.
  */
 
-const EXTRACT_MODEL = process.env.OPENAI_EXTRACT_MODEL ?? process.env.OPENAI_MODEL ?? "gpt-5";
+const EXTRACT_MODEL =
+  process.env.ANTHROPIC_EXTRACT_MODEL ?? process.env.ANTHROPIC_MODEL ?? "claude-opus-4-8";
 
 const EXTRACT_SYSTEM = `You extract a structured business profile from a company's OWN website text.
 Be strictly factual: use only what the text supports. If something isn't stated, write "unknown"
@@ -49,9 +50,9 @@ const PROFILE_JSON_SCHEMA = {
 
 export async function extractBusinessProfile(
   site: FetchedSite,
-  client?: OpenAI,
+  client?: Anthropic,
 ): Promise<BusinessProfile> {
-  const openai = client ?? new OpenAI();
+  const anthropic = client ?? new Anthropic();
 
   const pageList = site.pages.map((p) => `- ${p.title || "(untitled)"} → ${p.url}`).join("\n");
   const userContent = [
@@ -62,20 +63,22 @@ export async function extractBusinessProfile(
     site.combinedText,
   ].join("\n");
 
-  const completion = await openai.chat.completions.create({
+  const message = await anthropic.messages.create({
     model: EXTRACT_MODEL,
-    max_completion_tokens: 4000,
-    messages: [
-      { role: "system", content: EXTRACT_SYSTEM },
-      { role: "user", content: userContent },
-    ],
-    response_format: {
-      type: "json_schema",
-      json_schema: { name: "business_profile", strict: true, schema: PROFILE_JSON_SCHEMA },
+    max_tokens: 4000,
+    system: EXTRACT_SYSTEM,
+    output_config: {
+      format: { type: "json_schema", schema: PROFILE_JSON_SCHEMA as Record<string, unknown> },
     },
+    messages: [{ role: "user", content: userContent }],
   });
 
-  const content = completion.choices[0]?.message.content;
+  if (message.stop_reason === "refusal") {
+    throw new Error("Model refused the business-profile extraction.");
+  }
+  const content = message.content
+    .map((block) => (block.type === "text" ? block.text : ""))
+    .join("");
   if (!content) throw new Error("Empty business-profile extraction");
   return BusinessProfileSchema.parse(JSON.parse(content));
 }
