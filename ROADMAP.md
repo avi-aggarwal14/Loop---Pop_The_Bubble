@@ -163,7 +163,8 @@ Product-level intelligence so the "one move" can be product-specific.
 
 ## Phase 7 — App shell, auth & dashboard UI  ·  coordinate with teammate
 - [ ] **[TEAM]** Confirm the Next.js app exists; my `app/api/*` + `lib/*` slot in; deps merge into `package.json`.
-- [ ] **[ME]** Supabase Auth (email magic-link) via `@supabase/ssr`; the per-user RLS client.
+- [x] **[ME]** Supabase server-session lookup via `@supabase/ssr` for connector starts; production no longer depends on `founder_id` query params.
+- [ ] **[ME]** Build the visible Supabase Auth UI (email magic-link/login) and the per-user dashboard RLS client.
 - [ ] **[ME]** Replace the `founder_id` query param on the connect links with the server session (see the `NOTE` in `handleShopifyStart`/`handleGoogleStart`).
 - [~] **[ME]** **Dashboard page:** ✅ a DEMO is built — `/brief` (`components/brief/BriefDashboard.tsx`) renders the brief card in the Synapse aesthetic + "Generate with Claude" (`/api/brief/demo`) + Done/Skipped + outcome (local). **Remaining:** list real briefs (`getLatestBriefs`) and wire Done/Skipped → `POST /api/briefs/[id]/action` once auth + Supabase are in.
 - [ ] **[ME]** **Connect page:** buttons for Shopify / GA4 / Vercel / paste-website; onboarding captures `business_context` and triggers the scraper.
