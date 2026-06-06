@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-html {
-  scroll-behavior: smooth;
-}
+html, body { margin: 0; padding: 0; background: #EAE3D6; }
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+/* Product card glow halo */
+@keyframes synProdGlow { 0%, 100% { opacity: .85; } 50% { opacity: 1; } }
+.syn-prod-glow { animation: synProdGlow 3.2s ease-in-out infinite; }
+
+/* Pulsing ring on the selected hero star */
+@keyframes synStarRing { 0% { transform: scale(0.6); opacity: 0.9; } 70% { transform: scale(1.6); opacity: 0; } 100% { opacity: 0; } }
+.syn-star-ring { animation: synStarRing 1.9s ease-out infinite; }
+
+/* Brand cross-fade: theme switches transition smoothly across the whole page */
+.syn-fade, .syn-fade section, .syn-fade [data-fade] { transition: background-color .5s ease, border-color .5s ease, color .5s ease; }
+.syn-fade h1, .syn-fade h2, .syn-fade h3, .syn-fade p, .syn-fade span, .syn-fade div, .syn-fade button { transition: background-color .5s ease, border-color .5s ease, color .5s ease, box-shadow .5s ease; }

@@ -4,6 +4,7 @@ import './globals.css'
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
+  style: ['normal', 'italic'],
   variable: '--font-playfair',
   display: 'swap',
 })
@@ -21,17 +22,15 @@ const jetbrains = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Synapse — Your analytics, turned into one decision.',
+  title: 'Synapse — A mind for your company',
   description:
-    'Synapse connects to your Shopify, Stripe, or Google Analytics and gives you a weekly Growth Brief — what\'s working, what to cut, and the one move that will actually move the needle.',
+    'Synapse remembers every product, order and metric your business has ever made — and weighs today against all of it. Your analytics, turned into one decision.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${playfair.variable} ${dmSans.variable} ${jetbrains.variable}`}>
-      <body className="bg-[#0A0A0A] text-[#F5F5F5] font-sans antialiased">
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   )
 }
