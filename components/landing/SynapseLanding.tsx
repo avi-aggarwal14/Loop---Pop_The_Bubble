@@ -346,7 +346,7 @@ function WaitlistForm({ theme, onInk = false, width = "100%", gap = 10, height =
         fontFamily: SYN.sans, fontSize, color: onInk ? "#fff" : theme.text }}>
         <span style={{ width: 22, height: 22, flex: "0 0 auto", borderRadius: "50%", background: theme.accent,
           color: theme.onAccent || "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>✓</span>
-        <span>You're on the list — check your inbox to confirm.</span>
+        <span>You're on the waitlist — keep a lookout for updates.</span>
       </div>
     );
   }
