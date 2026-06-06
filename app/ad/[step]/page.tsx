@@ -6,6 +6,8 @@ export const metadata = {
 };
 
 const CAN_IMAGE = "/demo-assets/red-bull-coconut-berry.webp";
+const MEMORY_CAN_IMAGE = "/demo-assets/red-bull-memory-alt.avif";
+const SUMMER_CAN_IMAGE = "/demo-assets/red-bull-summer-edition.jpg";
 
 const F = {
   serif: "var(--font-playfair), 'Playfair Display', Georgia, serif",
@@ -73,16 +75,19 @@ const memoryCards = [
   {
     title: "Tropical Edition",
     when: "April launch memory",
+    image: MEMORY_CAN_IMAGE,
     text: "When TikTok crossed 30% of product revenue and weekend velocity exceeded weekday velocity by 40%+, stockout followed within 4 days.",
   },
   {
     title: "Peach Edition",
     when: "May promotion memory",
+    image: SUMMER_CAN_IMAGE,
     text: "A 35%+ units-sold lift with less than 1.5k inventory left created a two-day sellout window after one creator repost.",
   },
   {
     title: "Coconut & Berry",
     when: "Current week",
+    image: CAN_IMAGE,
     text: "The same pattern is forming again: TikTok concentration, weekend acceleration, higher conversion, and only 1,180 cans left.",
   },
 ];
@@ -139,18 +144,21 @@ const verdictAlternatives = [
     name: "Watermelon Edition",
     signal: "predicted to fade",
     metric: "-18% demand in 14 days",
+    image: MEMORY_CAN_IMAGE,
     text: "mubit recalls a similar early-summer lift that fell once creator traffic moved back to limited editions.",
   },
   {
     name: "Tropical Edition",
     signal: "promotion fatigue",
     metric: "ROAS sliding 3.1 -> 1.7",
+    image: SUMMER_CAN_IMAGE,
     text: "past briefs show paid spend kept rising after organic intent had already peaked.",
   },
   {
     name: "Peach Edition",
     signal: "inventory is safe",
     metric: "7.6 days runway",
+    image: CAN_IMAGE,
     text: "recent sales look healthy, but memory marks it as a trailing product after the first weekend spike.",
   },
 ];
@@ -303,7 +311,7 @@ function ValidationChatSlide() {
     >
       <StageStyles />
 
-      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px minmax(0, 1fr) 34px", gap: 14 }}>
+      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px minmax(0, 1fr) 32px", gap: 12 }}>
         <header style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
           <Brand />
           <SegmentedNav active="AI READ" />
@@ -1007,14 +1015,30 @@ function EvidenceCard({ label, value, detail, index }: { label: string; value: s
   );
 }
 
-function MemoryCard({ title, when, text, index }: { title: string; when: string; text: string; index: number }) {
+function MemoryCard({ title, when, text, image, index }: { title: string; when: string; text: string; image: string; index: number }) {
   return (
-    <Frame className="card-in" style={{ padding: 15, borderColor: index === 2 ? "rgba(250,84,0,0.34)" : C.hair, animationDelay: `${220 + index * 80}ms` } as React.CSSProperties}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
-        <h3 style={{ margin: 0, fontFamily: F.serif, fontStyle: "italic", fontSize: 25, lineHeight: 1 }}>{title}</h3>
-        <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: "0.1em", textTransform: "uppercase" }}>{when}</span>
+    <Frame className="card-in" style={{ padding: 11, borderColor: index === 2 ? "rgba(250,84,0,0.34)" : C.hair, animationDelay: `${220 + index * 80}ms` } as React.CSSProperties}>
+      <div style={{ display: "grid", gridTemplateColumns: "42px 1fr", gap: 12, alignItems: "center" }}>
+        <img
+          src={image}
+          alt=""
+          style={{
+            width: 42,
+            height: 54,
+            objectFit: "contain",
+            borderRadius: 10,
+            background: "rgba(255,255,255,0.72)",
+            boxShadow: "0 8px 20px rgba(33,28,23,0.08)",
+          }}
+        />
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
+            <h3 style={{ margin: 0, fontFamily: F.serif, fontStyle: "italic", fontSize: 22, lineHeight: 1 }}>{title}</h3>
+            <span style={{ fontFamily: F.mono, fontSize: 8, color: C.faint, letterSpacing: "0.1em", textTransform: "uppercase" }}>{when}</span>
+          </div>
+          <p style={{ margin: "6px 0 0", color: C.muted, lineHeight: 1.28, fontSize: 12 }}>{text}</p>
+        </div>
       </div>
-      <p style={{ margin: "9px 0 0", color: C.muted, lineHeight: 1.36, fontSize: 13.5 }}>{text}</p>
     </Frame>
   );
 }
@@ -1039,24 +1063,24 @@ function PredictionSlide() {
           <SegmentedNav active="AI READ" />
         </header>
 
-        <section style={{ display: "grid", gridTemplateColumns: "0.42fr 0.58fr", gap: 18, minHeight: 0 }}>
-          <div style={{ display: "grid", gridTemplateRows: "auto minmax(0, 1fr)", gap: 14, minHeight: 0 }}>
-            <Frame style={{ padding: 22, overflow: "visible", borderColor: "rgba(250,84,0,0.32)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
+        <section style={{ display: "grid", gridTemplateColumns: "0.42fr 0.58fr", gap: 16, minHeight: 0 }}>
+          <div style={{ display: "grid", gridTemplateRows: "auto minmax(0, 1fr)", gap: 10, minHeight: 0 }}>
+            <Frame style={{ padding: 18, overflow: "visible", borderColor: "rgba(250,84,0,0.32)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
               <Eyebrow>Full prediction</Eyebrow>
-              <h1 style={{ margin: "12px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(38px, 4vw, 68px)", lineHeight: 0.94 }}>
+              <h1 style={{ margin: "10px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(34px, 3.6vw, 60px)", lineHeight: 0.95 }}>
                 Stockout likely inside the next order cycle.
               </h1>
-              <p style={{ margin: "14px 0 0", color: C.muted, fontSize: 15, lineHeight: 1.42 }}>
+              <p style={{ margin: "11px 0 0", color: C.muted, fontSize: 13.5, lineHeight: 1.35 }}>
                 Synapse predicts Red Bull Coconut & Berry will run out in 3-4 days unless replenishment is confirmed or promotion is slowed. The prediction is not just based on this week: it matches the store's remembered pattern from prior limited-edition launches.
               </p>
             </Frame>
 
-            <Frame style={{ padding: 18, minHeight: 0 }}>
+            <Frame style={{ padding: 14, minHeight: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                 <Eyebrow>Past memory</Eyebrow>
                 <span style={{ fontFamily: F.mono, fontSize: 10, color: C.green, letterSpacing: "0.08em" }}>mubit recall</span>
               </div>
-              <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+              <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
                 {memoryCards.map((memory, index) => (
                   <MemoryCard key={memory.title} {...memory} index={index} />
                 ))}
@@ -1337,39 +1361,39 @@ function FinalVerdictSlide() {
     >
       <StageStyles />
 
-      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px 1fr 36px", gap: 18 }}>
+      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px minmax(0, 1fr) 32px", gap: 12 }}>
         <header style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
           <Brand />
           <SegmentedNav active="AI READ" />
         </header>
 
-        <section style={{ display: "grid", gridTemplateColumns: "0.58fr 0.42fr", gap: 18, minHeight: 0 }}>
-          <div style={{ display: "grid", gridTemplateRows: "auto minmax(0, 1fr)", gap: 12, minHeight: 0 }}>
-            <Frame style={{ padding: 24, borderColor: "rgba(250,84,0,0.32)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
+        <section style={{ display: "grid", gridTemplateColumns: "0.58fr 0.42fr", gap: 16, minHeight: 0 }}>
+          <div style={{ display: "grid", gridTemplateRows: "auto minmax(0, 1fr)", gap: 10, minHeight: 0 }}>
+            <Frame style={{ padding: 20, borderColor: "rgba(250,84,0,0.32)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
                 <Eyebrow>Final verdict</Eyebrow>
                 <span style={{ fontFamily: F.mono, fontSize: 10, color: C.red, letterSpacing: "0.08em" }}>DO NOT REDUCE</span>
               </div>
-              <h1 style={{ margin: "12px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(40px, 4.4vw, 76px)", lineHeight: 0.92 }}>
+              <h1 style={{ margin: "10px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(34px, 4vw, 66px)", lineHeight: 0.92 }}>
                 Do not decrease Coconut & Berry.
               </h1>
-              <p style={{ margin: "14px 0 0", color: C.muted, fontSize: 16, lineHeight: 1.4 }}>
+              <p style={{ margin: "11px 0 0", color: C.muted, fontSize: 14, lineHeight: 1.35 }}>
                 The correct move is to increase sales pressure while inventory is still available, then protect the reorder. The product is showing the exact limited-edition breakout pattern Synapse remembers from prior launches.
               </p>
             </Frame>
 
-            <Frame className="scan" style={{ padding: 20, minHeight: 0 }}>
+            <Frame className="scan" style={{ padding: 17, minHeight: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
                 <Eyebrow>What to do instead</Eyebrow>
                 <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>current pull + mubit memory</span>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginTop: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 9, marginTop: 11 }}>
                 {[
                   ["1", "Increase Coconut & Berry", "Keep TikTok and search live until stock or reorder confirmation becomes the constraint."],
                   ["2", "Slow the likely fall-offs", "Reduce promotion on other drinks that still look healthy now but memory predicts will fade soon."],
                   ["3", "Move budget into the breakout", "Shift spend and homepage space toward the product with rising conversion and urgent stock risk."],
                 ].map(([number, title, text], index) => (
-                  <Frame key={title} className="card-in" style={{ padding: 15, animationDelay: `${index * 70}ms`, borderColor: index === 0 ? "rgba(250,84,0,0.3)" : C.hair } as React.CSSProperties}>
+                  <Frame key={title} className="card-in" style={{ padding: 12, animationDelay: `${index * 70}ms`, borderColor: index === 0 ? "rgba(250,84,0,0.3)" : C.hair } as React.CSSProperties}>
                     <div
                       style={{
                         width: 30,
@@ -1385,22 +1409,22 @@ function FinalVerdictSlide() {
                     >
                       {number}
                     </div>
-                    <h3 style={{ margin: "12px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 26, lineHeight: 0.98 }}>{title}</h3>
-                    <p style={{ margin: "9px 0 0", color: C.muted, fontSize: 13, lineHeight: 1.38 }}>{text}</p>
+                    <h3 style={{ margin: "9px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 22, lineHeight: 0.98 }}>{title}</h3>
+                    <p style={{ margin: "7px 0 0", color: C.muted, fontSize: 11.5, lineHeight: 1.3 }}>{text}</p>
                   </Frame>
                 ))}
               </div>
             </Frame>
           </div>
 
-          <div style={{ display: "grid", gridTemplateRows: "0.82fr 1fr", gap: 14, minHeight: 0 }}>
-            <Frame style={{ padding: 22, display: "grid", placeItems: "center", background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,251,254,0.9))" }}>
+          <div style={{ display: "grid", gridTemplateRows: "0.55fr 1fr", gap: 10, minHeight: 0 }}>
+            <Frame style={{ padding: 14, display: "grid", placeItems: "center", background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,251,254,0.9))" }}>
               <img
                 className="hero-can"
                 src={CAN_IMAGE}
                 alt=""
                 style={{
-                  maxHeight: "min(39vh, 340px)",
+                  maxHeight: "min(26vh, 250px)",
                   width: "auto",
                   maxWidth: "84%",
                   objectFit: "contain",
@@ -1409,20 +1433,36 @@ function FinalVerdictSlide() {
               />
             </Frame>
 
-            <Frame style={{ padding: 22, minHeight: 0 }}>
+            <Frame style={{ padding: 16, minHeight: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
                 <Eyebrow>Decrease these instead</Eyebrow>
                 <span style={{ fontFamily: F.mono, fontSize: 10, color: C.green, letterSpacing: "0.08em" }}>MUBIT FORECAST</span>
               </div>
-              <div style={{ display: "grid", gap: 10, marginTop: 15 }}>
+              <div style={{ display: "grid", gap: 7, marginTop: 11 }}>
                 {verdictAlternatives.map((drink, index) => (
-                  <Frame key={drink.name} className="card-in" style={{ padding: 14, animationDelay: `${index * 70}ms` } as React.CSSProperties}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
-                      <h3 style={{ margin: 0, fontFamily: F.serif, fontStyle: "italic", fontSize: 26, lineHeight: 1 }}>{drink.name}</h3>
-                      <span style={{ fontFamily: F.mono, color: C.red, fontSize: 10, letterSpacing: "0.06em" }}>{drink.metric}</span>
+                  <Frame key={drink.name} className="card-in" style={{ padding: 10, animationDelay: `${index * 70}ms` } as React.CSSProperties}>
+                    <div style={{ display: "grid", gridTemplateColumns: "38px 1fr", gap: 10, alignItems: "center" }}>
+                      <img
+                        src={drink.image}
+                        alt=""
+                        style={{
+                          width: 38,
+                          height: 48,
+                          objectFit: "contain",
+                          borderRadius: 9,
+                          background: "rgba(255,255,255,0.72)",
+                          boxShadow: "0 8px 18px rgba(33,28,23,0.08)",
+                        }}
+                      />
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
+                          <h3 style={{ margin: 0, fontFamily: F.serif, fontStyle: "italic", fontSize: 21, lineHeight: 1 }}>{drink.name}</h3>
+                          <span style={{ fontFamily: F.mono, color: C.red, fontSize: 9, letterSpacing: "0.04em" }}>{drink.metric}</span>
+                        </div>
+                        <div style={{ marginTop: 4, fontFamily: F.mono, color: C.faint, fontSize: 8, letterSpacing: "0.12em", textTransform: "uppercase" }}>{drink.signal}</div>
+                        <p style={{ margin: "5px 0 0", color: C.muted, fontSize: 11.5, lineHeight: 1.28 }}>{drink.text}</p>
+                      </div>
                     </div>
-                    <div style={{ marginTop: 8, fontFamily: F.mono, color: C.faint, fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase" }}>{drink.signal}</div>
-                    <p style={{ margin: "8px 0 0", color: C.muted, fontSize: 13.5, lineHeight: 1.42 }}>{drink.text}</p>
                   </Frame>
                 ))}
               </div>
