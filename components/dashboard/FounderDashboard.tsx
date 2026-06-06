@@ -11,6 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GrowthBrief, TrendDirection } from "@/lib/brief/schema";
+import type { Advice } from "@/lib/advise/schema";
 import { SAMPLE_BRIEF } from "@/lib/brief/sample";
 
 const F = {
@@ -198,6 +199,50 @@ function BriefCard({ brief, live }: { brief: GrowthBrief; live: boolean }) {
   );
 }
 
+// ── Ask Synapse answer card ──────────────────────────────────────────────────
+function AdviceCard({ advice, live }: { advice: Advice; live: boolean }) {
+  const sc = advice.stance === "do" ? C.up : advice.stance === "dont" ? C.down : "#F59E0B";
+  const sl = advice.stance === "do" ? "Go ahead" : advice.stance === "dont" ? "Don't — do the opposite" : "Proceed with caution";
+  return (
+    <article style={{ marginTop: 14, background: C.card, border: `1px solid ${sc}55`, borderRadius: 16, padding: "clamp(18px,3vw,26px)", boxShadow: "0 24px 70px rgba(0,0,0,0.45)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+        <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: sc, border: `1px solid ${sc}66`, borderRadius: 100, padding: "3px 10px" }}>{sl}</span>
+        <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: live ? C.up : C.faint, border: `1px solid ${live ? C.up + "66" : C.border2}`, borderRadius: 100, padding: "3px 9px" }}>{live ? "● live · Claude" : "sample"}</span>
+      </div>
+      <h3 style={{ margin: 0, fontFamily: F.serif, fontWeight: 700, fontSize: "clamp(20px,4vw,26px)", lineHeight: 1.2, color: C.text }}>{advice.headline}</h3>
+      <p style={{ margin: "12px 0 0", fontSize: 15, lineHeight: 1.6, color: C.muted }}>{advice.summary}</p>
+
+      {advice.signals.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <Eyebrow>The signals</Eyebrow>
+          <div style={{ display: "grid", gap: 8 }}>
+            {advice.signals.map((s, i) => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "minmax(108px,148px) 1fr", gap: 12, alignItems: "baseline" }}>
+                <span style={{ fontFamily: F.mono, fontSize: 11.5, color: sc }}>{s.label}</span>
+                <span style={{ fontFamily: F.sans, fontSize: 13.5, color: C.text, lineHeight: 1.45 }}>{s.detail}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {advice.memory_used.length > 0 && (
+        <div style={{ marginTop: 20, borderRadius: 12, border: `1px solid ${C.accent}44`, background: `${C.accent}10`, padding: "14px 16px" }}>
+          <div style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: C.accent, marginBottom: 9 }}>🧠 What Synapse remembered</div>
+          <ul style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 6 }}>
+            {advice.memory_used.map((m, i) => (<li key={i} style={{ fontFamily: F.sans, fontSize: 13.5, lineHeight: 1.5, color: C.text }}>{m}</li>))}
+          </ul>
+        </div>
+      )}
+
+      <div style={{ marginTop: 20, borderRadius: 14, border: `1px solid ${sc}55`, background: `linear-gradient(180deg, ${sc}1a, ${sc}08)`, padding: "16px 18px" }}>
+        <div style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: sc, marginBottom: 8 }}>Recommended move</div>
+        <div style={{ fontFamily: F.serif, fontSize: "clamp(17px,3.5vw,21px)", fontWeight: 700, lineHeight: 1.25, color: C.text }}>{advice.recommended_move}</div>
+      </div>
+    </article>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function FounderDashboard() {
   // Default = real/blank. ?demo=1 turns on the simulated walk-through (recording).
@@ -213,8 +258,33 @@ export default function FounderDashboard() {
   const [briefLive, setBriefLive] = useState(false);
   const [briefLoading, setBriefLoading] = useState(false);
   const [action, setAction] = useState<"pending" | "done" | "skipped">("pending");
-  const [ask, setAsk] = useState("");
+  const [askInput, setAskInput] = useState("");
+  const [asking, setAsking] = useState(false);
+  const [advice, setAdvice] = useState<Advice | null>(null);
+  const [adviceLive, setAdviceLive] = useState(false);
+  const [askErr, setAskErr] = useState("");
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const submitAsk = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      const q = askInput.trim();
+      if (!q || asking) return;
+      setAsking(true);
+      setAskErr("");
+      try {
+        const r = await fetch("/api/advice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q }) });
+        const j = (await r.json()) as { advice?: Advice; live?: boolean };
+        if (j.advice) { setAdvice(j.advice); setAdviceLive(Boolean(j.live)); }
+        else setAskErr("Couldn't get an answer — try again.");
+      } catch {
+        setAskErr("Network error — try again.");
+      } finally {
+        setAsking(false);
+      }
+    },
+    [askInput, asking],
+  );
 
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
 
@@ -403,21 +473,40 @@ export default function FounderDashboard() {
           </div>
         )}
 
-        {/* Ask Synapse — preview of the upcoming advisor */}
+        {/* Ask Synapse — functional in demo mode (example store), preview otherwise */}
         <section style={{ marginBottom: 30 }}>
           <Eyebrow>Ask Synapse</Eyebrow>
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "18px 20px" }}>
             <p style={{ margin: "0 0 14px", fontFamily: F.sans, fontSize: 14, color: C.muted, lineHeight: 1.55 }}>
-              Once your data is connected, ask Synapse about any decision in plain English and it answers from your store&apos;s memory.
+              {demo
+                ? "Ask about any decision in plain English — Synapse answers from this store's data and everything it remembers."
+                : "Once your data is connected, ask Synapse about any decision in plain English and it answers from your store's memory."}
             </p>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <input value={ask} onChange={(e) => setAsk(e.target.value)} placeholder="e.g. Should I discount the Linen Shirt this week?" className="syn-in" style={{ ...inputStyle, flex: 1, minWidth: 240, height: 44 }} disabled />
-              <button type="button" style={{ ...btnPrimary, opacity: 0.5, cursor: "not-allowed" }} disabled title="Coming this week">Ask →</button>
-            </div>
-            <div style={{ marginTop: 10, fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.06em", color: C.faint, textTransform: "uppercase" }}>
-              ● Advisor rolling out this week
-            </div>
+            <form onSubmit={submitAsk} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <input
+                value={askInput}
+                onChange={(e) => setAskInput(e.target.value)}
+                placeholder={demo ? "e.g. Should I decrease Coconut & Berry next week?" : "e.g. Should I discount the Linen Shirt this week?"}
+                className="syn-in"
+                style={{ ...inputStyle, flex: 1, minWidth: 240, height: 44, opacity: demo ? 1 : 0.7 }}
+                disabled={!demo || asking}
+              />
+              <button type="submit" style={{ ...btnPrimary, opacity: !demo || asking ? 0.5 : 1, cursor: !demo || asking ? "default" : "pointer" }} disabled={!demo || asking}>
+                {asking ? "Thinking…" : "Ask →"}
+              </button>
+            </form>
+            {demo ? (
+              <div style={{ marginTop: 10, display: "flex", gap: 7, flexWrap: "wrap" }}>
+                {["Should I decrease Coconut & Berry next week?", "Is it time to reorder?", "Where should I put £500 of ad spend?"].map((q) => (
+                  <button key={q} type="button" onClick={() => setAskInput(q)} disabled={asking} style={{ fontFamily: F.sans, fontSize: 11.5, color: C.muted, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 100, padding: "5px 11px", cursor: "pointer" }}>{q}</button>
+                ))}
+              </div>
+            ) : (
+              <div style={{ marginTop: 10, fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.06em", color: C.faint, textTransform: "uppercase" }}>● Available once your data is connected</div>
+            )}
+            {askErr && <div style={{ marginTop: 12, fontFamily: F.sans, fontSize: 13, color: C.down }}>{askErr}</div>}
           </div>
+          {advice && <AdviceCard advice={advice} live={adviceLive} />}
         </section>
 
         {/* Brief history */}
