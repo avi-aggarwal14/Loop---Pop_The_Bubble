@@ -1,14 +1,14 @@
 "use client";
 
-// Founder dashboard — the logged-in product home. Four parts:
-//   1) Connect your data (source cards → the real OAuth start routes)
-//   2) This week's Growth Brief (live via /api/brief/demo, sample fallback) + capture
-//   3) Brief history (past weeks)
-//   4) Ask Synapse (the on-demand advisor — UI preview; engine lands next)
-// Pure front-end against the existing demo endpoint + sample data; structured so
-// real per-founder data (getLatestBriefs, auth) drops in later.
+// Founder dashboard — one page, state-driven. The whole page moves through the
+// founder journey from the spec:
+//   EMPTY  → (connect a source) → SYNCING (pull + remember history) → READY
+// In demo mode the journey is walked through live (Connect → Syncing → Ready,
+// with a simulated history backfill), and "Restart" replays it for recording.
+// Same component reads real connection/brief data once it exists — the states
+// just swap their data source (Supabase connections, getLatestBriefs, mubit).
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { GrowthBrief, TrendDirection } from "@/lib/brief/schema";
 import { SAMPLE_BRIEF } from "@/lib/brief/sample";
 
@@ -31,12 +31,28 @@ const C = {
   down: "#F43F5E",
 };
 
-// Demo founder until Supabase Auth lands.
 const FOUNDER_ID = "demo";
 const BUSINESS = "Aveline Threads";
+const HISTORY_WEEKS = 62; // ~14 months — the backfill we "remember" on connect
 
 const dirColor = (d: TrendDirection) => (d === "up" ? C.up : d === "down" ? C.down : C.muted);
 const dirArrow = (d: TrendDirection) => (d === "up" ? "↑" : d === "down" ? "↓" : "→");
+
+type SourceId = "shopify" | "ga4" | "website";
+type SourceStatus = "not_connected" | "syncing" | "connected";
+
+interface Source {
+  id: SourceId;
+  name: string;
+  desc: string;
+  tint: string;
+  kind: "shopify" | "google" | "website";
+}
+const SOURCES: Source[] = [
+  { id: "shopify", name: "Shopify", desc: "Orders, products, inventory & full sales history", tint: "#95BF47", kind: "shopify" },
+  { id: "ga4", name: "Google Analytics", desc: "Traffic, sessions & conversion", tint: "#E8710A", kind: "google" },
+  { id: "website", name: "Your website", desc: "What you sell & how you position it", tint: "#60A5FA", kind: "website" },
+];
 
 function SynMark({ size = 22 }: { size?: number }) {
   return (
@@ -55,75 +71,6 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ── Connect your data ────────────────────────────────────────────────────────
-type SourceStatus = "connected" | "available" | "soon";
-interface Source {
-  id: string;
-  name: string;
-  desc: string;
-  status: SourceStatus;
-  tint: string;
-  /** "shopify" needs a shop domain; "google" just goes; "website" pastes a URL. */
-  kind: "shopify" | "google" | "website";
-}
-const SOURCES: Source[] = [
-  { id: "shopify", name: "Shopify", desc: "Orders, products, inventory & sales history", status: "connected", tint: "#95BF47", kind: "shopify" },
-  { id: "ga4", name: "Google Analytics", desc: "Traffic, sessions & conversion", status: "available", tint: "#E8710A", kind: "google" },
-  { id: "website", name: "Your website", desc: "What you sell & how you position it", status: "available", tint: "#60A5FA", kind: "website" },
-];
-
-function ConnectCard({ source }: { source: Source }) {
-  const [shop, setShop] = useState("");
-  const [url, setUrl] = useState("");
-  const connected = source.status === "connected";
-
-  function go() {
-    if (source.kind === "shopify") {
-      const s = shop.trim();
-      if (!s) return;
-      const domain = s.includes(".") ? s : `${s}.myshopify.com`;
-      window.location.href = `/api/auth/shopify?shop=${encodeURIComponent(domain)}&founder_id=${FOUNDER_ID}`;
-    } else if (source.kind === "google") {
-      window.location.href = `/api/auth/google?founder_id=${FOUNDER_ID}`;
-    }
-  }
-
-  return (
-    <div style={{ background: C.card, border: `1px solid ${connected ? C.up + "55" : C.border}`, borderRadius: 14, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
-        <span style={{ width: 34, height: 34, borderRadius: 9, flex: "0 0 auto", background: source.tint + "22", border: `1px solid ${source.tint}55`, display: "flex", alignItems: "center", justifyContent: "center", color: source.tint, fontFamily: F.serif, fontWeight: 700, fontSize: 16 }}>
-          {source.name[0]}
-        </span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 14.5, color: C.text }}>{source.name}</div>
-          <div style={{ fontFamily: F.sans, fontSize: 12, color: C.muted, lineHeight: 1.35 }}>{source.desc}</div>
-        </div>
-        {connected && (
-          <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.up, border: `1px solid ${C.up}55`, borderRadius: 100, padding: "3px 9px", whiteSpace: "nowrap" }}>
-            ● Connected
-          </span>
-        )}
-      </div>
-
-      {!connected && source.kind === "shopify" && (
-        <div style={{ display: "flex", gap: 8 }}>
-          <input value={shop} onChange={(e) => setShop(e.target.value)} placeholder="your-store.myshopify.com" className="syn-in" style={inputStyle} />
-          <button type="button" style={btnPrimary} onClick={go}>Connect</button>
-        </div>
-      )}
-      {!connected && source.kind === "google" && (
-        <button type="button" style={{ ...btnPrimary, alignSelf: "flex-start" }} onClick={go}>Connect Google Analytics</button>
-      )}
-      {!connected && source.kind === "website" && (
-        <div style={{ display: "flex", gap: 8 }}>
-          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://yourstore.com" className="syn-in" style={inputStyle} />
-          <button type="button" style={btnGhost} onClick={() => setUrl(url)}>Add</button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 const inputStyle: React.CSSProperties = {
   flex: 1, minWidth: 0, height: 38, padding: "0 12px", borderRadius: 9,
   background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border2}`,
@@ -137,6 +84,69 @@ const btnGhost: React.CSSProperties = {
   fontFamily: F.sans, fontSize: 13, fontWeight: 600, color: C.text, background: "transparent",
   border: `1px solid ${C.border2}`, borderRadius: 9, padding: "9px 15px", cursor: "pointer", whiteSpace: "nowrap",
 };
+
+// ── Connect card (state-driven) ──────────────────────────────────────────────
+function ConnectCard({
+  source, status, progress, weeksDone, onConnect,
+}: {
+  source: Source;
+  status: SourceStatus;
+  progress: number;
+  weeksDone: number;
+  onConnect: (id: SourceId, value: string) => void;
+}) {
+  const [val, setVal] = useState("");
+  const connected = status === "connected";
+  const syncing = status === "syncing";
+  const borderColor = connected ? C.up + "55" : syncing ? C.accent + "66" : C.border;
+
+  return (
+    <div style={{ background: C.card, border: `1px solid ${borderColor}`, borderRadius: 14, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+        <span style={{ width: 34, height: 34, borderRadius: 9, flex: "0 0 auto", background: source.tint + "22", border: `1px solid ${source.tint}55`, display: "flex", alignItems: "center", justifyContent: "center", color: source.tint, fontFamily: F.serif, fontWeight: 700, fontSize: 16 }}>
+          {source.name[0]}
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 14.5, color: C.text }}>{source.name}</div>
+          <div style={{ fontFamily: F.sans, fontSize: 12, color: C.muted, lineHeight: 1.35 }}>{source.desc}</div>
+        </div>
+        {connected && (
+          <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.up, border: `1px solid ${C.up}55`, borderRadius: 100, padding: "3px 9px", whiteSpace: "nowrap" }}>● Connected</span>
+        )}
+        {syncing && (
+          <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.accent, border: `1px solid ${C.accent}66`, borderRadius: 100, padding: "3px 9px", whiteSpace: "nowrap" }}>Syncing</span>
+        )}
+      </div>
+
+      {syncing && (
+        <div>
+          <div style={{ height: 6, borderRadius: 6, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+            <div style={{ width: `${progress}%`, height: "100%", background: C.accent, borderRadius: 6, transition: "width .1s linear" }} />
+          </div>
+          <div style={{ marginTop: 8, fontFamily: F.mono, fontSize: 10.5, color: C.muted, letterSpacing: "0.04em" }}>
+            Remembering week {Math.min(weeksDone, HISTORY_WEEKS)} of {HISTORY_WEEKS} · {Math.round(progress)}%
+          </div>
+        </div>
+      )}
+
+      {!connected && !syncing && source.kind === "shopify" && (
+        <div style={{ display: "flex", gap: 8 }}>
+          <input value={val} onChange={(e) => setVal(e.target.value)} placeholder="your-store.myshopify.com" className="syn-in" style={inputStyle} />
+          <button type="button" style={btnPrimary} onClick={() => onConnect(source.id, val)}>Connect</button>
+        </div>
+      )}
+      {!connected && !syncing && source.kind === "google" && (
+        <button type="button" style={{ ...btnPrimary, alignSelf: "flex-start" }} onClick={() => onConnect(source.id, "")}>Connect Google Analytics</button>
+      )}
+      {!connected && !syncing && source.kind === "website" && (
+        <div style={{ display: "flex", gap: 8 }}>
+          <input value={val} onChange={(e) => setVal(e.target.value)} placeholder="https://yourstore.com" className="syn-in" style={inputStyle} />
+          <button type="button" style={btnGhost} onClick={() => onConnect(source.id, val)}>Add</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Brief card ───────────────────────────────────────────────────────────────
 function BriefCard({ brief, live }: { brief: GrowthBrief; live: boolean }) {
@@ -182,44 +192,93 @@ function BriefCard({ brief, live }: { brief: GrowthBrief; live: boolean }) {
   );
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────────
 const HISTORY = [
   { week_of: "Week of 26 May", move: "Double down on Instagram Reels — your only positive-ROAS channel.", status: "done" as const },
   { week_of: "Week of 19 May", move: "Pause the Facebook prospecting set; reallocate to email.", status: "done" as const },
   { week_of: "Week of 12 May", move: "Reorder the Linen Shirt — 1.5 weeks of stock at current pace.", status: "skipped" as const },
 ];
 
+// ── Page ─────────────────────────────────────────────────────────────────────
 export default function FounderDashboard() {
+  const [connected, setConnected] = useState<Partial<Record<SourceId, boolean>>>({});
+  const [syncSource, setSyncSource] = useState<SourceId | null>(null);
+  const [progress, setProgress] = useState(0);
   const [brief, setBrief] = useState<GrowthBrief>(SAMPLE_BRIEF);
-  const [live, setLive] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [briefLive, setBriefLive] = useState(false);
+  const [briefLoading, setBriefLoading] = useState(false);
   const [action, setAction] = useState<"pending" | "done" | "skipped">("pending");
   const [ask, setAsk] = useState("");
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const r = await fetch("/api/brief/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ week: 1 }) });
-        const j = (await r.json()) as { brief?: GrowthBrief; live?: boolean };
-        if (!cancelled && j.brief) { setBrief(j.brief); setLive(Boolean(j.live)); }
-      } catch {
-        /* keep sample */
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+  useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
+
+  const connectedCount = Object.values(connected).filter(Boolean).length;
+  const syncing = syncSource !== null;
+  const phase: "empty" | "syncing" | "ready" = syncing ? "syncing" : connectedCount > 0 ? "ready" : "empty";
+  const weeksDone = Math.round((progress / 100) * HISTORY_WEEKS);
+
+  const loadBrief = useCallback(async () => {
+    setBriefLoading(true);
+    try {
+      const r = await fetch("/api/brief/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ week: 1 }) });
+      const j = (await r.json()) as { brief?: GrowthBrief; live?: boolean };
+      if (j.brief) { setBrief(j.brief); setBriefLive(Boolean(j.live)); }
+    } catch {
+      /* keep sample */
+    } finally {
+      setBriefLoading(false);
+    }
   }, []);
 
-  const connectedCount = useMemo(() => SOURCES.filter((s) => s.status === "connected").length, []);
+  const connect = useCallback((id: SourceId) => {
+    if (connected[id] || timer.current) return;
+    const firstEver = Object.values(connected).filter(Boolean).length === 0;
+    setSyncSource(id);
+    setProgress(0);
+    const dur = id === "shopify" ? 3800 : 1800; // Shopify carries the full history backfill
+    const t0 = Date.now();
+    timer.current = setInterval(() => {
+      const p = Math.min(100, ((Date.now() - t0) / dur) * 100);
+      setProgress(p);
+      if (p >= 100) {
+        if (timer.current) clearInterval(timer.current);
+        timer.current = null;
+        setConnected((c) => ({ ...c, [id]: true }));
+        setSyncSource(null);
+        if (firstEver) loadBrief();
+      }
+    }, 50);
+  }, [connected, loadBrief]);
+
+  const reset = useCallback(() => {
+    if (timer.current) { clearInterval(timer.current); timer.current = null; }
+    setConnected({});
+    setSyncSource(null);
+    setProgress(0);
+    setBrief(SAMPLE_BRIEF);
+    setBriefLive(false);
+    setBriefLoading(false);
+    setAction("pending");
+  }, []);
+
+  const statusOf = (id: SourceId): SourceStatus =>
+    connected[id] ? "connected" : syncSource === id ? "syncing" : "not_connected";
+
+  const greeting =
+    phase === "empty"
+      ? { h: "Let's wire up your store.", p: "Connect a source — Synapse reads your whole history and writes your first brief in minutes, not months." }
+      : phase === "syncing"
+      ? { h: "Building your store's memory…", p: `Reading ${HISTORY_WEEKS} weeks of history so your first brief already knows your past.` }
+      : { h: `Good morning, ${BUSINESS}.`, p: `${connectedCount} source${connectedCount === 1 ? "" : "s"} connected · your next move is ready below.` };
 
   return (
     <main style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: F.sans, padding: "clamp(20px,4vw,44px) 18px 96px", display: "flex", justifyContent: "center" }}>
       <style>{`
         @keyframes synGlow { 0%,100% { box-shadow: 0 0 0 1px ${C.accent}55, 0 0 22px -6px ${C.accent}66; } 50% { box-shadow: 0 0 0 1px ${C.accent}aa, 0 0 34px -4px ${C.accent}99; } }
+        @keyframes synShimmer { 0% { background-position: -360px 0; } 100% { background-position: 360px 0; } }
         .syn-move { animation: synGlow 3.6s ease-in-out infinite; }
         .syn-in::placeholder { color: ${C.faint}; }
+        .syn-shimmer { background: linear-gradient(90deg, ${C.card} 0%, rgba(255,255,255,0.05) 50%, ${C.card} 100%); background-size: 360px 100%; animation: synShimmer 1.4s linear infinite; }
       `}</style>
 
       <div style={{ width: "100%", maxWidth: 920 }}>
@@ -229,45 +288,69 @@ export default function FounderDashboard() {
             <SynMark />
             <span style={{ fontFamily: F.serif, fontWeight: 700, fontSize: 20, letterSpacing: "-0.01em" }}>Synapse</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 9, fontFamily: F.sans, fontSize: 13, color: C.muted }}>
-            <span style={{ width: 26, height: 26, borderRadius: "50%", background: C.accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.serif, fontWeight: 700, fontSize: 13 }}>
-              {BUSINESS[0]}
-            </span>
-            {BUSINESS}
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            {phase !== "empty" && (
+              <button type="button" onClick={reset} style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: "0.06em", color: C.faint, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 100, padding: "5px 11px", cursor: "pointer" }}>
+                ↺ Restart
+              </button>
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 9, fontFamily: F.sans, fontSize: 13, color: C.muted }}>
+              <span style={{ width: 26, height: 26, borderRadius: "50%", background: C.accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.serif, fontWeight: 700, fontSize: 13 }}>
+                {BUSINESS[0]}
+              </span>
+              {BUSINESS}
+            </div>
           </div>
         </header>
 
         {/* Greeting */}
         <div style={{ marginBottom: 26 }}>
-          <h1 style={{ margin: 0, fontFamily: F.serif, fontWeight: 700, fontSize: "clamp(26px,5vw,38px)", letterSpacing: "-0.02em" }}>
-            Good morning, {BUSINESS}.
-          </h1>
-          <p style={{ margin: "8px 0 0", fontFamily: F.sans, fontSize: 15.5, color: C.muted }}>
-            {connectedCount} source connected · your next move is ready below.
-          </p>
+          <h1 style={{ margin: 0, fontFamily: F.serif, fontWeight: 700, fontSize: "clamp(26px,5vw,38px)", letterSpacing: "-0.02em" }}>{greeting.h}</h1>
+          <p style={{ margin: "8px 0 0", fontFamily: F.sans, fontSize: 15.5, color: C.muted, maxWidth: 560, lineHeight: 1.5 }}>{greeting.p}</p>
         </div>
 
         {/* Connect your data */}
         <section style={{ marginBottom: 30 }}>
           <Eyebrow>Connect your data</Eyebrow>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 12 }}>
-            {SOURCES.map((s) => <ConnectCard key={s.id} source={s} />)}
+            {SOURCES.map((s) => (
+              <ConnectCard key={s.id} source={s} status={statusOf(s.id)} progress={progress} weeksDone={weeksDone} onConnect={connect} />
+            ))}
           </div>
         </section>
 
-        {/* This week's brief */}
+        {/* This week's brief — state-driven */}
         <section style={{ marginBottom: 16 }}>
-          {loading ? (
-            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 18, padding: 30, fontFamily: F.mono, fontSize: 13, color: C.muted }}>
+          {phase === "empty" && (
+            <div style={{ background: C.card, border: `1px dashed ${C.border2}`, borderRadius: 18, padding: "40px 30px", textAlign: "center" }}>
+              <div style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text }}>Your first brief is one connection away.</div>
+              <p style={{ margin: "10px auto 0", maxWidth: 440, fontFamily: F.sans, fontSize: 14.5, color: C.muted, lineHeight: 1.55 }}>
+                Connect Shopify above and Synapse reads your full sales history, then writes a Growth Brief that already understands your past.
+              </p>
+            </div>
+          )}
+
+          {phase === "syncing" && (
+            <div className="syn-shimmer" style={{ border: `1px solid ${C.border}`, borderRadius: 18, padding: "34px 30px" }}>
+              <div style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: C.accent }}>Reading your history</div>
+              <div style={{ marginTop: 12, fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text }}>Writing your first brief…</div>
+              <p style={{ margin: "10px 0 0", maxWidth: 480, fontFamily: F.sans, fontSize: 14, color: C.muted, lineHeight: 1.55 }}>
+                Remembering week {Math.min(weeksDone, HISTORY_WEEKS)} of {HISTORY_WEEKS}. Every week is written to permanent memory, so today gets weighed against all of it.
+              </p>
+            </div>
+          )}
+
+          {phase === "ready" && (briefLoading ? (
+            <div className="syn-shimmer" style={{ border: `1px solid ${C.border}`, borderRadius: 18, padding: 34, fontFamily: F.mono, fontSize: 13, color: C.muted }}>
               Generating this week&apos;s brief with Claude…
             </div>
           ) : (
-            <BriefCard brief={brief} live={live} />
-          )}
+            <BriefCard brief={brief} live={briefLive} />
+          ))}
         </section>
 
-        {/* Capture */}
-        {!loading && (
+        {/* Capture — only when a brief is showing */}
+        {phase === "ready" && !briefLoading && (
           <div style={{ marginBottom: 30, background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px 20px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             {action === "pending" ? (
               <>
@@ -286,12 +369,14 @@ export default function FounderDashboard() {
           </div>
         )}
 
-        {/* Ask Synapse (advisor preview) */}
+        {/* Ask Synapse — preview */}
         <section style={{ marginBottom: 30 }}>
           <Eyebrow>Ask Synapse</Eyebrow>
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "18px 20px" }}>
             <p style={{ margin: "0 0 14px", fontFamily: F.sans, fontSize: 14, color: C.muted, lineHeight: 1.55 }}>
-              Facing a decision? Ask in plain English — Synapse answers from everything it remembers about your store.
+              {phase === "ready"
+                ? "Facing a decision? Ask in plain English — Synapse answers from everything it remembers about your store."
+                : "Once your data is connected, ask Synapse about any decision and it answers from your store's memory."}
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <input value={ask} onChange={(e) => setAsk(e.target.value)} placeholder="e.g. Should I discount the Linen Shirt this week?" className="syn-in" style={{ ...inputStyle, flex: 1, minWidth: 240, height: 44 }} />
@@ -306,22 +391,27 @@ export default function FounderDashboard() {
         {/* Brief history */}
         <section>
           <Eyebrow>Brief history</Eyebrow>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {HISTORY.map((h, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "13px 16px" }}>
-                <span style={{ fontFamily: F.mono, fontSize: 11.5, color: C.muted, whiteSpace: "nowrap", flex: "0 0 auto", width: 110 }}>{h.week_of}</span>
-                <span style={{ flex: 1, fontFamily: F.sans, fontSize: 13.5, color: C.text, lineHeight: 1.4 }}>{h.move}</span>
-                <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: h.status === "done" ? C.up : C.faint, border: `1px solid ${h.status === "done" ? C.up + "55" : C.border2}`, borderRadius: 100, padding: "3px 9px", whiteSpace: "nowrap", flex: "0 0 auto" }}>
-                  {h.status === "done" ? "✓ done" : "skipped"}
-                </span>
-              </div>
-            ))}
-          </div>
+          {phase === "ready" ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {HISTORY.map((h, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "13px 16px" }}>
+                  <span style={{ fontFamily: F.mono, fontSize: 11.5, color: C.muted, whiteSpace: "nowrap", flex: "0 0 auto", width: 110 }}>{h.week_of}</span>
+                  <span style={{ flex: 1, fontFamily: F.sans, fontSize: 13.5, color: C.text, lineHeight: 1.4 }}>{h.move}</span>
+                  <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: h.status === "done" ? C.up : C.faint, border: `1px solid ${h.status === "done" ? C.up + "55" : C.border2}`, borderRadius: 100, padding: "3px 9px", whiteSpace: "nowrap", flex: "0 0 auto" }}>
+                    {h.status === "done" ? "✓ done" : "skipped"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ background: C.card, border: `1px dashed ${C.border2}`, borderRadius: 12, padding: "20px", fontFamily: F.sans, fontSize: 13.5, color: C.muted }}>
+              Your past briefs and the moves you took will appear here.
+            </div>
+          )}
         </section>
 
         <p style={{ fontFamily: F.mono, fontSize: 11, color: C.faint, marginTop: 26, lineHeight: 1.6 }}>
-          Founder dashboard (demo). Brief generates live via the engine; Connect buttons start the real
-          OAuth flows. Per-founder data, auth, and the Ask advisor wire in next.
+          Founder dashboard. Demo walk-through: Connect → Syncing → Ready (history backfill simulated; brief generated live by the engine). Real connection status, per-founder briefs, the capture write-back, and the Ask advisor wire in next.
         </p>
       </div>
     </main>
