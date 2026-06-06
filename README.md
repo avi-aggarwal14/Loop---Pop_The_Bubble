@@ -17,9 +17,13 @@ Do not build production around a single admin-created store token.
    `read_orders,read_customers,read_products,read_reports`.
 5. Add an `app/uninstalled` webhook pointing at:
    `<APP_URL>/api/webhooks/shopify/app-uninstalled`.
-6. Put the app credentials in `.env`:
+6. Add mandatory compliance webhooks before public app review:
+   `customers/data_request` -> `<APP_URL>/api/webhooks/shopify/customers-data-request`;
+   `customers/redact` -> `<APP_URL>/api/webhooks/shopify/customers-redact`;
+   `shop/redact` -> `<APP_URL>/api/webhooks/shopify/shop-redact`.
+7. Put the app credentials in `.env`:
    `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, `SHOPIFY_SCOPES`, `APP_URL`.
-7. In production, users must be logged in through Supabase Auth before visiting
+8. In production, users must be logged in through Supabase Auth before visiting
    `/connect`; the connector start routes use the server session as the
    `founder_id`.
 
