@@ -1,6 +1,7 @@
 import { isValidShopDomain } from "./oauth";
 import { toISODateString } from "../util/dates";
 import type { TrafficMetrics } from "../metrics/types";
+import { SHOPIFY_API_VERSION } from "./ingest";
 
 /**
  * Pull online-store sessions + conversion from Shopify via ShopifyQL over the
@@ -10,25 +11,29 @@ import type { TrafficMetrics } from "../metrics/types";
  * brief simply leans on GA4 / Vercel for traffic.
  */
 
-const API_VERSION = "2024-10";
-
 interface ShopifyQLColumn {
   name?: string;
 }
 interface ShopifyQLTable {
   columns?: ShopifyQLColumn[];
+  rows?: unknown[];
   rowData?: unknown[][];
 }
 
 function numFromRow(
   columns: ShopifyQLColumn[],
-  row: unknown[],
+  row: unknown,
   names: string[],
 ): number | undefined {
   for (const n of names) {
-    const idx = columns.findIndex((c) => (c.name ?? "").toLowerCase() === n);
-    if (idx >= 0) {
+    if (Array.isArray(row)) {
+      const idx = columns.findIndex((c) => (c.name ?? "").toLowerCase() === n);
+      if (idx < 0) continue;
       const v = Number(row[idx]);
+      if (Number.isFinite(v)) return v;
+    } else if (row && typeof row === "object") {
+      const rec = row as Record<string, unknown>;
+      const v = Number(rec[n]);
       if (Number.isFinite(v)) return v;
     }
   }
@@ -58,7 +63,7 @@ export async function fetchShopifyTraffic(opts: {
   }`;
 
   try {
-    const res = await fetch(`https://${opts.shop}/admin/api/${API_VERSION}/graphql.json`, {
+    const res = await fetch(`https://${opts.shop}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`, {
       method: "POST",
       headers: {
         "X-Shopify-Access-Token": opts.accessToken,
@@ -77,7 +82,7 @@ export async function fetchShopifyTraffic(opts: {
 
     const table = result.tableData;
     const columns = table?.columns ?? [];
-    const rows = table?.rowData ?? [];
+    const rows = table?.rows ?? table?.rowData ?? [];
     if (rows.length === 0) return null;
 
     let sessions = 0;

@@ -11,7 +11,7 @@ import { isValidShopDomain } from "./oauth";
  * unavailable rather than guessing.
  */
 
-const API_VERSION = "2024-10";
+export const SHOPIFY_API_VERSION = process.env.SHOPIFY_API_VERSION ?? "2026-04";
 const MAX_PAGES = 10; // 10 × 250 = 2500 orders/week — plenty for early founders.
 
 export interface ShopifyLineItem {
@@ -120,7 +120,7 @@ export async function fetchShopifyWeek(opts: {
   if (!isValidShopDomain(opts.shop)) {
     throw new Error(`Invalid shop domain: ${opts.shop}`);
   }
-  const base = `https://${opts.shop}/admin/api/${API_VERSION}`;
+  const base = `https://${opts.shop}/admin/api/${SHOPIFY_API_VERSION}`;
   const headers = adminHeaders(opts.accessToken);
 
   const orders: ShopifyOrder[] = [];
@@ -227,7 +227,7 @@ export async function fetchShopifyProducts(opts: {
   if (!isValidShopDomain(opts.shop)) {
     throw new Error(`Invalid shop domain: ${opts.shop}`);
   }
-  const base = `https://${opts.shop}/admin/api/${API_VERSION}`;
+  const base = `https://${opts.shop}/admin/api/${SHOPIFY_API_VERSION}`;
   const headers = adminHeaders(opts.accessToken);
 
   const products: ShopifyProduct[] = [];
@@ -277,7 +277,7 @@ export async function fetchShopInfo(opts: {
   accessToken: string;
 }): Promise<ShopInfo | null> {
   if (!isValidShopDomain(opts.shop)) return null;
-  const base = `https://${opts.shop}/admin/api/${API_VERSION}`;
+  const base = `https://${opts.shop}/admin/api/${SHOPIFY_API_VERSION}`;
   try {
     const res = await fetch(`${base}/shop.json`, { headers: adminHeaders(opts.accessToken) });
     if (!res.ok) return null;

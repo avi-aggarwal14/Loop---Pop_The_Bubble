@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start",
     "generate-brief": "tsx scripts/generate-brief.ts",
+    "shopify:brief": "tsx scripts/shopify-live-brief.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/dates.test.ts tests/derive.test.ts tests/shopify-oauth.test.ts tests/ga4.test.ts tests/vercel.test.ts tests/weekly-data.test.ts tests/website.test.ts tests/products.test.ts tests/brief.test.ts"
   },

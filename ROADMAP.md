@@ -67,6 +67,7 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 ---
 
 ## Phase 3 — Shopify live data (sales)  ·  ~45 min
+- [x] **[ME]** Added a direct live smoke harness: `npm run shopify:brief` uses `SHOPIFY_SHOP_DOMAIN` + `SHOPIFY_ACCESS_TOKEN` to pull Shopify orders, line items, products/inventory, and best-effort ShopifyQL traffic, then generates a Claude brief and writes the brief memory to mubit. This lets us prove Shopify → AI/mubit before the full Supabase/OAuth dashboard path is complete.
 - [ ] **[YOU]** Shopify Partners: create an app; redirect URL `<APP_URL>/api/auth/shopify/callback`; scopes `read_orders,read_customers,read_products,read_reports`; create a **development store** and add sample products/orders.
 - [ ] **[ME]** Run OAuth (`/api/auth/shopify` → Shopify → `/callback`) → a `connections` row is written.
 - [ ] **[ME]** Run the pipeline → `metric_snapshots` + a brief from live Shopify orders.
