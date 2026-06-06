@@ -51,14 +51,22 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 
 ---
 
-## Phase 2 — Lock in mubit (the +10-points memory)  ·  ~30 min
-> The compounding **demo UI is already built** (`/brief` 2-week flow) using simulated memory passed client-side — exactly the shape mubit returns. All that's left is to swap that for real `MubitClient.recall()`/`remember()`.
-- [ ] **[YOU]** Paste me mubit's quickstart `curl` snippet (base URL + auth header) + the API key.
-- [ ] **[ME]** Point `lib/mubit/client.ts` at the real endpoints/fields (already env-driven + defensive; small adjustment).
-- [ ] **[ME]** Re-run the harness: week 1 → record action → **week 2 brief references the week-1 move + outcome.**
-- [ ] **[YOU/ME]** Confirm the memories show in the mubit dashboard.
+## Phase 2 — Lock in mubit (the +10-points memory)  ·  ~45 min
+> **API confirmed from docs.mubit.ai** (see CLAUDE.md §3 for the full shapes). The compounding **demo UI is already built** (`/brief` 2-week flow) on simulated memory; this phase swaps it for the real mubit **learning loop**: recall → ingest a `lesson` → record an **`outcome`** when the founder acts → mubit reinforces what worked → next week compounds.
+>
+> **The design** — one agent per founder (`synapse-founder-<id>`, hard tenant isolation) + `user_id=founderId`; `run_id=brief-<founderId>-<weekOf>`; the one move stored as a `lesson` (scope user/session, never global); Done/Skipped → `outcome` (success/failure + signal + the founder's note).
 
-**Done when:** the week-2 brief visibly compounds on week-1 — the demo that wins judges.
+- [ ] **[YOU]** Create the API key at console.mubit.ai (format `mbt_…`) and put it in `.env` as `MUBIT_API_KEY` (base + bearer are already set). Don't paste the secret in chat.
+- [ ] **[ME]** Align `lib/mubit/client.ts` to the confirmed Control HTTP API:
+  - `remember()` → `POST /v2/control/ingest` with `{run_id, agent_id, items:[{item_id, content_type:"text/plain", text, intent:"lesson"|"fact", user_id, source:"agent", lane:"growth-brief", occurrence_time(unix s), metadata}]}`; return the `item_id` as the stable reference.
+  - `recall()` → **POST** (not GET) `/v2/control/query` with `{agent_id, user_id, query, entry_types:["lesson","fact"], mode:"AGENT_ROUTED", limit}`; read `final_answer` + `evidence[].content`.
+  - add `recordOutcome()` → `POST /v2/control/outcome` `{agent_id, user_id, reference_id, outcome, signal, rationale, verified_in_production:true}`.
+  - (optional) `registerAgent()` → `POST /v2/control/agents/register`; `reflect()` → `POST /v2/control/reflect`.
+- [ ] **[ME]** Thread `user_id` (founderId) through `weekly-brief.ts` (recall + ingest) and `record-action.ts` (→ `recordOutcome()` instead of an ingest); update `lib/mubit/memory.ts`.
+- [ ] **[ME]** Wire the real recall into `/api/brief/demo` (replace the client-passed memory) so the `/brief` view shows true recalled lessons.
+- [ ] **[ME]** Re-run the harness: week 1 → record outcome → **week 2 brief references the reinforced lesson.** Confirm entries + outcomes show in the mubit console.
+
+**Done when:** the week-2 brief visibly compounds on week-1 via *real* mubit recall + outcome reinforcement — the demo that wins judges.
 
 ---
 
