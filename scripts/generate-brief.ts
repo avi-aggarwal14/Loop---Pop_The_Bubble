@@ -7,6 +7,7 @@ import {
   MubitClient,
   mubitConfigFromEnv,
   founderAgentId,
+  founderRunId,
 } from "../lib/mubit/client";
 import type { GrowthBrief } from "../lib/brief/schema";
 
@@ -56,6 +57,7 @@ async function main(): Promise<void> {
   const anthropic = new Anthropic();
   const founderId = "demo";
   const agentId = founderAgentId(founderId);
+  const scope = { userId: founderId, runId: founderRunId(founderId) };
 
   const mubitConfig = mubitConfigFromEnv();
   const mubit = mubitConfig ? new MubitClient(mubitConfig) : null;
@@ -70,7 +72,7 @@ async function main(): Promise<void> {
     "this founder's weekly growth briefs, the moves recommended, what they did, and the outcomes";
 
   async function runWeek(metrics: DerivedMetrics): Promise<GrowthBrief> {
-    const recalled = mubit ? await mubit.recall(agentId, recallQuery) : [];
+    const recalled = mubit ? await mubit.recall(agentId, recallQuery, scope) : [];
     console.log(
       `\n[${metrics.windowLabel}] recalled ${recalled.length} memories from mubit`,
     );
@@ -92,13 +94,17 @@ async function main(): Promise<void> {
     );
 
     if (mubit) {
-      const { id } = await mubit.remember(agentId, {
-        text:
-          `Brief for ${brief.week_of}. The one move I recommended: "${brief.one_move.action}". ` +
-          `Why: ${brief.one_move.rationale}`,
-        intent: "weekly_brief",
-        metadata: { week_of: brief.week_of },
-      });
+      const { id } = await mubit.remember(
+        agentId,
+        {
+          text:
+            `Brief for ${brief.week_of}. The one move I recommended: "${brief.one_move.action}". ` +
+            `Why: ${brief.one_move.rationale}`,
+          intent: "lesson",
+          metadata: { week_of: brief.week_of },
+        },
+        scope,
+      );
       console.log(`  → wrote brief to mubit (id=${id ?? "unknown"})`);
     }
     return brief;
@@ -109,13 +115,17 @@ async function main(): Promise<void> {
 
   if (mubit) {
     // Simulate the founder acting on the move, and record the outcome.
-    await mubit.remember(agentId, {
-      text:
-        "Founder acted on last week's move: posted 3 product demo Reels. " +
-        "Outcome: Instagram's share of new customers rose 34% → 41%, revenue +18% WoW.",
-      intent: "founder_action",
-      metadata: { week_of: "Week of 2 June", status: "done" },
-    });
+    await mubit.remember(
+      agentId,
+      {
+        text:
+          "Founder acted on last week's move: posted 3 product demo Reels. " +
+          "Outcome: Instagram's share of new customers rose 34% → 41%, revenue +18% WoW.",
+        intent: "lesson",
+        metadata: { week_of: "Week of 2 June", status: "done" },
+      },
+      scope,
+    );
     console.log("\n• Recorded founder action + outcome to mubit.");
     console.log(
       "  (Note: mubit ingest is async — if week 2 doesn't reflect it yet, give it a moment / check the dashboard.)",

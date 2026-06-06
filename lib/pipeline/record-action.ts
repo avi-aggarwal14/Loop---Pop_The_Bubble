@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MubitClient, founderAgentId } from "../mubit/client";
-import { actionMemory } from "../mubit/memory";
+import { MubitClient, founderAgentId, founderRunId } from "../mubit/client";
+import { actionMemory, actionOutcome } from "../mubit/memory";
 import { getBrief, updateAction } from "../db/index";
 import type { ActionRow, ActionStatus } from "../db/types";
 
@@ -28,15 +28,42 @@ export async function recordFounderAction(
   });
 
   if (deps.mubit) {
+    const founderId = brief.founder_id;
+    const agentId = founderAgentId(founderId);
+    const scope = { userId: founderId, runId: founderRunId(founderId) };
+
+    // 1. Ingest the response as a lesson so next week's recall reliably surfaces it.
     await deps.mubit.remember(
-      founderAgentId(brief.founder_id),
+      agentId,
       actionMemory({
         weekOf: brief.raw_json.week_of, // human label, e.g. "Week of 2 June"
         oneMoveText: brief.one_move.action,
         status: opts.status,
         outcomeNote: opts.outcomeNote,
       }),
+      scope,
     );
+
+    // 2. Reinforce the original move's lesson with a success/failure signal (the
+    //    learning loop). Resolve the lesson's reference_id via recall, best-effort.
+    const signal = actionOutcome(opts.status);
+    if (signal) {
+      const recalled = await deps.mubit.queryRaw(agentId, brief.one_move.action, {
+        ...scope,
+        entryTypes: ["lesson"],
+        limit: 3,
+      });
+      const referenceId = recalled?.evidence[0]?.referenceId;
+      if (referenceId) {
+        await deps.mubit.recordOutcome(agentId, {
+          referenceId,
+          outcome: signal.outcome,
+          signal: signal.signal,
+          rationale: opts.outcomeNote,
+          ...scope,
+        });
+      }
+    }
   }
 
   return action;

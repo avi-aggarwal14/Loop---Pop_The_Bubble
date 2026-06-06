@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { generateBrief } from "../brief/generate";
 import type { GrowthBrief } from "../brief/schema";
-import { founderAgentId, type MubitClient } from "../mubit/client";
+import { founderAgentId, founderRunId, type MubitClient } from "../mubit/client";
 import { BRIEF_RECALL_QUERY, briefMemory } from "../mubit/memory";
 import {
   createPendingAction,
@@ -60,8 +60,9 @@ export async function runWeeklyBriefForFounder(
   }
 
   const agentId = founderAgentId(founderId);
+  const scope = { userId: founderId, runId: founderRunId(founderId) };
   const recalled = deps.mubit
-    ? await deps.mubit.recall(agentId, BRIEF_RECALL_QUERY)
+    ? await deps.mubit.recall(agentId, BRIEF_RECALL_QUERY, scope)
     : [];
 
   const { brief } = await generateBrief(
@@ -71,7 +72,7 @@ export async function runWeeklyBriefForFounder(
 
   const memoryIds: string[] = [];
   if (deps.mubit) {
-    const { id } = await deps.mubit.remember(agentId, briefMemory(brief));
+    const { id } = await deps.mubit.remember(agentId, briefMemory(brief, founderId), scope);
     if (id) memoryIds.push(id);
   }
 
