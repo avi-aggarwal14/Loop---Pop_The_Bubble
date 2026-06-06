@@ -61,6 +61,29 @@ export async function handleShopifyAppUninstalled(input: {
   return json(200, { ok: true, revoked });
 }
 
+export async function handleShopifyComplianceWebhook(input: {
+  db: SupabaseClient;
+  rawBody: string;
+  headers: Record<string, string | null>;
+}): Promise<HttpResult> {
+  const config = shopifyConfigFromEnv();
+  if (!config) return json(500, { error: "Shopify not configured" });
+
+  const topic = input.headers["x-shopify-topic"];
+  const shop = input.headers["x-shopify-shop-domain"];
+  const hmac = input.headers["x-shopify-hmac-sha256"];
+  const allowed = new Set(["customers/data_request", "customers/redact", "shop/redact"]);
+
+  if (!topic || !allowed.has(topic)) return json(400, { error: "unexpected Shopify topic" });
+  if (!shop || !isValidShopDomain(shop)) return json(400, { error: "invalid shop" });
+  if (!verifyWebhookHmac(input.rawBody, hmac, config.apiSecret)) {
+    return json(401, { error: "webhook HMAC validation failed" });
+  }
+
+  const revoked = topic === "shop/redact" ? await revokeShopifyConnectionsForShop(input.db, shop) : 0;
+  return json(200, { ok: true, topic, revoked });
+}
+
 // ── POST /api/cron/generate-briefs ────────────────────────────────
 export async function handleCronGenerate(
   deps: WeeklyBriefDeps,
