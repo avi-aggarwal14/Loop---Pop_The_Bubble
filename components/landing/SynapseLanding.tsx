@@ -316,16 +316,67 @@ function CycKick({ theme, children }) {
   return <div style={{ fontFamily: SYN.mono, fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", color: theme.accent }}>{children}</div>;
 }
 
-function CycCapture({ theme }) {
+// Working email capture → POST /api/waitlist. Shared by the hero + CTA forms.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function WaitlistForm({ theme, onInk = false, width = "100%", gap = 10, height = 48,
+  fieldPad = "0 15px", btnPad = "0 22px", radius = 9, fontSize = 14, label = "Get early access", source = "landing" }) {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState("idle"); // idle | loading | ok | err
+  const [msg, setMsg] = useState("");
+  const submit = async (e) => {
+    e.preventDefault();
+    if (status === "loading") return;
+    if (!EMAIL_RE.test(email.trim())) { setStatus("err"); setMsg("Enter a valid email."); return; }
+    setStatus("loading"); setMsg("");
+    try {
+      const r = await fetch("/api/waitlist", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), source }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.ok) { setStatus("ok"); }
+      else { setStatus("err"); setMsg(j.error === "invalid email" ? "Enter a valid email." : "Something went wrong — try again."); }
+    } catch {
+      setStatus("err"); setMsg("Network error — try again.");
+    }
+  };
+  if (status === "ok") {
+    return (
+      <div style={{ width, maxWidth: "100%", display: "flex", alignItems: "center", gap: 10, height,
+        fontFamily: SYN.sans, fontSize, color: onInk ? "#fff" : theme.text }}>
+        <span style={{ width: 22, height: 22, flex: "0 0 auto", borderRadius: "50%", background: theme.accent,
+          color: theme.onAccent || "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>✓</span>
+        <span>You're on the list — check your inbox to confirm.</span>
+      </div>
+    );
+  }
   return (
-    <div style={{ display: "flex", gap: 9, width: "100%" }}>
-      <div style={{ flex: 1, height: 44, display: "flex", alignItems: "center", padding: "0 13px",
-        background: theme.field, border: `1px solid ${theme.hair2}`, borderRadius: 8,
-        fontFamily: SYN.sans, fontSize: 13.5, color: theme.faint }}>your@email.com</div>
-      <button style={{ height: 44, padding: "0 16px", background: theme.accent, color: theme.onAccent || "#fff", border: "none",
-        borderRadius: 8, fontFamily: SYN.sans, fontSize: 13.5, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>Get access</button>
-    </div>
+    <form onSubmit={submit} noValidate style={{ width, maxWidth: "100%" }}>
+      <div style={{ display: "flex", gap }}>
+        <input
+          type="email" value={email} onChange={(e) => { setEmail(e.target.value); if (status === "err") setStatus("idle"); }}
+          placeholder="your@email.com" aria-label="Email address"
+          className="syn-input"
+          style={{ flex: 1, minWidth: 0, height, padding: fieldPad, borderRadius: radius,
+            background: onInk ? "rgba(255,255,255,0.06)" : theme.field,
+            border: `1px solid ${status === "err" ? theme.accent : (onInk ? "rgba(255,255,255,0.22)" : theme.hair2)}`,
+            fontFamily: SYN.sans, fontSize, color: onInk ? "#fff" : theme.text, outline: "none" }}
+        />
+        <button type="submit" disabled={status === "loading"} style={{ height, padding: btnPad, background: theme.accent,
+          color: theme.onAccent || "#fff", border: "none", borderRadius: radius, fontFamily: SYN.sans, fontSize,
+          fontWeight: 600, cursor: status === "loading" ? "default" : "pointer", whiteSpace: "nowrap", opacity: status === "loading" ? 0.7 : 1 }}>
+          {status === "loading" ? "…" : label}
+        </button>
+      </div>
+      {status === "err" && msg && (
+        <div style={{ marginTop: 7, fontFamily: SYN.sans, fontSize: 12.5, color: onInk ? "#fff" : theme.accent }}>{msg}</div>
+      )}
+    </form>
   );
+}
+
+function CycCapture({ theme }) {
+  return <WaitlistForm theme={theme} width="100%" gap={9} height={44} fieldPad="0 13px" btnPad="0 16px" radius={8} fontSize={13.5} label="Get access" source="hero" />;
 }
 
 function CycDots({ theme, count, active }) {
@@ -528,15 +579,7 @@ function Eyebrow({ children, color = "#FA5400", style }) {
 }
 
 function LCapture({ width = 420, onInk = false, theme }) {
-  return (
-    <div style={{ display: "flex", gap: 10, width, maxWidth: "100%" }}>
-      <div style={{ flex: 1, height: 48, display: "flex", alignItems: "center", padding: "0 15px",
-        background: onInk ? "rgba(255,255,255,0.06)" : theme.field, border: `1px solid ${onInk ? "rgba(255,255,255,0.22)" : theme.hair2}`,
-        borderRadius: 9, fontFamily: SYN.sans, fontSize: 14, color: onInk ? "rgba(255,255,255,0.5)" : theme.faint }}>your@email.com</div>
-      <button style={{ height: 48, padding: "0 22px", background: theme.accent, color: theme.onAccent || "#fff", border: "none",
-        borderRadius: 9, fontFamily: SYN.sans, fontSize: 14, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>Get early access</button>
-    </div>
-  );
+  return <WaitlistForm theme={theme} onInk={onInk} width={width} gap={10} height={48} fieldPad="0 15px" btnPad="0 22px" radius={9} fontSize={14} label="Get early access" source="cta" />;
 }
 
 function LFooter({ theme }) {

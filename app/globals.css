@@ -7,6 +7,9 @@ html, body { margin: 0; padding: 0; background: #EAE3D6; }
 
 html { scroll-behavior: smooth; }
 
+/* Waitlist email input — placeholder follows the input's text colour, dimmed */
+.syn-input::placeholder { color: currentColor; opacity: 0.45; }
+
 /* Product card glow halo */
 @keyframes synProdGlow { 0%, 100% { opacity: .85; } 50% { opacity: 1; } }
 .syn-prod-glow { animation: synProdGlow 3.2s ease-in-out infinite; }
