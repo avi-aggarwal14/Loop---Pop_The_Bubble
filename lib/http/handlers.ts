@@ -5,6 +5,7 @@ import {
   getActiveConnections,
   getConnectionById,
   insertAnalyticsEvents,
+  revokeShopifyConnectionsForShop,
   saveProviderConnection,
   upsertConnection,
 } from "../db/index";
@@ -17,6 +18,7 @@ import {
   newOAuthState,
   shopifyConfigFromEnv,
   verifyCallbackHmac,
+  verifyWebhookHmac,
 } from "../shopify/oauth";
 import {
   buildGoogleAuthUrl,
@@ -36,6 +38,28 @@ import { clearCookie, json, redirect, setCookie, type HttpResult } from "./respo
  */
 
 const NONCE_COOKIE = "shopify_oauth_nonce";
+
+export async function handleShopifyAppUninstalled(input: {
+  db: SupabaseClient;
+  rawBody: string;
+  headers: Record<string, string | null>;
+}): Promise<HttpResult> {
+  const config = shopifyConfigFromEnv();
+  if (!config) return json(500, { error: "Shopify not configured" });
+
+  const topic = input.headers["x-shopify-topic"];
+  const shop = input.headers["x-shopify-shop-domain"];
+  const hmac = input.headers["x-shopify-hmac-sha256"];
+
+  if (topic !== "app/uninstalled") return json(400, { error: "unexpected Shopify topic" });
+  if (!shop || !isValidShopDomain(shop)) return json(400, { error: "invalid shop" });
+  if (!verifyWebhookHmac(input.rawBody, hmac, config.apiSecret)) {
+    return json(401, { error: "webhook HMAC validation failed" });
+  }
+
+  const revoked = await revokeShopifyConnectionsForShop(input.db, shop);
+  return json(200, { ok: true, revoked });
+}
 
 // ── POST /api/cron/generate-briefs ────────────────────────────────
 export async function handleCronGenerate(
@@ -90,7 +114,7 @@ export function handleShopifyStart(input: {
   // NOTE: when the app shell exists, derive founder_id from the server session,
   // not a query param. The connect link is generated server-side for the logged-in
   // founder, and the nonce cookie + HMAC below protect the callback.
-  if (!input.founderId) return json(400, { error: "?founder_id required" });
+  if (!input.founderId) return json(401, { error: "login required to connect Shopify" });
 
   const nonce = newOAuthState();
   const state = `${input.founderId}:${nonce}`;
@@ -149,7 +173,7 @@ const GOOGLE_NONCE_COOKIE = "google_oauth_nonce";
 export function handleGoogleStart(input: { founderId: string | null }): HttpResult {
   const config = googleConfigFromEnv();
   if (!config) return json(500, { error: "Google/GA4 not configured" });
-  if (!input.founderId) return json(400, { error: "?founder_id required" });
+  if (!input.founderId) return json(401, { error: "login required to connect Google Analytics" });
 
   const nonce = newGoogleState();
   const state = `${input.founderId}:${nonce}`;

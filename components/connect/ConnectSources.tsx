@@ -168,14 +168,17 @@ export default function ConnectSources() {
   const hasFounder = founderId.trim().length > 0;
 
   const shopifyUrl = useMemo(() => {
-    if (!normalizedShop || !hasFounder) return "";
-    const params = new URLSearchParams({ shop: normalizedShop, founder_id: founderId.trim() });
+    if (!normalizedShop) return "";
+    const params = new URLSearchParams({ shop: normalizedShop });
+    if (hasFounder) params.set("founder_id", founderId.trim());
     return `/api/auth/shopify?${params.toString()}`;
   }, [founderId, hasFounder, normalizedShop]);
 
   const googleUrl = useMemo(() => {
-    if (!hasFounder) return "";
-    const params = new URLSearchParams({ founder_id: founderId.trim() });
+    const params = new URLSearchParams();
+    if (hasFounder) params.set("founder_id", founderId.trim());
+    const qs = params.toString();
+    if (!qs) return "/api/auth/google";
     return `/api/auth/google?${params.toString()}`;
   }, [founderId, hasFounder]);
 
@@ -204,7 +207,7 @@ export default function ConnectSources() {
               Feed Synapse the real numbers.
             </h1>
             <p style={{ margin: "18px 0 0", maxWidth: 650, color: C.muted, fontSize: 16, lineHeight: 1.65 }}>
-              This is the working connector surface for the current backend. For now it uses a temporary founder id; once Supabase Auth is wired, that comes from the session automatically.
+              This is the working connector surface for the current backend. In production it uses the logged-in Supabase session; the founder id field is only a local-dev fallback.
             </p>
           </div>
 
@@ -217,17 +220,17 @@ export default function ConnectSources() {
             }}
           >
             <label style={{ display: "block", fontFamily: F.mono, fontSize: 11, color: C.faint, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>
-              Temporary founder id
+              Dev fallback founder id
             </label>
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 10 }}>
               <input
                 value={founderId}
                 onChange={(e) => setFounderId(e.target.value)}
-                placeholder="Paste a Supabase founders.id UUID"
+                placeholder="Optional: paste a Supabase founders.id UUID for local dev"
                 style={fieldStyle()}
               />
               <p style={{ margin: 0, color: C.faint, fontSize: 12.5, lineHeight: 1.5 }}>
-                Required by the current OAuth start routes. Replace this with server-session lookup when Supabase Auth is added.
+                Production OAuth ignores this and uses the server session. Set ALLOW_QUERY_FOUNDER_ID=true only for local smoke tests.
               </p>
             </div>
           </section>
@@ -250,7 +253,7 @@ export default function ConnectSources() {
               <button type="button" style={buttonStyle(Boolean(shopifyUrl))} disabled={!shopifyUrl} onClick={() => open(shopifyUrl)}>
                 Connect Shopify <ExternalLink size={15} />
               </button>
-              <CodeLine>{shopifyUrl ? `${appOrigin}${shopifyUrl}` : "Enter founder id + shop domain to build OAuth URL"}</CodeLine>
+              <CodeLine>{shopifyUrl ? `${appOrigin}${shopifyUrl}` : "Enter a shop domain to build the OAuth URL"}</CodeLine>
             </div>
           </SourceCard>
 
@@ -264,7 +267,7 @@ export default function ConnectSources() {
               <button type="button" style={buttonStyle(Boolean(googleUrl))} disabled={!googleUrl} onClick={() => open(googleUrl)}>
                 Connect GA4 <ExternalLink size={15} />
               </button>
-              <CodeLine>{googleUrl ? `${appOrigin}${googleUrl}` : "Enter founder id to build Google OAuth URL"}</CodeLine>
+              <CodeLine>{`${appOrigin}${googleUrl}`}</CodeLine>
             </div>
           </SourceCard>
 

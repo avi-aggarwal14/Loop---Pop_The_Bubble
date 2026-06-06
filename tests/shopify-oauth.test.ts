@@ -6,6 +6,7 @@ import {
   isValidShopDomain,
   missingRequiredScopes,
   verifyCallbackHmac,
+  verifyWebhookHmac,
   shopifyConfigFromEnv,
 } from "../lib/shopify/oauth";
 
@@ -89,4 +90,14 @@ test("verifyCallbackHmac accepts a correct signature and rejects tampering", () 
   assert.ok(!verifyCallbackHmac({ ...params, shop: "evil.myshopify.com", hmac }, SECRET));
   // Wrong secret → must fail.
   assert.ok(!verifyCallbackHmac({ ...params, hmac }, "wrong_secret"));
+});
+
+test("verifyWebhookHmac accepts Shopify webhook signatures and rejects tampering", () => {
+  const rawBody = JSON.stringify({ id: 123, domain: "acme.myshopify.com" });
+  const hmac = createHmac("sha256", SECRET).update(rawBody, "utf8").digest("base64");
+
+  assert.ok(verifyWebhookHmac(rawBody, hmac, SECRET));
+  assert.ok(!verifyWebhookHmac(rawBody.replace("acme", "evil"), hmac, SECRET));
+  assert.ok(!verifyWebhookHmac(rawBody, hmac, "wrong_secret"));
+  assert.ok(!verifyWebhookHmac(rawBody, null, SECRET));
 });
