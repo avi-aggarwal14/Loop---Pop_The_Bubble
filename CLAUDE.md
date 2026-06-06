@@ -215,7 +215,7 @@ The current no-talking demo video flow is the six-screen Red Bull Coconut & Berr
 - `/ad/5` — four-step memory timeline: velocity, source, funnel, inventory.
 - `/ad/6` — final verdict: increase the breakout product, reduce other drinks that look good recently but mubit memory predicts will fall off.
 
-Assets for this flow are in `public/demo-assets/`: `red-bull-coconut-berry.webp`, `red-bull-memory-alt.avif`, and `red-bull-summer-edition.jpg`. The data is synthetic and must not be described as real Red Bull or real merchant data.
+Assets for this flow are in `public/demo-assets/`: `red-bull-coconut-berry.webp`, `red-bull-memory-alt.avif`, `red-bull-summer-edition.jpg`, and `red-bull-lineup.jpg`. The data is synthetic and must not be described as real Red Bull or real merchant data.
 
 ## 2. The core loop (what the product actually does)
 ```
@@ -369,8 +369,9 @@ supabase/migrations/
                       jsonb; analytics_events table + RLS.
 
 scripts/generate-brief.ts   Local harness. Demo founder, week1 → record action → week2; proves the
-                            compounding. Needs OPENAI_API_KEY; mubit optional. `npm run generate-brief`.
-tests/                       node:test via tsx (19 tests): dates, derive, shopify-oauth, ga4, vercel,
+                            compounding. Needs ANTHROPIC_API_KEY; mubit optional but currently wired.
+                            `npm run generate-brief`.
+tests/                       node:test via tsx (28 tests): dates, derive, shopify-oauth, ga4, vercel,
                             weekly-data, website. `npm test`.
 ROADMAP.md                  Step-by-step plan to a live demo (owner-tagged [YOU]/[ME]/[TEAM]).
 README.md, .gitignore, package.json, tsconfig.json, .env.example
@@ -406,7 +407,7 @@ RLS pattern: every table is scoped to the owning founder (`auth.uid()`), directl
 ```bash
 npm install            # deps
 npm run generate-brief # run the engine on seeded fixtures (needs ANTHROPIC_API_KEY)
-npm test               # 25 unit tests (no keys needed)
+npm test               # 28 unit tests (no keys needed)
 npm run typecheck      # full TS check (tsc --noEmit)
 ```
 Deps: runtime `@anthropic-ai/sdk ^0.101`, `zod ^4`, `@supabase/supabase-js ^2`, `dotenv ^17`, `next ^16`, `react/react-dom ^18`, `lucide-react`. (`openai` was **removed** when the engine switched back to Claude.) Dev: `typescript ^6`, `tsx ^4`, `@types/node ^25`, `tailwindcss`, `postcss`, `autoprefixer`. Module system: **ESM (`"type":"module"`)**, `tsconfig` `moduleResolution: "bundler"` → relative imports are **extensionless** (no `.js`). Tests run via `node --import tsx --test`.
@@ -444,6 +445,9 @@ Deps: runtime `@anthropic-ai/sdk ^0.101`, `zod ^4`, `@supabase/supabase-js ^2`, 
 ## Project Log
 
 Newest entries at the top. Record meaningful developments here.
+
+- **2026-06-06** — **Final verdict screen (`/ad/6`) — added the full Red Bull edition lineup + bigger images.** Copied the 9-can edition lineup (Original + Iced/Coconut/Sea Blue/Amber/Yellow/Red/Pink/Peach) into `public/demo-assets/red-bull-lineup.jpg` and rendered it inside the "What to do instead" frame to fill the previously-blank space below the three move cards (new `LINEUP_IMAGE` const; the frame is now a 3-row grid with the lineup contained in the bottom `1fr`, captioned "The full edition range / what Synapse reasons across"). Also made the existing images more prominent: the Coconut & Berry hero can grew (`maxHeight min(26vh,250px)→min(34vh,330px)`, `maxWidth 84%→92%`, right column rows `0.55fr 1fr→0.66fr 1fr`) and the three "Decrease these instead" thumbnails grew (`38×48→50×62`). No-scroll fixed layout preserved. Verified `npm run typecheck` clean and local `GET /ad/6` = 200 with the lineup asset served. **Asset is local only — commit/push so it deploys.**
+- **2026-06-06** - **Full markdown handoff refresh after Red Bull demo polish.** Updated `README.md`, `CLAUDE.md`, `ROADMAP.md`, `synapse_design_brief.md`, `demo/shopify-demo-video-brief.md`, `docs/google-sheets-waitlist.md`, and `public/products/_README.md` so a teammate/agent can understand the current product state cold: Claude brief engine + mubit memory loop are live, Shopify/GA4/Vercel/website connectors are code-present, Supabase/auth/real dashboard remain the main product blockers, and the current recording path is the six-screen synthetic Red Bull Coconut & Berry flow at `/ad/1` -> `/ad/6`. Current verification remains `npm run typecheck`, `npm run build`, and `npm test` = 28/28 from the latest product pass; this documentation pass did not introduce runtime code changes.
 
 - **2026-06-06** - **Final Red Bull ad recording polish: cropped bottom sections fixed + extra product images added.** Copied the two supplied images into `public/demo-assets/red-bull-memory-alt.avif` and `public/demo-assets/red-bull-summer-edition.jpg`. Wired them alongside the original Coconut & Berry image: `/ad/4` past-memory cards now show product thumbnails, and `/ad/6` fall-off forecast cards show thumbnails for the drinks Synapse recommends reducing. Tightened `/ad/4` prediction/memory card sizing and `/ad/6` verdict/forecast sizing so the bottom cards/text fit inside the fixed 1080p recording viewport. Verified `npm run typecheck`, `npm run build`, `npm test`, local HTTP `GET /ad/4`, `/ad/6`, and both new asset URLs = 200.
 

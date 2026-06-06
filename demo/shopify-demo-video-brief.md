@@ -23,9 +23,9 @@ this" block clicks through to `/ad/5`, a four-step memory timeline. `/ad/6` is
 the final verdict. All screens are fixed-viewport recording surfaces: there
 should be no scrolling in the demo.
 
-The flow uses three Red Bull can images in `public/demo-assets`: the original
-Coconut & Berry can plus the two extra supplied product images, mainly as
-thumbnails in memory and fall-off forecast cards.
+The flow uses four Red Bull images in `public/demo-assets`: the original
+Coconut & Berry can, two supplied product images used as memory/forecast
+thumbnails, and the edition lineup image used on the final verdict screen.
 
 ## Mock Shopify Product Pull
 

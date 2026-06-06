@@ -106,7 +106,7 @@ This is the current working plan for the next push. Keep the focus on real first
 - [x] **[YOU]** Created the API key at console.mubit.ai (`mbt_synapse-…`) → in `.env` as `MUBIT_API_KEY`. (Admin key to follow; not needed for the core loop — agents auto-register on first ingest.)
 - [x] **[ME]** Aligned `lib/mubit/client.ts` to the real Control HTTP API: `remember()`=POST `/v2/control/ingest` (`items:[]`); `recall()`/`queryRaw()`=POST `/v2/control/query` (**`run_id` required** → `final_answer`+`evidence[]`); `recordOutcome()`=POST `/v2/control/outcome`. Added `founderRunId()`.
 - [x] **[ME]** Threaded `user_id`/`run_id` through `weekly-brief.ts`, `record-action.ts` (ingests the response as a lesson + best-effort `recordOutcome()`), `scripts/generate-brief.ts`; updated `lib/mubit/memory.ts` (valid `lesson` intents, `moveItemId`, `actionOutcome`).
-- [x] **[ME]** Re-ran the harness: week 2 recalled 2 memories from live mubit and built on them ("posted 3 Reels as advised…"). typecheck + 25 tests green.
+- [x] **[ME]** Re-ran the harness: week 2 recalled 2 memories from live mubit and built on them ("posted 3 Reels as advised..."). typecheck was green at the time; current suite is **28/28**.
 - [ ] *(optional, skipped for stage reliability)* Wire real recall into `/api/brief/demo` — the `/brief` UI keeps simulated memory so the demo never depends on network; the engine pipeline already uses live mubit.
 
 **Done:** the week-2 brief visibly compounds on week-1 via *real* mubit recall + outcome reinforcement — the demo that wins judges. ✅
@@ -127,7 +127,7 @@ This is the current working plan for the next push. Keep the focus on real first
 Product-level intelligence so the "one move" can be product-specific.
 - [x] **[ME]** `fetchShopifyProducts()` (products + variants + `inventory_quantity`) and `fetchShopInfo()` (name/plan/currency) in `lib/shopify/ingest.ts`; order line-items added.
 - [x] **[ME]** `ProductMetrics` type + `deriveProductMetrics()` in `lib/metrics/{types,derive}.ts`: units + revenue **per product** WoW, top sellers, **inventory-vs-velocity** ("weeks of stock left"), zero-sales products.
-- [x] **[ME]** Wired into `lib/pipeline/collect.ts` (Shopify branch) + rendered in the prompt; fixtures updated; `tests/products.test.ts` added; build green (21 tests).
+- [x] **[ME]** Wired into `lib/pipeline/collect.ts` (Shopify branch) + rendered in the prompt; fixtures updated; `tests/products.test.ts` added. Test coverage later expanded; current suite is **28/28**.
 - [ ] **[ME/YOU]** Verify against a real dev store during Phase 3 (needs `read_products`, already in scopes).
 
 **Done when:** a brief can say things like *"Product X is 40% of revenue but ~1 week from stockout — reorder now."* (Code path is ready; just needs live data.)
@@ -186,7 +186,7 @@ Product-level intelligence so the "one move" can be product-specific.
 
 ## Phase 9 — Demo polish
 - [x] **[ME]** Added synthetic Shopify pull endpoint, Claude generation endpoint, and screen-recording page for the demo video: `/api/demo/shopify-pull`, `/api/demo/shopify-growth-plan`, and `/demo/shopify`, backed by `lib/demo/shopify-synthetic.ts`, plus `demo/shopify-demo-video-brief.md` with narrative + silent storyboard.
-- [x] **[ME]** Redesigned the silent ad flow at `/ad/1` -> `/ad/10` to match the Synapse landing-page aesthetic: white editorial canvas, orange Synapse accent, Playfair italic ad copy, constellation-memory graph visuals, animated nodes/bars, product-risk scene, AI Growth Brief scene, and baked-in text for recording without editor overlays.
+- [x] **[ME]** Earlier silent ad flow at `/ad/1` -> `/ad/10` matched the Synapse landing-page aesthetic: white editorial canvas, orange Synapse accent, Playfair italic ad copy, constellation-memory graph visuals, animated nodes/bars, product-risk scene, AI Growth Brief scene, and baked-in text for recording without editor overlays. This is now superseded by the six-screen Red Bull flow below.
 - [x] **[ME]** Added a full synthetic Shopify analytics catalogue and graph scene at `/ad/3`: 30 mock signals covering revenue, orders, customers, traffic/conversion, channels/ad spend, products, inventory, fulfillment, and operational risk, all arranged as a connected Synapse memory graph for the video.
 - [x] **[ME]** Superseded the above ad flow for the current video direction: `/ad/1` -> `/ad/3` now form a Red Bull Coconut & Berry demo. Slide 1 centers the supplied can image; slide 2 shows plausible product-level Shopify mock stats in charts plus a hover/click Synapse prediction card; slide 3 is the full stockout prediction backed by current stats and past-memory cards. Current recording guide is `demo/shopify-demo-video-brief.md`.
 - [x] **[ME]** Polished the Red Bull demo into a four-screen fixed-viewport recording flow: `/ad/1` has a stronger autonomous can float, `/ad/3` has unclipped prediction copy and a clickable "Why Synapse believes this" block, and `/ad/4` is a four-step memory timeline where velocity/source/funnel/inventory clicks swap the detailed explanation plus recalled past-launch evidence beside the can.

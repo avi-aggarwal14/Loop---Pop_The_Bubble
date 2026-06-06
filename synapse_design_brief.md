@@ -158,6 +158,7 @@ Demo assets:
 public/demo-assets/red-bull-coconut-berry.webp
 public/demo-assets/red-bull-memory-alt.avif
 public/demo-assets/red-bull-summer-edition.jpg
+public/demo-assets/red-bull-lineup.jpg
 ```
 
 The demo data is fictional. It should be described as mock Shopify-style data,

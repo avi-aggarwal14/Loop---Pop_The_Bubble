@@ -89,6 +89,7 @@ Demo assets live in:
 public/demo-assets/red-bull-coconut-berry.webp
 public/demo-assets/red-bull-memory-alt.avif
 public/demo-assets/red-bull-summer-edition.jpg
+public/demo-assets/red-bull-lineup.jpg
 ```
 
 ## Shopify Multi-Merchant Setup

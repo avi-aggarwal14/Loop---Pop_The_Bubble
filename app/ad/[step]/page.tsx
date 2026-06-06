@@ -8,6 +8,7 @@ export const metadata = {
 const CAN_IMAGE = "/demo-assets/red-bull-coconut-berry.webp";
 const MEMORY_CAN_IMAGE = "/demo-assets/red-bull-memory-alt.avif";
 const SUMMER_CAN_IMAGE = "/demo-assets/red-bull-summer-edition.jpg";
+const LINEUP_IMAGE = "/demo-assets/red-bull-lineup.jpg";
 
 const F = {
   serif: "var(--font-playfair), 'Playfair Display', Georgia, serif",
@@ -1382,12 +1383,12 @@ function FinalVerdictSlide() {
               </p>
             </Frame>
 
-            <Frame className="scan" style={{ padding: 17, minHeight: 0 }}>
+            <Frame className="scan" style={{ padding: 17, minHeight: 0, display: "grid", gridTemplateRows: "auto auto minmax(0, 1fr)", gap: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
                 <Eyebrow>What to do instead</Eyebrow>
                 <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>current pull + mubit memory</span>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 9, marginTop: 11 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 9 }}>
                 {[
                   ["1", "Increase Coconut & Berry", "Keep TikTok and search live until stock or reorder confirmation becomes the constraint."],
                   ["2", "Slow the likely fall-offs", "Reduce promotion on other drinks that still look healthy now but memory predicts will fade soon."],
@@ -1414,19 +1415,32 @@ function FinalVerdictSlide() {
                   </Frame>
                 ))}
               </div>
+              <div style={{ minHeight: 0, display: "grid", gridTemplateRows: "auto minmax(0, 1fr)", gap: 8, borderTop: `1px solid ${C.hair}`, paddingTop: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+                  <Eyebrow muted>The full edition range</Eyebrow>
+                  <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: "0.1em" }}>what Synapse reasons across</span>
+                </div>
+                <div style={{ minHeight: 0, display: "grid", placeItems: "center" }}>
+                  <img
+                    src={LINEUP_IMAGE}
+                    alt="Full Red Bull editions lineup"
+                    style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", objectFit: "contain", filter: "drop-shadow(0 16px 38px rgba(33,28,23,0.12))" }}
+                  />
+                </div>
+              </div>
             </Frame>
           </div>
 
-          <div style={{ display: "grid", gridTemplateRows: "0.55fr 1fr", gap: 10, minHeight: 0 }}>
+          <div style={{ display: "grid", gridTemplateRows: "0.66fr 1fr", gap: 10, minHeight: 0 }}>
             <Frame style={{ padding: 14, display: "grid", placeItems: "center", background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,251,254,0.9))" }}>
               <img
                 className="hero-can"
                 src={CAN_IMAGE}
                 alt=""
                 style={{
-                  maxHeight: "min(26vh, 250px)",
+                  maxHeight: "min(34vh, 330px)",
                   width: "auto",
-                  maxWidth: "84%",
+                  maxWidth: "92%",
                   objectFit: "contain",
                   filter: "drop-shadow(0 28px 62px rgba(33,28,23,0.18))",
                 }}
@@ -1441,17 +1455,17 @@ function FinalVerdictSlide() {
               <div style={{ display: "grid", gap: 7, marginTop: 11 }}>
                 {verdictAlternatives.map((drink, index) => (
                   <Frame key={drink.name} className="card-in" style={{ padding: 10, animationDelay: `${index * 70}ms` } as React.CSSProperties}>
-                    <div style={{ display: "grid", gridTemplateColumns: "38px 1fr", gap: 10, alignItems: "center" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "50px 1fr", gap: 12, alignItems: "center" }}>
                       <img
                         src={drink.image}
                         alt=""
                         style={{
-                          width: 38,
-                          height: 48,
+                          width: 50,
+                          height: 62,
                           objectFit: "contain",
-                          borderRadius: 9,
+                          borderRadius: 10,
                           background: "rgba(255,255,255,0.72)",
-                          boxShadow: "0 8px 18px rgba(33,28,23,0.08)",
+                          boxShadow: "0 10px 22px rgba(33,28,23,0.1)",
                         }}
                       />
                       <div>

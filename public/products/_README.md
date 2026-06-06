@@ -8,6 +8,7 @@ The current Red Bull demo video uses `public/demo-assets/` instead:
 public/demo-assets/red-bull-coconut-berry.webp
 public/demo-assets/red-bull-memory-alt.avif
 public/demo-assets/red-bull-summer-edition.jpg
+public/demo-assets/red-bull-lineup.jpg
 ```
 
 Use this `public/products/` folder only when rebuilding the broader Nike /
