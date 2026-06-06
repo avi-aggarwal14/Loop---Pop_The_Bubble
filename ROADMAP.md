@@ -9,11 +9,12 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 
 ## Current state (2026-06-06)
 
-- **Built, typechecked, pushed:** the brief engine (**Anthropic Claude**), the memory layer (mubit), **four data connectors** (Shopify orders **+ per-product/inventory**, GA4, Vercel drains, website scraper), the multi-source pipeline, all API routes, two SQL migrations, and **21 unit tests**.
-- **🟢 Build is green** — `npm run typecheck` clean, `npm test` = 25 (now incl. brief-engine tests). The Shopify per-product upgrade (Phase 3b) is **complete**: line items + catalogue/inventory → per-product revenue, top sellers, inventory-vs-sales-velocity, and dead stock, all flowing into the brief.
+- **Built, typechecked:** the brief engine (**Anthropic Claude**), the memory layer (mubit), **four data connectors** (Shopify orders **+ per-product/inventory**, GA4, Vercel drains, website scraper), the multi-source pipeline, all API routes, two SQL migrations, and the demo/ad surfaces.
+- **🟢 Build is green** — `npm run typecheck` clean, `npm run build` clean, `npm test` = **28/28**. The Shopify per-product upgrade (Phase 3b) is **complete**: line items + catalogue/inventory → per-product revenue, top sellers, inventory-vs-sales-velocity, and dead stock, all flowing into the brief.
 - **✅ The brief engine runs LIVE on Anthropic Claude** (`claude-opus-4-8`) — Phase 1 done.
 - **✅ mubit is WIRED + verified LIVE** — `MUBIT_API_KEY` in `.env`, client aligned to the real Control HTTP API, and `npm run generate-brief` shows real cross-week compounding + outcome reinforcement (Phase 2 done).
-- **Next up: Shopify (Phase 3)** — use the direct token path first as an integration smoke test, then wire real user OAuth/persistence. Do **not** spend time manufacturing a fake realistic store; the demo story should come from real/borrowed user data or the existing seeded narrative.
+- **Demo/video path is recording-ready** — the current silent story is `/ad/1` → `/ad/6` using synthetic Red Bull Coconut & Berry Shopify-style data and mubit-style memory. See `demo/shopify-demo-video-brief.md`.
+- **Next up after recording: real product setup** — use the direct Shopify token path first as an integration smoke test, then wire real user OAuth/persistence. Do **not** build production around one store token; the real product must support many merchant installs.
 
 ---
 
@@ -192,9 +193,10 @@ Product-level intelligence so the "one move" can be product-specific.
 - [x] **[ME]** Added the missing product-flow wrapper screens without redesigning the middle screens: `/ad/1` is now a validation chat where the founder proposes decreasing Coconut & Berry sales and Synapse replies not to; the prior product/stat/prediction/memory screens now sit at `/ad/2` -> `/ad/5`; `/ad/6` is the final verdict telling the founder to increase the breakout product and decrease other drinks that look good recently but mubit memory predicts will fall off.
 - [x] **[ME]** Fixed fixed-viewport crop issues in the Red Bull ad flow. `/ad/3` now has a tighter stats grid, compact Revenue by source card, and a thin cylindrical Conversion path pill that opens the full modal; later screens had headline/card sizing reduced where needed so the recording flow stays no-scroll.
 - [x] **[ME]** Final recording polish: added the two extra supplied Red Bull images to `public/demo-assets`, used them with the original Coconut & Berry image in `/ad/4` memory cards and `/ad/6` forecast cards, and tightened those bottom-heavy screens so the last cards/text are visible in the fixed viewport.
-- [ ] **[ME]** Seed a believable 2–3 week founder story so the compounding is obvious on stage.
-- [ ] **[TEAM]** Mobile pass.
-- [ ] **[ME/YOU]** Rehearse: brief → "your one move" → (founder acts) → next brief references it → *"and it remembers everything."*
+- [x] **[ME]** Recording guide updated in `demo/shopify-demo-video-brief.md` with the exact six-screen flow and timing notes.
+- [ ] **[YOU/TEAM]** Record the final no-talking demo video from the local `/ad/1` → `/ad/6` flow or deploy first and record from production.
+- [ ] **[TEAM]** Optional mobile/cropped 9:16 pass for Instagram/Reels if needed.
+- [ ] **[ME/YOU]** After the video, return to real product setup: Supabase, Shopify app credentials, OAuth smoke, and authenticated dashboard.
 
 ---
 
@@ -218,8 +220,9 @@ Product-level intelligence so the "one move" can be product-specific.
 ```bash
 npm install            # deps
 npm run generate-brief # run the engine on seeded data (needs ANTHROPIC_API_KEY)
-npm test               # 21 unit tests (no keys needed) — green
+npm test               # 28 unit tests (no keys needed) — green
 npm run typecheck      # full type check — green
+npm run build          # production build — green
 ```
 
 ## Dependency order (what blocks what)

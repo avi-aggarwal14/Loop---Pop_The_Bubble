@@ -1,88 +1,184 @@
-# Synapse — Design Brief
+# Synapse - Design Brief
 
-## What it is
+## What It Is
 
-Synapse is an AI growth partner for founders. You connect your analytics tools (Shopify, Stripe, Google Analytics) and every week it generates a plain-English **Growth Brief**: what's working, what to cut, and — crucially — **one single prioritised action**. Not ten suggestions. One.
+Synapse is an AI growth partner for founders. Users connect analytics tools such
+as Shopify, Google Analytics, Vercel, Stripe later, and Synapse generates a
+plain-English Growth Brief: what is working, what to cut, and one single
+prioritized action. Not ten suggestions. One.
 
-It gets smarter over time because it remembers every brief it's ever given you and what you acted on, so advice compounds week over week.
+It gets smarter over time because it remembers every brief, every action the
+founder took, and what happened next. That memory loop is the main differentiator.
 
-**One-liner:** "Your analytics, turned into one decision."
+One-liner:
 
-**Displaces:** Databox, Whatagraph — tools that show you charts but never tell you what to do about them.
+> Your analytics, turned into one decision.
 
----
+Displaces:
 
-## The core product artefact: the Growth Brief
+- Databox
+- Whatagraph
+- static dashboards that show charts but do not say what to do
 
-This is what Synapse produces. It's the hero of the product — everything should feel like it's building toward delivering this.
+## Product Behavior
 
+Synapse has two core modes:
+
+1. **Weekly Growth Brief**  
+   A scheduled brief that summarizes the business and gives one move.
+
+2. **Decision validation**  
+   The founder can ask whether a planned move is a good idea. Synapse checks the
+   plan against current analytics plus remembered past outcomes, then says
+   whether to do it and what to do instead.
+
+Example from the current demo:
+
+```text
+Founder: I plan to decrease Red Bull Coconut & Berry sales next week.
+Synapse: Do not decrease it. Demand is still compounding, stockout risk is high,
+and remembered limited-edition launches show this pattern usually sells out.
 ```
-Growth Brief — Week of 2 June
+
+## The Core Product Artifact: Growth Brief
+
+This is what Synapse produces. Everything should feel like it is building toward
+delivering this.
+
+```text
+Growth Brief - Week of 2 June
 
 Headline numbers
-Revenue ↑12% WoW  ·  Sessions ↓3%  ·  Conversion 2.4% →
+Revenue up 12% WoW  |  Sessions down 3%  |  Conversion 2.4%
 
 What's working
 Instagram traffic drove 34% of new customers this week,
 up from 18% last week.
 
 What to cut
-Facebook ads: £180 spend, 0 conversions — pause now.
+Facebook ads: GBP 180 spend, 0 conversions - pause now.
 
 Your one move this week
-Post 3 product demo Reels this week. It's your only
+Post 3 product demo Reels this week. It is your only
 channel with positive ROAS right now.
 ```
 
----
+## Who It Is For
 
-## Who it's for
+- **E-commerce founders** - connect Shopify, see which products, sources, and
+  campaigns are converting.
+- **SaaS founders** - connect Stripe later, track MRR, churn, and growth levers.
+- **Any business with a website** - connect GA4 or Vercel analytics, understand
+  pages, sources, and conversion.
 
-- **E-commerce founders** — connect Shopify, see what's converting
-- **SaaS founders** — connect Stripe, track MRR and churn levers
-- **Any business with a website** — connect Google Analytics
+## Design Direction
 
----
+The design should feel sharp, editorial, and decisive. The product reads like a
+business analyst with taste: not a generic AI chatbot and not a decorative SaaS
+landing page.
 
-## Design direction
+Core principles:
 
-**Aesthetic:** Clean, intelligent, slightly editorial. Think a finance tool that reads like a newspaper. Dark mode.
+- The interface should make one recommendation feel obvious.
+- Data should feel inspectable, but not overwhelming.
+- Memory should feel like a product capability, not an explanation pasted on top.
+- Use fixed, stable layouts for demo/video surfaces. No scrolling in the ad flow.
 
-**Palette:**
-- Background: `#0A0A0A` (near-black)
-- Accent: Electric blue `#2563EB`
+## Visual System
+
+Typography:
+
+- Display: Playfair Display, bold italic, editorial.
+- Body: DM Sans, clean and readable.
+- Labels/data: JetBrains Mono.
+
+Original dark product direction:
+
+- Background: `#0A0A0A`
 - Card bg: `#0D1117`
 - Text: `#F5F5F5`
-- Muted: `rgba(255,255,255,0.4–0.5)`
-- Up/positive: emerald green
-- Down/negative: red
+- Accent: electric blue `#2563EB`
+- Muted: `rgba(255,255,255,0.4-0.5)`
 
-**Typography:**
-- Headlines: Playfair Display, bold italic — gives it editorial weight
-- Body: DM Sans — clean and readable
-- Numbers/data in the card: JetBrains Mono — terminal/data feel
+Current demo/ad direction:
 
-**Tone:** Sharp, confident, no fluff. The product makes a single recommendation — the design should feel equally decisive.
+- Background: warm white `#FFFDFC`
+- Text: near-black `#111111`
+- Accent: Synapse orange `#FA5400`
+- Muted text: `rgba(17,17,17,0.62)`
+- Positive: green `#118A46`
+- Risk/negative: red `#D63638`
+- Cards: white/near-white frames with restrained borders and shadows
 
-**Do NOT:** Purple gradients, glassmorphism, 3D blobs, stock laptop photos, generic AI startup aesthetics.
+Avoid:
 
----
+- Purple gradients
+- glassmorphism
+- stock laptop photos
+- generic AI startup blobs
+- scrolling demo pages
 
-## Current landing page sections
+## Current Landing Page Sections
 
-1. **Nav** — "Synapse" wordmark + single "Get early access" CTA
-2. **Hero** — Headline + subhead + email capture + Growth Brief card (the centrepiece)
-3. **How it works** — 3 steps: Connect → Brief → One move
-4. **Who it's for** — 3 founder archetypes
-5. **Social proof** — One quote card (placeholder)
-6. **Final CTA** — Repeat email capture: "Stop guessing. Start growing."
-7. **Footer** — Wordmark + "Built at Pop the Bubble Hackathon 2026"
+1. Nav - Synapse wordmark + single "Get early access" CTA
+2. Hero - headline, subhead, email capture, Growth Brief visual
+3. How it works - Connect -> Brief -> One move
+4. Who it is for - ecommerce, SaaS, website businesses
+5. Social proof - one quote card
+6. Final CTA - "Stop guessing. Start growing."
+7. Footer - Synapse + Pop the Bubble Hackathon 2026
 
----
+## Current Demo/Ad Flow
 
-## Tech stack
+The current no-talking demo video is the Red Bull Coconut & Berry story:
 
-- Next.js 16 (App Router)
-- Tailwind CSS
-- Deployed to Vercel
-- Backend: Claude API for brief generation, Supabase for storage, mubit for memory (so briefs compound over time)
+```text
+/ad/1 -> /ad/2 -> /ad/3 -> /ad/4 -> /ad/5 -> /ad/6
+```
+
+It is implemented in `app/ad/[step]/page.tsx` and documented in
+`demo/shopify-demo-video-brief.md`.
+
+Screens:
+
+1. **Validation chat** - founder plans to decrease Coconut & Berry sales;
+   Synapse says not to.
+2. **Product hero** - clean Red Bull Coconut & Berry can shot.
+3. **Shopify pull** - synthetic product-level stats, revenue by source,
+   conversion path pill/modal, and stockout prediction card.
+4. **Full prediction** - stockout likely inside the next order cycle.
+5. **Memory timeline** - four clickable steps: velocity, source, funnel,
+   inventory.
+6. **Final verdict** - increase Coconut & Berry; decrease other drinks predicted
+   by memory to fall off.
+
+Demo assets:
+
+```text
+public/demo-assets/red-bull-coconut-berry.webp
+public/demo-assets/red-bull-memory-alt.avif
+public/demo-assets/red-bull-summer-edition.jpg
+```
+
+The demo data is fictional. It should be described as mock Shopify-style data,
+not real Red Bull or real merchant data.
+
+## Tech Stack
+
+- Next.js App Router
+- TypeScript
+- Tailwind CSS where used by the main app
+- Claude API for brief generation
+- Supabase for auth/storage/RLS
+- mubit for memory/outcome learning
+- Shopify first, GA4/Vercel next, Stripe later
+
+Current verification target:
+
+```bash
+npm run typecheck
+npm run build
+npm test
+```
+
+`npm test` currently passes 28/28.

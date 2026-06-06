@@ -1,18 +1,34 @@
-# Product photos — drop them here
+# Product Photos
 
-Put the 12 product images in **this folder** (`public/products/`) using the **exact
-filenames** below. As soon as a file exists, it shows up automatically (the slot
-falls back to a placeholder until then). Served at `/products/<name>`.
+This folder is for the older broad catalogue/product-card grid.
 
-**Format:** `.png` preferred (transparent background looks best, especially the
-Red Bull cans). If your files are `.jpg`/`.webp` instead, that's fine — just tell
-me and I'll switch the extensions in `PRODUCT_IMG`.
+The current Red Bull demo video uses `public/demo-assets/` instead:
 
-**Shape tips:** Nike cards are wide, Honi cards are square, Red Bull cards are tall
-& narrow (rendered with `contain`, so full cans won't get cropped). Roughly square
-or product-on-clean-background shots work best.
+```text
+public/demo-assets/red-bull-coconut-berry.webp
+public/demo-assets/red-bull-memory-alt.avif
+public/demo-assets/red-bull-summer-edition.jpg
+```
 
-| Brand | Product | Filename to use |
+Use this `public/products/` folder only when rebuilding the broader Nike /
+Honi Poke / Red Bull catalogue grid. Product images placed here are served at
+`/products/<name>`.
+
+Preferred format:
+
+- `.png` for transparent product cutouts
+- `.webp` or `.jpg` is fine if the code is updated to reference that extension
+
+Shape tips:
+
+- Nike cards are wide.
+- Honi Poke cards are square.
+- Red Bull cards are tall and narrow, rendered with `contain` so full cans do
+  not get cropped.
+
+Expected catalogue filenames:
+
+| Brand | Product | Filename |
 |---|---|---|
 | Nike | Phantom 6 Elite | `nike-phantom-6-elite.png` |
 | Nike | Jordan 1 Low | `nike-jordan-1-low.png` |
@@ -26,6 +42,3 @@ or product-on-clean-background shots work best.
 | Red Bull | Zero | `redbull-zero.png` |
 | Red Bull | Tropical Edition | `redbull-tropical-edition.png` |
 | Red Bull | Summer Edition | `redbull-summer-edition.png` |
-
-After you drop them in, tell me and I'll rebuild + verify they render in both the
-hero product card and the "Your catalogue, recalled" grid.
