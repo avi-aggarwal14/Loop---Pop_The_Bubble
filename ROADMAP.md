@@ -46,7 +46,8 @@ This is the current working plan for the next push. Keep the focus on real first
 - [ ] **[ME]** If available, create a `vercel` connection row with `drain_secret` and verify events aggregate into traffic metrics.
 
 ### Milestone 5 — Product UI
-- [ ] **[ME]** Build the real Connect page and real dashboard path once Supabase Auth/session wiring is available.
+- [x] **[ME]** Added a first-pass `/connect` page for the current connector routes: Shopify OAuth URL builder, GA4 OAuth URL builder, Vercel drain instructions, and website sidecar command. It still uses the temporary `founder_id` field until Supabase Auth is wired.
+- [ ] **[ME]** Build the real authenticated Connect page and real dashboard path once Supabase Auth/session wiring is available.
 - [ ] **[ME]** Replace `founder_id` query params with the authenticated server session.
 - [ ] **[ME]** Wire Done/Skipped/outcome in the UI to `POST /api/briefs/[id]/action`, so mubit outcome learning is used in the real app.
 
