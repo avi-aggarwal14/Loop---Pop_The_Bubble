@@ -570,7 +570,9 @@ function HeroStage({ children, w = 1280, h = 760 }) {
 
 // ── Page primitives ─────────────────────────────────────────────────────────
 function Wrap({ children, max = 1180, style }) {
-  return <div style={{ maxWidth: max, margin: "0 auto", padding: "0 40px", ...style }}>{children}</div>;
+  // Side padding lives in CSS (.syn-wrap) so it can shrink on mobile via media
+  // query; top/bottom padding still comes through inline `style`.
+  return <div className="syn-wrap" style={{ maxWidth: max, margin: "0 auto", ...style }}>{children}</div>;
 }
 
 function Eyebrow({ children, color = "#FA5400", style }) {
@@ -649,6 +651,76 @@ function AdviceChart({ theme, rows = ["Coats", "Knits", "Dresses", "Trousers", "
   );
 }
 
+// ── Responsive ──────────────────────────────────────────────────────────────
+// false on the server and on first client render (so desktop markup is byte-
+// identical and there's no hydration mismatch); flips true under `bp` after mount.
+function useIsMobile(bp = 820) {
+  const [m, setM] = useState(false);
+  useEffect(() => {
+    const check = () => setM(window.innerWidth < bp);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [bp]);
+  return m;
+}
+
+// Stacked, natural-size hero for phones (the desktop ProductHero is a fixed
+// 1280-wide stage that scales down to an unreadable size on mobile).
+function MobileHero({ controlIndex }) {
+  const c = COMPANIES[controlIndex];
+  const t = c.theme;
+  const cp = c.copy.c2;
+  const hero = c.heroes[0];
+  return (
+    <div style={{ position: "relative", overflow: "hidden", background: t.bg, transition: "background-color .6s ease" }}>
+      <div style={{ position: "absolute", inset: 0, opacity: 0.6, pointerEvents: "none" }}>
+        <GraphField key={c.id} theme={{ g: c.g }} focus="full" density={26} faded anchors={[]} labels={[]} />
+      </div>
+      <div style={{ position: "relative", zIndex: 2, padding: "90px 22px 44px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 22 }}>
+          <SynMark accent={t.accent} size={20} />
+          <span style={{ fontFamily: SYN.serif, fontWeight: 700, fontSize: 20, color: t.text }}>Synapse</span>
+        </div>
+        <div style={{ fontFamily: SYN.mono, fontSize: 9.5, letterSpacing: "0.18em", textTransform: "uppercase", color: t.faint, marginBottom: 9 }}>What Synapse sees for</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 18 }}>
+          <LogoMark logo={c.logo} name={c.name} theme={t} size={22} />
+          <span style={{ fontFamily: SYN.mono, fontSize: 10.5, letterSpacing: "0.14em", color: t.muted, textTransform: "uppercase" }}>{c.kind}</span>
+        </div>
+        <div style={{ fontFamily: SYN.mono, fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", color: t.accent }}>{cp.k}</div>
+        <h1 style={{ margin: "12px 0 0", fontFamily: SYN.serif, fontStyle: "italic", fontWeight: 700, fontSize: 38, lineHeight: 1.05, letterSpacing: "-0.015em", color: t.text }}>
+          {cp.h.map((line, k) => <div key={k}>{line}</div>)}
+        </h1>
+        <p style={{ margin: "16px 0 0", fontFamily: SYN.sans, fontSize: 15.5, lineHeight: 1.55, color: t.muted }}>{cp.s}</p>
+        <div style={{ marginTop: 22 }}><CycCapture theme={t} /></div>
+        <div style={{ marginTop: 32, position: "relative" }}>
+          <div className="syn-prod-glow" style={{ position: "absolute", left: "50%", top: "44%", width: 340, height: 340,
+            transform: "translate(-50%,-50%)", borderRadius: "50%", zIndex: 0, pointerEvents: "none",
+            background: `radial-gradient(circle, ${t.accent}33 0%, ${t.accent}10 38%, transparent 64%)` }} />
+          <div style={{ position: "relative", zIndex: 1, maxWidth: 320, margin: "0 auto" }}>
+            <ImageSlot shape="rounded" radius={18} src={PRODUCT_IMG[hero.slot]} fit={c.tileFit || "cover"} placeholder={`Drop the ${hero.product} photo`}
+              style={{ display: "block", width: "100%", height: 300, background: t.cardBg, border: `1px solid ${t.hair2}`,
+                boxShadow: t.dark ? "0 24px 60px rgba(0,0,0,0.5)" : "0 24px 60px rgba(33,28,23,0.25)" }} />
+            <div style={{ marginTop: 12, background: t.cardBg, border: `1px solid ${t.accent}55`, borderRadius: 14, padding: "13px 15px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontFamily: SYN.mono, fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", color: t.accent }}>Recalled from memory</span>
+                <span style={{ fontFamily: SYN.mono, fontSize: 9, color: t.faint }}>{hero.since}</span>
+              </div>
+              <div style={{ fontFamily: SYN.sans, fontSize: 15, lineHeight: 1.4, color: t.text }}>
+                <span style={{ fontWeight: 700 }}>{hero.product}</span><span style={{ color: t.faint }}> ↔ </span><span style={{ color: t.muted }}>{hero.past}</span>
+              </div>
+              <div style={{ marginTop: 6, fontFamily: SYN.sans, fontSize: 12.5, lineHeight: 1.4, color: t.muted }}>{hero.meta}</div>
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 26, display: "flex", justifyContent: "center" }}>
+          <CycDots theme={t} count={COMPANIES.length} active={controlIndex} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ────────────────────────────────────────────────────────────────────
 const BENCH_ROWS = ["Flagship", "New launch", "Seasonal", "Core range", "Bundles", "Long-tail"];
 
@@ -668,6 +740,7 @@ export default function SynapseLanding() {
     window.addEventListener("touchmove", lock, { passive: true });
     return () => { clearInterval(id); window.removeEventListener("scroll", lock); window.removeEventListener("wheel", lock); window.removeEventListener("touchmove", lock); };
   }, []);
+  const m = useIsMobile();
   const active = locked != null ? locked : i;
   const co = COMPANIES[active];
   const t = pal(co);
@@ -681,27 +754,27 @@ export default function SynapseLanding() {
   return (
     <div className="syn-fade" style={{ background: t.bg, color: t.text, fontFamily: SYN.sans }}>
       {/* company toggle */}
-      <div style={{ position: "fixed", top: 18, right: 20, zIndex: 100, display: "flex", gap: 5, padding: 5,
+      <div style={{ position: "fixed", top: m ? 12 : 18, right: m ? 12 : 20, zIndex: 100, display: "flex", gap: m ? 3 : 5, padding: m ? 4 : 5,
         borderRadius: 100, background: t.dark ? "rgba(10,20,45,0.45)" : "rgba(255,255,255,0.5)",
         backdropFilter: "blur(14px) saturate(1.4)", WebkitBackdropFilter: "blur(14px) saturate(1.4)",
         border: `1px solid ${t.hair2}`, boxShadow: "0 10px 34px rgba(0,0,0,0.22)" }}>
         {COMPANIES.map((c, idx) => (
-          <button key={idx} onClick={() => pick(idx)} style={{ fontFamily: SYN.mono, fontSize: 11, letterSpacing: "0.08em",
-            textTransform: "uppercase", cursor: "pointer", border: "none", borderRadius: 100, padding: "7px 12px",
+          <button key={idx} onClick={() => pick(idx)} style={{ fontFamily: SYN.mono, fontSize: m ? 9 : 11, letterSpacing: m ? "0.04em" : "0.08em",
+            textTransform: "uppercase", cursor: "pointer", border: "none", borderRadius: 100, padding: m ? "6px 9px" : "7px 12px",
             background: idx === active ? t.accent : "transparent", color: idx === active ? (t.onAccent || "#fff") : t.muted, whiteSpace: "nowrap" }}>{c.name}</button>
         ))}
       </div>
 
       {/* HERO */}
-      <HeroStage><ProductHero controlIndex={active} /></HeroStage>
+      {m ? <MobileHero controlIndex={active} /> : <HeroStage><ProductHero controlIndex={active} /></HeroStage>}
 
       {/* STAT BAND */}
       <section style={{ background: t.band, color: t.bandText }}>
-        <Wrap style={{ paddingTop: 92, paddingBottom: 64 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.05fr 0.95fr", gap: 56, alignItems: "center" }}>
+        <Wrap style={{ paddingTop: m ? 56 : 92, paddingBottom: m ? 48 : 64 }}>
+          <div style={{ display: "grid", gridTemplateColumns: m ? "1fr" : "1.05fr 0.95fr", gap: m ? 28 : 56, alignItems: "center" }}>
             <div>
               <div style={{ fontFamily: SYN.mono, fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase", color: t.accent, marginBottom: 20 }}>The unfair advantage</div>
-              <h2 style={{ margin: 0, fontFamily: SYN.serif, fontStyle: "italic", fontWeight: 700, fontSize: 42, lineHeight: 1.12, letterSpacing: "-0.015em", color: t.bandText }}>
+              <h2 style={{ margin: 0, fontFamily: SYN.serif, fontStyle: "italic", fontWeight: 700, fontSize: m ? 30 : 42, lineHeight: 1.12, letterSpacing: "-0.015em", color: t.bandText }}>
                 What does {({ nike: "Nike", honi: "Honi Poke", redbull: "Red Bull" })[co.id] || co.name} have that your business doesn’t?
               </h2>
             </div>
@@ -718,10 +791,10 @@ export default function SynapseLanding() {
           <div style={{ marginTop: 56, paddingTop: 40, borderTop: "1px solid rgba(255,255,255,0.14)",
             display: "flex", alignItems: "center", justifyContent: "space-between", gap: 30, flexWrap: "wrap" }}>
             <div style={{ fontFamily: SYN.mono, fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: t.bandSub, maxWidth: 200 }}>What Synapse holds in memory</div>
-            <div style={{ display: "flex", gap: 64 }}>
+            <div style={{ display: "flex", gap: m ? 24 : 64 }}>
               {co.stats.map(([n, l], idx) => (
                 <div key={idx}>
-                  <div style={{ fontFamily: SYN.serif, fontStyle: "italic", fontWeight: 700, fontSize: 44, lineHeight: 1, color: t.bandText, whiteSpace: "nowrap" }}>{n}</div>
+                  <div style={{ fontFamily: SYN.serif, fontStyle: "italic", fontWeight: 700, fontSize: m ? 30 : 44, lineHeight: 1, color: t.bandText, whiteSpace: "nowrap" }}>{n}</div>
                   <div style={{ fontFamily: SYN.sans, fontSize: 13, color: t.bandSub, marginTop: 8 }}>{l}</div>
                 </div>
               ))}
@@ -731,13 +804,13 @@ export default function SynapseLanding() {
       </section>
 
       {/* PRODUCT SHOWCASE */}
-      <section style={{ padding: "100px 0" }}>
+      <section style={{ padding: m ? "60px 0" : "100px 0" }}>
         <Wrap>
-          <div style={{ marginBottom: 40 }}>
+          <div style={{ marginBottom: m ? 28 : 40 }}>
             <Eyebrow color={t.accent} style={{ marginBottom: 14 }}>Your catalogue, recalled</Eyebrow>
-            <h2 style={{ margin: 0, fontFamily: SYN.serif, fontStyle: "italic", fontWeight: 700, fontSize: 40, letterSpacing: "-0.015em", color: t.text }}>Every product knows its own past.</h2>
+            <h2 style={{ margin: 0, fontFamily: SYN.serif, fontStyle: "italic", fontWeight: 700, fontSize: m ? 28 : 40, letterSpacing: "-0.015em", color: t.text }}>Every product knows its own past.</h2>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: m ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: m ? 12 : 20 }}>
             {co.heroes.map((h, idx) => (
               <div key={idx} style={{ background: t.cardBg, border: `1px solid ${t.hair2}`, borderRadius: 16, overflow: "hidden" }}>
                 <ImageSlot shape="rect" fit={co.tileFit || "cover"} src={PRODUCT_IMG[h.slot]} placeholder={`Drop ${h.product}`}
@@ -757,12 +830,12 @@ export default function SynapseLanding() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section style={{ padding: "90px 0", background: t.panel, borderTop: `1px solid ${t.hair}`, borderBottom: `1px solid ${t.hair}` }}>
+      <section style={{ padding: m ? "56px 0" : "90px 0", background: t.panel, borderTop: `1px solid ${t.hair}`, borderBottom: `1px solid ${t.hair}` }}>
         <Wrap>
-          <div style={{ display: "grid", gridTemplateColumns: "0.7fr 1.3fr", gap: 50, alignItems: "center" }}>
+          <div style={{ display: "grid", gridTemplateColumns: m ? "1fr" : "0.7fr 1.3fr", gap: m ? 22 : 50, alignItems: "center" }}>
             <div>
               <Eyebrow color={t.accent} style={{ marginBottom: 14 }}>How the memory works</Eyebrow>
-              <h2 style={{ margin: 0, fontFamily: SYN.serif, fontStyle: "italic", fontWeight: 700, fontSize: 38, lineHeight: 1.08, color: t.text }}>See it.<br />Keep it.<br />Compare it.</h2>
+              <h2 style={{ margin: 0, fontFamily: SYN.serif, fontStyle: "italic", fontWeight: 700, fontSize: m ? 28 : 38, lineHeight: 1.08, color: t.text }}>See it.<br />Keep it.<br />Compare it.</h2>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {STEPS.map((s, idx) => (
@@ -780,12 +853,12 @@ export default function SynapseLanding() {
       </section>
 
       {/* DECISION ADVICE */}
-      <section style={{ padding: "100px 0" }}>
+      <section style={{ padding: m ? "60px 0" : "100px 0" }}>
         <Wrap>
-          <div style={{ display: "grid", gridTemplateColumns: "0.92fr 1.08fr", gap: 56, alignItems: "center" }}>
+          <div style={{ display: "grid", gridTemplateColumns: m ? "1fr" : "0.92fr 1.08fr", gap: m ? 30 : 56, alignItems: "center" }}>
             <div>
               <Eyebrow color={t.accent} style={{ marginBottom: 14 }}>Decision advice</Eyebrow>
-              <h2 style={{ margin: 0, fontFamily: SYN.serif, fontStyle: "italic", fontWeight: 700, fontSize: 38, lineHeight: 1.12, color: t.text }}>Every analytic, saved and used to advise.</h2>
+              <h2 style={{ margin: 0, fontFamily: SYN.serif, fontStyle: "italic", fontWeight: 700, fontSize: m ? 28 : 38, lineHeight: 1.12, color: t.text }}>Every analytic, saved and used to advise.</h2>
               <p style={{ margin: "22px 0 0", maxWidth: 410, fontSize: 16, lineHeight: 1.62, color: t.muted }}>{ADVICE[co.id]}</p>
               <div style={{ marginTop: 24, display: "inline-flex", alignItems: "center", gap: 10, padding: "10px 16px", borderRadius: 100, background: `${t.accent}1a`, border: `1px solid ${t.accent}55` }}>
                 <span style={{ width: 7, height: 7, borderRadius: 5, background: t.accent }} />
@@ -798,9 +871,9 @@ export default function SynapseLanding() {
       </section>
 
       {/* CTA */}
-      <section id="waitlist" style={{ background: t.band, color: t.bandText, padding: "110px 0", textAlign: "center" }}>
+      <section id="waitlist" style={{ background: t.band, color: t.bandText, padding: m ? "72px 0" : "110px 0", textAlign: "center" }}>
         <Wrap max={900}>
-          <h2 style={{ margin: 0, fontFamily: SYN.serif, fontStyle: "italic", fontWeight: 700, fontSize: 54, lineHeight: 1.12, letterSpacing: "-0.02em", color: t.bandText }}>Give your {you} a memory.</h2>
+          <h2 style={{ margin: 0, fontFamily: SYN.serif, fontStyle: "italic", fontWeight: 700, fontSize: m ? 34 : 54, lineHeight: 1.12, letterSpacing: "-0.02em", color: t.bandText }}>Give your {you} a memory.</h2>
           <p style={{ margin: "20px auto 0", maxWidth: 440, fontSize: 16.5, lineHeight: 1.6, color: t.bandSub }}>Connect your tools in two minutes. It starts remembering immediately.</p>
           <div style={{ marginTop: 30, display: "flex", justifyContent: "center" }}><LCapture onInk theme={t} /></div>
         </Wrap>
