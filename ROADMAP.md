@@ -26,6 +26,7 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 - [x] **[ME]** Replaced production `founder_id` query dependency with Supabase Auth session lookup in connector start routes. The query param now works only as a local/dev fallback when `ALLOW_QUERY_FOUNDER_ID=true` or non-production env.
 - [x] **[ME]** Added Shopify app lifecycle handling: `POST /api/webhooks/shopify/app-uninstalled` verifies Shopify HMAC and marks matching `shopify` connections `revoked`, clearing stored tokens.
 - [x] **[ME]** Added mandatory Shopify compliance webhook endpoints for app review: `customers/data_request`, `customers/redact`, and `shop/redact` (HMAC verified; `shop/redact` revokes/clears store tokens).
+- [x] **[ME]** Installed official Shopify CLI locally (`@shopify/cli`, verified `4.1.0`) and added repo scripts/config: `shopify.web.toml` plus `shopify.app.example.toml`. Use `npm run shopify:config:link` to connect this repo to the real Shopify app.
 - [ ] **[ME]** Token encryption/Vault before production.
 
 This is the current working plan for the next push. Keep the focus on real first-party analytics connections; public website scraping is only context enrichment.
