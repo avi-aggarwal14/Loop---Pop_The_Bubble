@@ -108,20 +108,20 @@ function pal(co) {
 // these before the photos are added. See public/products/_README.md.
 const PRODUCT_IMG = {
   // NIKE
-  "prod-nike-vomero": "/products/nike-phantom-6-elite.png",   // Phantom 6 Elite
-  "prod-nike-p6000": "/products/nike-jordan-1-low.png",        // Jordan 1 Low
-  "prod-nike-dn": "/products/nike-jordan-1.png",               // Jordan 1
-  "prod-nike-shox": "/products/nike-free-ride.png",            // Free Ride
+  "prod-nike-vomero": "/products/nike-phantom-6-elite.avif",   // Phantom 6 Elite
+  "prod-nike-p6000": "/products/nike-jordan-1-low.avif",        // Jordan 1 Low
+  "prod-nike-dn": "/products/nike-jordan-1.avif",              // Jordan 1 (Dunk Low stand-in)
+  "prod-nike-shox": "/products/nike-free-ride.avif",           // Free Ride
   // HONI POKE
-  "prod-honi-salmon": "/products/honi-spicy-prawn.png",        // Spicy Prawn
-  "prod-honi-tuna": "/products/honi-ahi-tuna.png",             // Ahi Tuna
-  "prod-honi-katsu": "/products/honi-salmon.png",              // Honi Salmon
-  "prod-honi-boba": "/products/honi-california.png",           // California
+  "prod-honi-salmon": "/products/honi-spicy-prawn.jpg",        // Spicy Prawn
+  "prod-honi-tuna": "/products/honi-ahi-tuna.jpg",             // Ahi Tuna
+  "prod-honi-katsu": "/products/honi-salmon.jpg",              // Honi Salmon
+  "prod-honi-boba": "/products/honi-california.jpg",           // California
   // RED BULL
-  "prod-redbull-red": "/products/redbull-coconut-berry.png",   // Coconut Berry
-  "prod-redbull-white": "/products/redbull-zero.png",          // Zero
-  "prod-redbull-tropical": "/products/redbull-tropical-edition.png", // Tropical Edition
-  "prod-redbull-summer": "/products/redbull-summer-edition.png",     // Summer Edition
+  "prod-redbull-red": "/products/redbull-coconut-berry.webp",  // Coconut Berry
+  "prod-redbull-white": "/products/redbull-zero.webp",         // Zero
+  "prod-redbull-tropical": "/products/redbull-tropical-edition.webp", // Tropical Edition (Fiji apple/ginger stand-in)
+  "prod-redbull-summer": "/products/redbull-summer-edition.webp",     // Summer Edition
 };
 
 // 3-step "how the memory works" content.
