@@ -185,6 +185,7 @@ Product-level intelligence so the "one move" can be product-specific.
 
 ## Phase 9 — Demo polish
 - [x] **[ME]** Added synthetic Shopify pull endpoint, Claude generation endpoint, and screen-recording page for the demo video: `/api/demo/shopify-pull`, `/api/demo/shopify-growth-plan`, and `/demo/shopify`, backed by `lib/demo/shopify-synthetic.ts`, plus `demo/shopify-demo-video-brief.md` with narrative + silent storyboard.
+- [x] **[ME]** Redesigned the silent ad flow at `/ad/1` -> `/ad/9` to match the Synapse landing-page aesthetic: white editorial canvas, orange Synapse accent, Playfair italic ad copy, constellation-memory graph visuals, animated nodes/bars, product-risk scene, AI Growth Brief scene, and baked-in text for recording without editor overlays.
 - [ ] **[ME]** Seed a believable 2–3 week founder story so the compounding is obvious on stage.
 - [ ] **[TEAM]** Mobile pass.
 - [ ] **[ME/YOU]** Rehearse: brief → "your one move" → (founder acts) → next brief references it → *"and it remembers everything."*

@@ -119,6 +119,12 @@ http://localhost:3000/ad/9
 Each page already has the overlay text. Click **Next** between pages while
 recording.
 
+Current design note: the `/ad` pages are now the preferred recording flow. They
+use the Synapse landing-page aesthetic directly: white editorial canvas, orange
+Synapse accent, serif italic headlines, constellation-memory animation, product
+frames, and AI brief cards. You do not need to add extra text overlays in
+CapCut/FocuSee/Clipchamp unless you want music timing titles.
+
 Scene 1:
 
 ```text
