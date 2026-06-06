@@ -1,17 +1,100 @@
 # Synapse
 
-AI growth partner for founders. Users connect first-party analytics sources
-(Shopify first, then GA4/Vercel/Stripe) and Synapse turns the data into a weekly
-Growth Brief with one prioritized action. Claude writes the brief; mubit stores
-lessons/outcomes so advice compounds.
+Synapse is an AI growth partner for founders. A user connects first-party
+analytics sources, starting with Shopify, and Synapse turns the data into a
+plain-English Growth Brief with one prioritized action. Claude writes the brief;
+mubit stores lessons and outcomes so advice compounds over time.
 
-## Shopify multi-merchant setup
+Current build status as of 2026-06-06:
+
+- Next.js App Router app with landing page, connector/demo pages, and API routes.
+- Backend engine is code-complete for the hackathon demo path.
+- Claude brief generation works.
+- mubit memory/outcome loop is wired and has been verified live.
+- Shopify OAuth/multi-merchant app path is implemented at code level, but real
+  merchant install/testing still needs Shopify app credentials, Supabase, and a
+  real/dev store.
+- Tests are green: `npm test` currently reports 28/28.
+
+For the full architecture and project log, read `CLAUDE.md`. For the step-by-step
+build plan, read `ROADMAP.md`.
+
+## Key Routes
+
+Product and demo surfaces:
+
+```text
+/                 landing page and waitlist
+/connect          first-pass connector setup UI
+/brief            demo Growth Brief dashboard
+/dashboard        app/dashboard shell
+/demo/shopify     fuller synthetic Shopify demo page
+/ad/1             silent demo video screen 1
+/ad/2             silent demo video screen 2
+/ad/3             silent demo video screen 3
+/ad/4             silent demo video screen 4
+/ad/5             silent demo video screen 5
+/ad/6             silent demo video screen 6
+```
+
+Important APIs:
+
+```text
+/api/auth/shopify
+/api/auth/shopify/callback
+/api/auth/google
+/api/auth/google/callback
+/api/brief/demo
+/api/briefs/[id]/action
+/api/cron/generate-briefs
+/api/demo/shopify-pull
+/api/demo/shopify-growth-plan
+/api/ingest/vercel
+/api/waitlist
+/api/webhooks/shopify/*
+```
+
+## Demo Video Flow
+
+The current recording-ready silent ad flow is the Red Bull Coconut & Berry story
+in `app/ad/[step]/page.tsx`, documented in `demo/shopify-demo-video-brief.md`.
+
+Record these URLs in order:
+
+```text
+http://localhost:3000/ad/1
+http://localhost:3000/ad/2
+http://localhost:3000/ad/3
+http://localhost:3000/ad/4
+http://localhost:3000/ad/5
+http://localhost:3000/ad/6
+```
+
+The story:
+
+- `/ad/1`: founder validates a risky plan to decrease Coconut & Berry sales.
+- `/ad/2`: product hero with the Red Bull Coconut & Berry can.
+- `/ad/3`: synthetic Shopify product-level analytics pull.
+- `/ad/4`: full prediction that the product will likely stock out.
+- `/ad/5`: four-step memory timeline explaining the causal chain.
+- `/ad/6`: final verdict: increase the breakout product and reduce drinks mubit
+  predicts will fall off.
+
+The demo uses fictional data shaped like a real Shopify pull. Do not present it
+as real Red Bull or real merchant data.
+
+Demo assets live in:
+
+```text
+public/demo-assets/red-bull-coconut-berry.webp
+public/demo-assets/red-bull-memory-alt.avif
+public/demo-assets/red-bull-summer-edition.jpg
+```
+
+## Shopify Multi-Merchant Setup
 
 Synapse should be configured as one Shopify app that many merchants can install.
 Do not build production around a single admin-created store token.
-
-The official Shopify CLI is installed locally in this repo. Use `npm run
-shopify:*` commands so everyone works from the same CLI version.
 
 1. Create/configure a Shopify app in the Shopify Partner/Dev Dashboard.
 2. Set the app URL to `APP_URL`.
@@ -27,47 +110,62 @@ shopify:*` commands so everyone works from the same CLI version.
 7. Put the app credentials in `.env`:
    `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, `SHOPIFY_SCOPES`, `APP_URL`.
 8. In production, users must be logged in through Supabase Auth before visiting
-   `/connect`; the connector start routes use the server session as the
+   `/connect`; connector start routes should use the server session as
    `founder_id`.
 
 Local smoke tests may set `ALLOW_QUERY_FOUNDER_ID=true` and pass
-`?founder_id=<uuid>` while the auth UI is still being wired. Keep that disabled
-in production.
+`?founder_id=<uuid>` while auth UI is still being wired. Keep that disabled in
+production.
 
-## Shopify CLI commands
+## Shopify CLI Commands
+
+The official Shopify CLI is installed locally in this repo. Use the npm scripts
+so everyone works from the same CLI version.
 
 ```bash
-npm run shopify:version          # verify local CLI
-npm run shopify:config:link      # link this repo to the Shopify app
-npm run shopify:config:pull      # pull dashboard config into shopify.app.toml
-npm run shopify:config:validate  # validate Shopify app config
-npm run shopify:dev              # run Shopify dev preview + this Next app
-npm run shopify:deploy           # deploy app config/extensions to Shopify
-npm run shopify:info             # show linked app/dev-store info
+npm run shopify:version
+npm run shopify:config:link
+npm run shopify:config:pull
+npm run shopify:config:validate
+npm run shopify:dev
+npm run shopify:deploy
+npm run shopify:info
 ```
 
 `shopify.web.toml` points Shopify CLI at this existing Next app. Use
 `shopify.app.example.toml` as the template if you need to create
 `shopify.app.toml` by hand; otherwise prefer `npm run shopify:config:link`.
 
-See `CLAUDE.md` for full architecture and `ROADMAP.md` for the current plan.
+## Waitlist
 
-## Demo video data
+Landing-page signups post to `/api/waitlist`, which forwards to a Google Apps
+Script Web App and appends rows to the Synapse Waitlist Google Sheet. The route
+has a hardcoded fallback Apps Script URL so missing Vercel env vars do not
+silently drop signups. Details are in `docs/google-sheets-waitlist.md`.
 
-For a fast demo video without waiting on a real Shopify store, use:
+## Commands
 
-```text
-/ad
-/demo/shopify
-/api/demo/shopify-pull
-/api/demo/shopify-growth-plan
-demo/shopify-demo-video-brief.md
+```bash
+npm install
+npm run dev -- --port 3000
+npm run typecheck
+npm test
+npm run build
+npm run generate-brief
+npm run shopify:brief
 ```
 
-`/ad` is the click-through silent ad flow with the text already on each page.
-`/demo/shopify` is the fuller screen-recording page. The API endpoint returns
-synthetic Shopify-like orders, products, inventory, traffic/channel summaries.
-`/api/demo/shopify-growth-plan` runs that synthetic data through the real Claude
-brief engine when `ANTHROPIC_API_KEY` is configured, falling back to the canned
-demo brief if the model is unavailable. It is fictional demo data, not merchant
-data.
+`npm run generate-brief` needs `ANTHROPIC_API_KEY`. `npm run shopify:brief`
+needs `SHOPIFY_SHOP_DOMAIN` and `SHOPIFY_ACCESS_TOKEN`.
+
+## What Needs To Be Built Next
+
+The demo/video flow is recording-ready. The real product path still needs:
+
+- Supabase project created and migrations run.
+- Visible Supabase Auth UI and real authenticated dashboard.
+- Real Shopify app credentials added and OAuth tested with a real/dev store.
+- Token encryption/Vault before production.
+- GA4 OAuth credentials and first traffic pull.
+- Optional Vercel Web Analytics drain setup.
+- Real dashboard wired to stored briefs and `POST /api/briefs/[id]/action`.
