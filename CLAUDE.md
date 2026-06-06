@@ -1,7 +1,9 @@
-# Synapse — Landing Page Brief
-**For:** Claude Code | **Task:** Build the landing page only | **Stack:** Next.js 14 (App Router) + Tailwind CSS | **Deploy:** Vercel
+# Synapse — Project Source of Truth
+**Stack:** Next.js 14 (App Router) + Supabase + TypeScript · **LLM:** OpenAI · **Memory:** mubit · **Deploy:** Vercel
 
-> **Maintenance note (read first):** This file is the single source of truth for the project and is auto-loaded at the start of every session. Whenever a meaningful development happens (section built, deploy, stack/scope change, decision made), append it to the **Project Log** at the bottom. Keep the brief above accurate as scope evolves.
+> **Maintenance note (read first):** This file is the single source of truth for the project and is auto-loaded at the start of every session. Whenever a meaningful development happens (section built, deploy, stack/scope change, decision made), append it to the **Project Log** at the bottom. Keep the doc accurate as scope evolves.
+
+> **Two workstreams:** **(A) Landing page** — the marketing site, briefed in the sections immediately below (owned by a teammate). **(B) Product engine / backend** — the actual product (ingest analytics → weekly Growth Brief → memory), fully documented in **[§ Engineering Handoff](#-engineering-handoff--full-project-state)** further down. **If you are a developer or AI agent picking this project up, jump straight to the Engineering Handoff section — it is the complete, self-contained description of everything built.**
 
 ---
 
@@ -185,10 +187,218 @@ A sharp hero beats a complete but mediocre full page every time.
 
 ---
 
+# 🛠 Engineering Handoff — Full Project State
+
+> **Audience:** any developer or AI agent taking over. This section is self-contained: read it and you understand the entire product engine — what it does, how it's built, what's verified, what's left, and every convention/gotcha. Last updated 2026-06-06.
+
+## 1. TL;DR
+Synapse is an **AI growth partner for founders**. A founder connects their data sources; once a week Synapse ingests everything, asks an LLM to write a **Growth Brief** (headline numbers → what's working → what to cut → **exactly one prioritised move**), stores it, and **remembers** the brief + whether the founder acted on it so next week's advice **compounds**.
+
+**The backend engine is code-complete, typechecked, and unit-tested (19 tests). It has NOT been run live yet** — that's only blocked on API keys/accounts (OpenAI, mubit, Supabase, Shopify dev store, Google Cloud). There is **no UI yet** (that's the teammate's Next.js app + a dashboard still to build). The engine is written **framework-agnostic in `lib/`** plus thin **`app/api/*` route handlers**, so it drops into the Next.js app without collisions.
+
+## 2. The core loop (what the product actually does)
+```
+Connect ─► Ingest ─► Collect/Merge ─► Recall ─► Generate ─► Persist ─► Capture ─► (next week)
+ founder    each      WeeklyData       mubit     OpenAI      Supabase   founder      advice
+ OAuth/     source     (commerce +      history   writes the  brief +    marks the    compounds
+ paste/     (defensive) traffic +                 Growth      pending    one move     via mubit
+ drain                  profile)                  Brief       action     done/skipped
+```
+Entry points: the **weekly cron** (`/api/cron/generate-briefs`) runs the loop for every founder; the **action route** (`/api/briefs/[id]/action`) records the founder's response and writes it to mubit.
+
+## 3. Tech stack & the key decisions (with rationale)
+- **Next.js 14 (App Router) + Supabase (Postgres/Auth/RLS) + TypeScript**, deployed on **Vercel**. One TS codebase shared with the landing page.
+- **LLM = OpenAI** (`OPENAI_MODEL`, default `gpt-5`). **It started as Anthropic Claude (`claude-opus-4-8`) and was switched to OpenAI because the team has $1000 of OpenAI API credits.** Only `lib/brief/generate.ts` + `lib/website/extract.ts` are provider-specific. Uses **structured outputs** (`response_format: json_schema`, `strict:true`) so the model must return our exact shape, validated again with Zod. OpenAI's **automatic prompt caching** is exploited by keeping the stable system prompt first and volatile data in the user turn.
+- **Memory = mubit (mubit.ai)** — "operational memory for agents." This is the product's differentiator **and worth +10 hackathon points for meaningful use.** REST-only (no TS SDK); one mubit **agent per founder** (`synapse-founder-<id>`). The client is **defensive**: any mubit failure logs and returns empty — it never blocks a brief. Base URL + auth scheme are **env-driven** because mubit's docs are gated and the exact endpoints/fields may differ from the public `/v2/control/*` shapes the client was written against.
+- **Data sources (4):** Shopify (orders via Admin REST + sessions/conversion via ShopifyQL), Google Analytics GA4 (Data API), Vercel Web Analytics (**push** via Drains — it has *no* pull API), and a **website scraper** (fetch + LLM extract → business profile). `stripe` exists in the provider enum but is **not implemented**.
+- **The brief OUTPUT schema is fixed** (`GrowthBriefSchema`). Adding data sources only enriches the **input** (`WeeklyData`) — the generator and brief shape don't change.
+- **Framework isolation:** all logic lives in `lib/` (pure, testable). The `app/api/*` route files are thin adapters using **web-standard `Request`/`Response` with NO `next` import**, so they neither need Next installed to typecheck nor collide with the teammate's `create-next-app` scaffold.
+
+## 4. Repository layout (every file, what it does)
+```
+lib/
+  brief/
+    schema.ts        GrowthBriefSchema (Zod): week_of, headline_numbers[], whats_working,
+                     what_to_cut, one_move{action,rationale}. one_move is a single object →
+                     enforces "exactly one move".
+    prompt.ts        SYSTEM_PROMPT — stable, cache-friendly. Voice + the one-move rule +
+                     how to use recalled memory so advice compounds. NEVER put per-request
+                     data here (would break the cached prefix).
+    generate.ts      generateBrief({data: WeeklyData, recalledMemories}, client?) → {brief, usage}.
+                     OpenAI chat.completions, strict json_schema (BRIEF_JSON_SCHEMA mirrors the
+                     Zod schema), then GrowthBriefSchema.parse() as a backstop.
+                     Model = OPENAI_MODEL ?? "gpt-5"; reasoning_effort = OPENAI_REASONING_EFFORT
+                     ?? "medium" (sent only if != "none").
+  metrics/
+    types.ts         DerivedMetrics (commerce) + formatMetricsForPrompt; TrafficMetrics,
+                     TrafficSourceShare, TopPage; WeeklyData (commerce + traffic[] +
+                     businessProfile + sources[]); formatWeeklyDataForPrompt (renders the
+                     full multi-source picture for the LLM user turn).
+    derive.ts        deriveMetrics({current, previous, businessContext, label}) → DerivedMetrics.
+                     Revenue/Orders/AOV/New-customers WoW + new-customer channel mix from
+                     order referrer/source. classifyChannel() exported. Honestly NOTES that
+                     sessions/conversion/ad-spend aren't in Shopify's order API. adSpend = [].
+    fixtures.ts      WEEK_ONE / WEEK_TWO seed DerivedMetrics (week 1 = the CLAUDE.md mock;
+                     week 2 = after the founder acts) — used by the harness + the compounding demo.
+  shopify/
+    oauth.ts         shopifyConfigFromEnv, isValidShopDomain (SSRF guard, *.myshopify.com only),
+                     newOAuthState, buildAuthorizeUrl, verifyCallbackHmac (constant-time),
+                     exchangeCodeForToken.
+    ingest.ts        fetchShopifyWeek() → ShopifyWeekRaw (orders paginated via Link header,
+                     productCount). ShopifyOrder type. customerOrdersCount===1 ⇒ new customer.
+    analytics.ts     fetchShopifyTraffic() → TrafficMetrics | null. ShopifyQL (GraphQL Admin
+                     shopifyqlQuery) for sessions + conversion. BEST-EFFORT: returns null on any
+                     failure (plan/scope-gated). Never throws.
+  ga4/
+    oauth.ts         googleConfigFromEnv, newGoogleState, buildGoogleAuthUrl (scope
+                     analytics.readonly, access_type=offline), exchangeGoogleCode, refreshGoogleToken.
+    ingest.ts        Ga4Report type; ga4TrafficFromReports() (PURE fold of 3 reports → TrafficMetrics,
+                     unit-tested); fetchGa4Traffic() (3 runReport calls: totals, channel mix, top
+                     pages); fetchFirstGa4PropertyId() (auto-pick property after OAuth).
+  vercel/
+    aggregate.ts     parseDrainNDJSON(body, connectionId) → AnalyticsEvent[]; aggregateVercel(events)
+                     → TrafficMetrics (pageViews, uniqueVisitors via deviceId, sessions, top pages,
+                     referrer mix). Both PURE + unit-tested.
+  website/
+    schema.ts        BusinessProfileSchema (Zod) + BusinessProfile type (whatTheySell, valueProp,
+                     targetCustomer, productCategories, keyPages, pricingSignals, tone, notableClaims).
+    fetch.ts         normalizeStartUrl, htmlToText (exported, tested), fetchSite() → FetchedSite.
+                     Fetches the founder's URL + up to 8 same-host internal pages (about/products/
+                     pricing prioritised), strips to text. Only the founder's own domain.
+    extract.ts       extractBusinessProfile(site, client?) → BusinessProfile via OpenAI strict
+                     json_schema. Model = OPENAI_EXTRACT_MODEL ?? OPENAI_MODEL ?? "gpt-5".
+  mubit/
+    client.ts        MubitConfig, mubitConfigFromEnv (null if unconfigured), MubitClient with
+                     remember()/recall() over /v2/control/{ingest,activity,query}, defensive
+                     (timeouts, try/catch, tolerant field parsing). founderAgentId(id) =
+                     "synapse-founder-<id>".
+    memory.ts        BRIEF_RECALL_QUERY; briefMemory(brief); actionMemory({weekOf, oneMoveText,
+                     status, outcomeNote}) — centralises WHAT gets remembered.
+  db/
+    types.ts         Provider ('shopify'|'stripe'|'ga4'|'vercel'|'website'), Connection, Founder,
+                     AnalyticsEvent, MetricSnapshotRow, BriefRow, ActionRow, status enums.
+    index.ts         All data access (throws on error). Connections: getActiveConnections,
+                     getConnectionById, getConnectionsForFounder, upsertConnection (Shopify),
+                     saveProviderConnection (ga4/vercel/website — select-then-update/insert).
+                     Founders: getFounder, setFounderProfile. Snapshots: upsertSnapshot, getSnapshot.
+                     Briefs: insertBrief, getBrief, getLatestBriefs. Actions: createPendingAction,
+                     updateAction. Events: insertAnalyticsEvents, getAnalyticsEvents.
+  supabase/
+    server.ts        createServiceClient() (service role — bypasses RLS, for cron/ingest);
+                     createUserClient(accessToken) (RLS-bound to a founder's token).
+  pipeline/
+    collect.ts       collectWeeklyData(deps, founder, connections, thisWeek, lastWeek) → WeeklyData.
+                     Runs EVERY connected source in its own try/catch (one failing never blocks
+                     others). Shopify also persists a commerce snapshot.
+    weekly-brief.ts  runWeeklyBriefForFounder(deps, founderId, now) — collect → recall → generate →
+                     remember → insertBrief + createPendingAction. runWeeklyBriefs(deps, founderIds)
+                     → BatchOutcome[] (per founder, fault-isolated). WeeklyBriefDeps = {db, openai, mubit}.
+    record-action.ts recordFounderAction(deps, {briefId, status, outcomeNote}) → ActionRow; writes
+                     actionMemory() to mubit so the next brief compounds.
+  http/
+    respond.ts       HttpResult, json(), redirect(), toResponse() (→ web Response), parseCookies(),
+                     bearerToken(), setCookie()/clearCookie() (Lax, survives OAuth round-trip).
+    deps.ts          buildServiceDeps() → WeeklyBriefDeps; buildUserActionDeps(token) →
+                     RecordActionDeps; mubit built from env.
+    handlers.ts      All HTTP logic as testable functions returning HttpResult:
+                     handleCronGenerate, handleRecordAction, handleShopifyStart/Callback,
+                     handleGoogleStart/Callback, handleVercelDrain.
+  util/
+    dates.ts         WeekRange; previousFullWeek(now) (most recent completed Mon–Mon week);
+                     priorWeek(); formatWeekLabel() ("Week of 2 June"); toISODateString().
+
+app/api/                     (thin adapters; web-standard Request/Response, runtime="nodejs")
+  cron/generate-briefs/route.ts   GET+POST, auth: Bearer CRON_SECRET → runs all founders.
+  briefs/[id]/action/route.ts     POST, auth: Bearer <supabase user token> (RLS) → record action.
+  auth/shopify/route.ts           GET start (?shop=&founder_id=), sets nonce cookie, redirects.
+  auth/shopify/callback/route.ts  GET — verify HMAC + nonce, exchange token, persist connection.
+  auth/google/route.ts            GET start (?founder_id=), nonce cookie, redirect to Google.
+  auth/google/callback/route.ts   GET — verify nonce, exchange tokens, auto-pick GA4 property, persist.
+  ingest/vercel/route.ts          POST — Vercel Drain NDJSON in; auth via ?cid=&secret= → store events.
+
+supabase/migrations/
+  0001_init.sql       founders, connections, metric_snapshots, briefs, actions + RLS + indexes.
+  0002_connectors.sql connections.config jsonb + refresh_token; widened provider CHECK; partial
+                      unique index (founder+provider where shop_domain null); founders.business_profile
+                      jsonb; analytics_events table + RLS.
+
+scripts/generate-brief.ts   Local harness. Demo founder, week1 → record action → week2; proves the
+                            compounding. Needs OPENAI_API_KEY; mubit optional. `npm run generate-brief`.
+tests/                       node:test via tsx (19 tests): dates, derive, shopify-oauth, ga4, vercel,
+                            weekly-data, website. `npm test`.
+ROADMAP.md                  Step-by-step plan to a live demo (owner-tagged [YOU]/[ME]/[TEAM]).
+README.md, .gitignore, package.json, tsconfig.json, .env.example
+```
+
+## 5. Database schema (Supabase Postgres, RLS ON everywhere)
+- **founders** — `id` (= `auth.users.id`), `email`, `business_context` (text), `business_profile` (jsonb, from the scraper), `created_at`. A founder's mubit agent id is `synapse-founder-<id>`.
+- **connections** — `id`, `founder_id`, `provider` ('shopify'|'stripe'|'ga4'|'vercel'|'website'), `shop_domain`, `access_token`, `refresh_token`, `scopes`, `config` (jsonb: GA4 `property_id`, Vercel `drain_secret`, website url), `status`, `created_at`. **Tokens should be encrypted at rest** (Supabase Vault/pgsodium) — currently stored plaintext; flagged in the migration.
+- **metric_snapshots** — `id`, `connection_id`, `week_of` (date), `raw` (jsonb), `derived` (jsonb = DerivedMetrics), unique(connection_id, week_of). Note: snapshots are **connection-scoped** and currently only Shopify writes one; the merged multi-source `WeeklyData` is ephemeral (regenerated each run, not persisted as a snapshot).
+- **briefs** — `id`, `founder_id`, `week_of`, `headline_numbers`/`one_move` (jsonb), `whats_working`/`what_to_cut` (text), `raw_json` (jsonb = full GrowthBrief), `mubit_memory_ids` (text[]), unique(founder_id, week_of).
+- **actions** — `id`, `brief_id`, `one_move_text`, `status` ('pending'|'done'|'skipped'), `outcome_note`, `updated_at`. The founder's response — the signal fed back to mubit.
+- **analytics_events** — `id` (bigint identity), `connection_id`, `event_type`, `path`, `referrer`, `session_id`, `device_id`, `occurred_at`, `raw` (jsonb). Raw Vercel drain events; aggregated weekly. Inserted via the service client (bypasses RLS) from the drain endpoint.
+
+RLS pattern: every table is scoped to the owning founder (`auth.uid()`), directly or via the owning connection/brief. The **service-role client bypasses RLS** for cron + drain ingestion.
+
+## 6. Environment variables (all server-only unless `NEXT_PUBLIC_`)
+| Var | Purpose |
+|---|---|
+| `OPENAI_API_KEY` | Brief engine + website extraction. Must be a platform.openai.com **API** key. |
+| `OPENAI_MODEL` | Brief model (default `gpt-5`). |
+| `OPENAI_REASONING_EFFORT` | `minimal`/`low`/`medium`/`high`, or `none` to omit (default `medium`). |
+| `OPENAI_EXTRACT_MODEL` | Optional override for website-profile extraction. |
+| `MUBIT_API_KEY` / `MUBIT_BASE_URL` / `MUBIT_AUTH_SCHEME` | Memory. Auth scheme `bearer` or `x-api-key`. |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase client. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only; cron + ingestion (bypasses RLS). |
+| `APP_URL` | Base URL for OAuth redirect URIs (falls back to `SHOPIFY_APP_URL`). |
+| `SHOPIFY_API_KEY` / `SHOPIFY_API_SECRET` / `SHOPIFY_SCOPES` / `SHOPIFY_APP_URL` | Shopify app. Scopes incl. `read_reports` for ShopifyQL. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | GA4 OAuth (scope `analytics.readonly`). |
+| `CRON_SECRET` | Protects the cron route (Vercel Cron sends it as a Bearer token). |
+| *(Vercel)* | No global key — per-connection `drain_secret` lives in `connections.config`. |
+
+## 7. Commands
+```bash
+npm install            # deps
+npm run generate-brief # run the engine on seeded fixtures (needs OPENAI_API_KEY)
+npm test               # 19 unit tests (no keys needed)
+npm run typecheck      # full TS check (tsc --noEmit)
+```
+Deps: runtime `@anthropic-ai/sdk` was **removed**; now `openai ^6`, `zod ^4`, `@supabase/supabase-js ^2`, `dotenv ^17`. Dev: `typescript ^6`, `tsx ^4`, `@types/node ^25`. Module system: **ESM (`"type":"module"`), NodeNext** — relative imports MUST use the `.js` extension (e.g. `import { x } from "./y.js"`). Tests run via `node --import tsx --test`.
+
+## 8. Verified vs NOT verified
+- ✅ **Verified:** `npm run typecheck` clean; `npm test` = 19/19 pass; runtime module-load smoke test (engine imports resolve, key guards fire).
+- ❌ **NOT verified (needs live keys, never run end-to-end):** a real OpenAI generation; any mubit call (and the exact mubit API shape); any Supabase query (no project provisioned); Shopify/GA4 OAuth + data pulls; Vercel drain ingestion; ShopifyQL.
+
+## 9. What's left to build / do (see ROADMAP.md for the ordered plan)
+1. **Keys/accounts** (the only blocker to live runs): OpenAI key; mubit key + confirm base URL/auth from console.mubit.ai (then adjust `lib/mubit/client.ts`); Supabase project + run both migrations; Shopify Partners dev store; Google Cloud OAuth client; (optional) a Vercel Pro project for drains.
+2. **Dashboard UI** — the founder-facing app (list briefs via `getLatestBriefs`, render the brief, Done/Skipped buttons → `/api/briefs/[id]/action`, a Connect page → the OAuth/drain links, onboarding to capture `business_context` + trigger the website scraper). This lives in the teammate's Next.js app.
+3. **Founder session wiring** — the Shopify/Google connect links currently take `founder_id` as a query param; replace with the server session once Supabase Auth (`@supabase/ssr`) is wired. See the `NOTE` in `handleShopifyStart`.
+4. **Automation** — Vercel Cron (weekly) → `/api/cron/generate-briefs` with `CRON_SECRET`.
+5. **Nice-to-haves:** encrypt tokens at rest; Stripe connector (enum exists, unimplemented); persist the merged `WeeklyData` as a founder-scoped snapshot; website-scrape refresh schedule.
+
+## 10. Conventions & gotchas (read before editing)
+- **ESM `.js` import extensions are mandatory** (NodeNext). Omitting them fails `tsc`.
+- **Route handlers are deliberately Next-free** — they use global `Request`/`Response`. Keep new HTTP *logic* in `lib/http/handlers.ts` (testable) and keep `app/api/*` files as 5-line adapters.
+- **Sources must stay defensive** — every connector returns `null`/`[]` on failure and `collectWeeklyData` isolates each in try/catch. A broken/expired source must never break the brief.
+- **Prompt caching** depends on the system prompt staying byte-stable — never interpolate the week/founder/metrics into `SYSTEM_PROMPT`; volatile data goes in the user turn only.
+- **Structured output is double-guarded** — strict json_schema on the wire AND a Zod `.parse()` after. If you change `GrowthBriefSchema`, also update `BRIEF_JSON_SCHEMA` in `generate.ts` (the Zod parse will catch drift).
+- **mubit is best-effort** — never `await` it in a way that can throw into the brief path; the client already swallows errors.
+- **Vercel Analytics has no pull API** — it's push-only via Drains; GA4 is the load-bearing traffic source if a founder can't drain.
+- **`metric_snapshots` is connection-scoped** — don't assume one snapshot per founder; the merged data is regenerated per run.
+- **Windows line endings** — git shows `LF will be replaced by CRLF` warnings on commit; harmless.
+
+## 11. Git & repo
+- GitHub: **`avi-aggarwal14/Loop---Pop_The_Bubble`** (public). Default branch **`main`**. Local git identity set to `avi-aggarwal14`.
+- Work has been committed directly to `main` throughout (often by the repo owner via the IDE, with short messages like "add"). `node_modules` and `.env` are gitignored; `package-lock.json` is committed.
+- `.env` does not exist yet — copy `.env.example` → `.env` and fill keys to run anything live.
+
+---
+
 ## Project Log
 
 Newest entries at the top. Record meaningful developments here.
 
+- **2026-06-06** — Added a complete **[§ Engineering Handoff](#-engineering-handoff--full-project-state)** section to this file: full architecture, file-by-file map, data flow, DB schema, env vars, commands, verified-vs-not, what's left, and conventions/gotchas — written so any developer or AI agent can take over cold. Also updated the top header (this file now documents both the landing page and the product engine, not "landing page only").
 - **2026-06-06** — **Data-ingestion layer built (4 sources, multi-source pipeline).** Approved plan: extend the brief input from Shopify-orders-only to a full picture. All new code, typechecked, **19 unit tests passing** (`npm test`), no live keys needed to build. Brief *output* schema unchanged — only the *input* got richer.
   - **Sources:** (1) **Website scraper** `lib/website/{fetch,extract,schema}.ts` — fetch + clean HTML + OpenAI structured extract → `BusinessProfile` (founder's own site only). (2) **GA4** `lib/ga4/{oauth,ingest}.ts` — Google OAuth + Data API `runReport` (sessions/users/conversion/channel mix/top pages); auto-picks the first GA4 property. (3) **Shopify Analytics** `lib/shopify/analytics.ts` — ShopifyQL sessions/conversion (best-effort, degrades). (4) **Vercel** — `app/api/ingest/vercel` receives Drain NDJSON (push) → `analytics_events`; `lib/vercel/aggregate.ts` rolls a week up.
   - **Merge:** new `WeeklyData` (commerce + `TrafficMetrics[]` + `BusinessProfile` + provenance) in `lib/metrics/types.ts`; `lib/pipeline/collect.ts` runs every connected source defensively and merges. `lib/pipeline/weekly-brief.ts` refactored **Shopify-only → founder-centric multi-source**; cron now runs per founder.
