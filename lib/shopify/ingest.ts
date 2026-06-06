@@ -1,4 +1,4 @@
-import { isValidShopDomain } from "./oauth.js";
+import { isValidShopDomain } from "./oauth";
 
 /**
  * Pull a week of Shopify data via the Admin REST API and normalise it into a

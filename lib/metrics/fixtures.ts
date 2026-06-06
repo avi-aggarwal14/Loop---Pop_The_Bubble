@@ -1,4 +1,4 @@
-import type { DerivedMetrics } from "./types.js";
+import type { DerivedMetrics } from "./types";
 
 /**
  * Seed snapshots for Phase 2 — they prove the engine + mubit loop end-to-end

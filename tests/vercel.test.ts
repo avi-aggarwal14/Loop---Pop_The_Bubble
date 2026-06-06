@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { aggregateVercel, parseDrainNDJSON } from "../lib/vercel/aggregate.js";
-import type { AnalyticsEvent } from "../lib/db/types.js";
+import { aggregateVercel, parseDrainNDJSON } from "../lib/vercel/aggregate";
+import type { AnalyticsEvent } from "../lib/db/types";
 
 test("parseDrainNDJSON parses valid lines and skips junk", () => {
   const ndjson = [

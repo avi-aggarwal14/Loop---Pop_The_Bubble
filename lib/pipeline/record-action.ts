@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MubitClient, founderAgentId } from "../mubit/client.js";
-import { actionMemory } from "../mubit/memory.js";
-import { getBrief, updateAction } from "../db/index.js";
-import type { ActionRow, ActionStatus } from "../db/types.js";
+import { MubitClient, founderAgentId } from "../mubit/client";
+import { actionMemory } from "../mubit/memory";
+import { getBrief, updateAction } from "../db/index";
+import type { ActionRow, ActionStatus } from "../db/types";
 
 /**
  * Records the founder's response to a brief's one move (done / skipped, with an

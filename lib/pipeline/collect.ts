@@ -4,16 +4,16 @@ import {
   fetchShopifyProducts,
   fetchShopInfo,
   type ShopifyProduct,
-} from "../shopify/ingest.js";
-import { fetchShopifyTraffic } from "../shopify/analytics.js";
-import { deriveMetrics } from "../metrics/derive.js";
-import { fetchGa4Traffic } from "../ga4/ingest.js";
-import { googleConfigFromEnv, refreshGoogleToken } from "../ga4/oauth.js";
-import { aggregateVercel } from "../vercel/aggregate.js";
-import { getAnalyticsEvents, upsertSnapshot } from "../db/index.js";
-import type { Connection, Founder } from "../db/types.js";
-import type { DerivedMetrics, TrafficMetrics, WeeklyData } from "../metrics/types.js";
-import { toISODateString, type WeekRange } from "../util/dates.js";
+} from "../shopify/ingest";
+import { fetchShopifyTraffic } from "../shopify/analytics";
+import { deriveMetrics } from "../metrics/derive";
+import { fetchGa4Traffic } from "../ga4/ingest";
+import { googleConfigFromEnv, refreshGoogleToken } from "../ga4/oauth";
+import { aggregateVercel } from "../vercel/aggregate";
+import { getAnalyticsEvents, upsertSnapshot } from "../db/index";
+import type { Connection, Founder } from "../db/types";
+import type { DerivedMetrics, TrafficMetrics, WeeklyData } from "../metrics/types";
+import { toISODateString, type WeekRange } from "../util/dates";
 
 /**
  * Merge every connected source for a founder into one WeeklyData. Each source is

@@ -1,7 +1,7 @@
 import OpenAI from "openai";
-import { GrowthBriefSchema, type GrowthBrief } from "./schema.js";
-import { SYSTEM_PROMPT } from "./prompt.js";
-import { formatWeeklyDataForPrompt, type WeeklyData } from "../metrics/types.js";
+import { GrowthBriefSchema, type GrowthBrief } from "./schema";
+import { SYSTEM_PROMPT } from "./prompt";
+import { formatWeeklyDataForPrompt, type WeeklyData } from "../metrics/types";
 
 /**
  * Generates a Growth Brief from this week's metrics plus what mubit recalled

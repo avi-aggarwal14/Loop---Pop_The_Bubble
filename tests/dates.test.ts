@@ -5,7 +5,7 @@ import {
   previousFullWeek,
   priorWeek,
   toISODateString,
-} from "../lib/util/dates.js";
+} from "../lib/util/dates";
 
 // 2026-06-10 is a Wednesday; the most recent completed week is Mon 1 Jun → Mon 8 Jun.
 const NOW = new Date("2026-06-10T12:00:00Z");

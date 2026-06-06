@@ -1,6 +1,6 @@
-import { buildServiceDeps } from "../../../../lib/http/deps.js";
-import { handleCronGenerate } from "../../../../lib/http/handlers.js";
-import { bearerToken, toResponse } from "../../../../lib/http/respond.js";
+import { buildServiceDeps } from "../../../../lib/http/deps";
+import { handleCronGenerate } from "../../../../lib/http/handlers";
+import { bearerToken, toResponse } from "../../../../lib/http/respond";
 
 // Uses node crypto + SDKs; must run on the Node runtime, never cached.
 export const runtime = "nodejs";

@@ -1,14 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { runWeeklyBriefs, type WeeklyBriefDeps } from "../pipeline/weekly-brief.js";
-import { recordFounderAction, type RecordActionDeps } from "../pipeline/record-action.js";
+import { runWeeklyBriefs, type WeeklyBriefDeps } from "../pipeline/weekly-brief";
+import { recordFounderAction, type RecordActionDeps } from "../pipeline/record-action";
 import {
   getActiveConnections,
   getConnectionById,
   insertAnalyticsEvents,
   saveProviderConnection,
   upsertConnection,
-} from "../db/index.js";
-import type { ActionStatus } from "../db/types.js";
+} from "../db/index";
+import type { ActionStatus } from "../db/types";
 import {
   buildAuthorizeUrl,
   exchangeCodeForToken,
@@ -16,17 +16,17 @@ import {
   newOAuthState,
   shopifyConfigFromEnv,
   verifyCallbackHmac,
-} from "../shopify/oauth.js";
+} from "../shopify/oauth";
 import {
   buildGoogleAuthUrl,
   exchangeGoogleCode,
   googleConfigFromEnv,
   newGoogleState,
-} from "../ga4/oauth.js";
-import { fetchFirstGa4PropertyId } from "../ga4/ingest.js";
-import { parseDrainNDJSON } from "../vercel/aggregate.js";
-import { createServiceClient } from "../supabase/server.js";
-import { clearCookie, json, redirect, setCookie, type HttpResult } from "./respond.js";
+} from "../ga4/oauth";
+import { fetchFirstGa4PropertyId } from "../ga4/ingest";
+import { parseDrainNDJSON } from "../vercel/aggregate";
+import { createServiceClient } from "../supabase/server";
+import { clearCookie, json, redirect, setCookie, type HttpResult } from "./respond";
 
 /**
  * The HTTP layer's actual logic, as pure-ish functions that take deps + parsed

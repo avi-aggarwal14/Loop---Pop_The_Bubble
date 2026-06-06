@@ -1,6 +1,6 @@
 import OpenAI from "openai";
-import { BusinessProfileSchema, type BusinessProfile } from "./schema.js";
-import type { FetchedSite } from "./fetch.js";
+import { BusinessProfileSchema, type BusinessProfile } from "./schema";
+import type { FetchedSite } from "./fetch";
 
 /**
  * Extract a structured BusinessProfile from scraped website text using OpenAI

@@ -1,11 +1,11 @@
-import type { ShopifyOrder, ShopifyProduct, ShopifyWeekRaw } from "../shopify/ingest.js";
+import type { ShopifyOrder, ShopifyProduct, ShopifyWeekRaw } from "../shopify/ingest";
 import type {
   ChannelStat,
   DerivedMetrics,
   HeadlineMetric,
   ProductLine,
   ProductMetrics,
-} from "./types.js";
+} from "./types";
 
 /**
  * Turn two weeks of normalised Shopify data (this week + last week) into the

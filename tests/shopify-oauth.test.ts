@@ -5,7 +5,7 @@ import {
   buildAuthorizeUrl,
   isValidShopDomain,
   verifyCallbackHmac,
-} from "../lib/shopify/oauth.js";
+} from "../lib/shopify/oauth";
 
 const SECRET = "shpss_testsecret";
 const CONFIG = {

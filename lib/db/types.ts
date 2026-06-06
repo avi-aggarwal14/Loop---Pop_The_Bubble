@@ -1,6 +1,6 @@
-import type { DerivedMetrics } from "../metrics/types.js";
-import type { GrowthBrief } from "../brief/schema.js";
-import type { BusinessProfile } from "../website/schema.js";
+import type { DerivedMetrics } from "../metrics/types";
+import type { GrowthBrief } from "../brief/schema";
+import type { BusinessProfile } from "../website/schema";
 
 /** Row shapes mirroring supabase/migrations/0001_init.sql + 0002_connectors.sql. */
 

@@ -1,5 +1,5 @@
-import { handleShopifyStart } from "../../../../lib/http/handlers.js";
-import { toResponse } from "../../../../lib/http/respond.js";
+import { handleShopifyStart } from "../../../../lib/http/handlers";
+import { toResponse } from "../../../../lib/http/respond";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

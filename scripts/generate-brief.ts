@@ -1,14 +1,14 @@
 import "dotenv/config";
 import OpenAI from "openai";
-import { generateBrief } from "../lib/brief/generate.js";
-import { WEEK_ONE, WEEK_TWO } from "../lib/metrics/fixtures.js";
-import type { DerivedMetrics, WeeklyData } from "../lib/metrics/types.js";
+import { generateBrief } from "../lib/brief/generate";
+import { WEEK_ONE, WEEK_TWO } from "../lib/metrics/fixtures";
+import type { DerivedMetrics, WeeklyData } from "../lib/metrics/types";
 import {
   MubitClient,
   mubitConfigFromEnv,
   founderAgentId,
-} from "../lib/mubit/client.js";
-import type { GrowthBrief } from "../lib/brief/schema.js";
+} from "../lib/mubit/client";
+import type { GrowthBrief } from "../lib/brief/schema";
 
 /**
  * Phase 2 end-to-end harness.

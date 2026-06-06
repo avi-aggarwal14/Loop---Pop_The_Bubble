@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { classifyChannel, deriveMetrics } from "../lib/metrics/derive.js";
-import type { ShopifyOrder, ShopifyWeekRaw } from "../lib/shopify/ingest.js";
+import { classifyChannel, deriveMetrics } from "../lib/metrics/derive";
+import type { ShopifyOrder, ShopifyWeekRaw } from "../lib/shopify/ingest";
 
 function order(p: Partial<ShopifyOrder>): ShopifyOrder {
   return {

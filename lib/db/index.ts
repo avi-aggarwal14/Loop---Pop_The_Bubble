@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DerivedMetrics } from "../metrics/types.js";
-import type { GrowthBrief } from "../brief/schema.js";
-import type { BusinessProfile } from "../website/schema.js";
+import type { DerivedMetrics } from "../metrics/types";
+import type { GrowthBrief } from "../brief/schema";
+import type { BusinessProfile } from "../website/schema";
 import type {
   ActionRow,
   ActionStatus,
@@ -11,7 +11,7 @@ import type {
   Founder,
   MetricSnapshotRow,
   Provider,
-} from "./types.js";
+} from "./types";
 
 /**
  * Data access over Supabase. Every function takes the client so it's trivially

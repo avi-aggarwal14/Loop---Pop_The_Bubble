@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { htmlToText, normalizeStartUrl } from "../lib/website/fetch.js";
+import { htmlToText, normalizeStartUrl } from "../lib/website/fetch";
 
 test("normalizeStartUrl adds https only when missing", () => {
   assert.equal(normalizeStartUrl("example.com"), "https://example.com");

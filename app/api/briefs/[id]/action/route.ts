@@ -1,6 +1,6 @@
-import { buildUserActionDeps } from "../../../../../lib/http/deps.js";
-import { handleRecordAction } from "../../../../../lib/http/handlers.js";
-import { bearerToken, json, toResponse } from "../../../../../lib/http/respond.js";
+import { buildUserActionDeps } from "../../../../../lib/http/deps";
+import { handleRecordAction } from "../../../../../lib/http/handlers";
+import { bearerToken, json, toResponse } from "../../../../../lib/http/respond";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,8 +14,9 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
+  const { id } = await params;
   const token = bearerToken(req.headers.get("authorization"));
   if (!token) return toResponse(json(401, { error: "missing bearer token" }));
 
@@ -27,7 +28,7 @@ export async function POST(
   }
 
   const result = await handleRecordAction(buildUserActionDeps(token), {
-    briefId: params.id,
+    briefId: id,
     status: body.status,
     outcomeNote: body.outcomeNote,
   });

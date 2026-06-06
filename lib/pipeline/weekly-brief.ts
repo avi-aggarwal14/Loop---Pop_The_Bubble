@@ -1,17 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type OpenAI from "openai";
-import { generateBrief } from "../brief/generate.js";
-import type { GrowthBrief } from "../brief/schema.js";
-import { founderAgentId, type MubitClient } from "../mubit/client.js";
-import { BRIEF_RECALL_QUERY, briefMemory } from "../mubit/memory.js";
+import { generateBrief } from "../brief/generate";
+import type { GrowthBrief } from "../brief/schema";
+import { founderAgentId, type MubitClient } from "../mubit/client";
+import { BRIEF_RECALL_QUERY, briefMemory } from "../mubit/memory";
 import {
   createPendingAction,
   getConnectionsForFounder,
   getFounder,
   insertBrief,
-} from "../db/index.js";
-import { collectWeeklyData } from "./collect.js";
-import { previousFullWeek, priorWeek, toISODateString } from "../util/dates.js";
+} from "../db/index";
+import { collectWeeklyData } from "./collect";
+import { previousFullWeek, priorWeek, toISODateString } from "../util/dates";
 
 /**
  * The weekly loop, now FOUNDER-centric and multi-source:

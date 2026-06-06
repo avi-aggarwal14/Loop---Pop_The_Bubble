@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ga4TrafficFromReports, type Ga4Report } from "../lib/ga4/ingest.js";
+import { ga4TrafficFromReports, type Ga4Report } from "../lib/ga4/ingest";
 
 const totals: Ga4Report = {
   metricHeaders: [

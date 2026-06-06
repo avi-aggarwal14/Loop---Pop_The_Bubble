@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { formatWeeklyDataForPrompt, type WeeklyData } from "../lib/metrics/types.js";
+import { formatWeeklyDataForPrompt, type WeeklyData } from "../lib/metrics/types";
 
 test("formatWeeklyDataForPrompt renders profile, commerce, traffic and sources", () => {
   const data: WeeklyData = {

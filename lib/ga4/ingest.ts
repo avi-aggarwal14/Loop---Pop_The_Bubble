@@ -1,5 +1,5 @@
-import { toISODateString } from "../util/dates.js";
-import type { TrafficMetrics, TrafficSourceShare, TopPage } from "../metrics/types.js";
+import { toISODateString } from "../util/dates";
+import type { TrafficMetrics, TrafficSourceShare, TopPage } from "../metrics/types";
 
 /**
  * GA4 Data API ingestion. `fetchGa4Traffic` runs three small `runReport` calls

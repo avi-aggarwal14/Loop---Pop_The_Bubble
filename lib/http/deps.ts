@@ -1,8 +1,8 @@
 import OpenAI from "openai";
-import { createServiceClient, createUserClient } from "../supabase/server.js";
-import { MubitClient, mubitConfigFromEnv } from "../mubit/client.js";
-import type { WeeklyBriefDeps } from "../pipeline/weekly-brief.js";
-import type { RecordActionDeps } from "../pipeline/record-action.js";
+import { createServiceClient, createUserClient } from "../supabase/server";
+import { MubitClient, mubitConfigFromEnv } from "../mubit/client";
+import type { WeeklyBriefDeps } from "../pipeline/weekly-brief";
+import type { RecordActionDeps } from "../pipeline/record-action";
 
 /** Construct real, env-backed dependencies for the route handlers. */
 

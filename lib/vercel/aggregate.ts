@@ -1,5 +1,5 @@
-import type { AnalyticsEvent } from "../db/types.js";
-import type { TrafficMetrics, TopPage, TrafficSourceShare } from "../metrics/types.js";
+import type { AnalyticsEvent } from "../db/types";
+import type { TrafficMetrics, TopPage, TrafficSourceShare } from "../metrics/types";
 
 /**
  * Vercel Web Analytics arrives via a Drain as newline-delimited JSON (push, not

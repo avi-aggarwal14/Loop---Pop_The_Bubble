@@ -1,6 +1,6 @@
-import { isValidShopDomain } from "./oauth.js";
-import { toISODateString } from "../util/dates.js";
-import type { TrafficMetrics } from "../metrics/types.js";
+import { isValidShopDomain } from "./oauth";
+import { toISODateString } from "../util/dates";
+import type { TrafficMetrics } from "../metrics/types";
 
 /**
  * Pull online-store sessions + conversion from Shopify via ShopifyQL over the

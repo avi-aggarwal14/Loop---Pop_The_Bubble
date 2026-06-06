@@ -1,4 +1,4 @@
-import type { BusinessProfile } from "../website/schema.js";
+import type { BusinessProfile } from "../website/schema";
 
 /**
  * Normalised metrics that feed the brief generator. Commerce metrics

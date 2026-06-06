@@ -1,5 +1,5 @@
-import { handleShopifyCallback } from "../../../../../lib/http/handlers.js";
-import { parseCookies, toResponse } from "../../../../../lib/http/respond.js";
+import { handleShopifyCallback } from "../../../../../lib/http/handlers";
+import { parseCookies, toResponse } from "../../../../../lib/http/respond";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

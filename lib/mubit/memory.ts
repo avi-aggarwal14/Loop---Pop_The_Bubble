@@ -1,6 +1,6 @@
-import type { GrowthBrief } from "../brief/schema.js";
-import type { ActionStatus } from "../db/types.js";
-import type { MubitMemory } from "./client.js";
+import type { GrowthBrief } from "../brief/schema";
+import type { ActionStatus } from "../db/types";
+import type { MubitMemory } from "./client";
 
 /**
  * What Synapse writes to mubit. Centralised so the "memory" is consistent across
