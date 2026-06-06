@@ -1,9 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DerivedMetrics } from "../metrics/types.js";
 import type { GrowthBrief } from "../brief/schema.js";
+import type { BusinessProfile } from "../website/schema.js";
 import type {
   ActionRow,
   ActionStatus,
+  AnalyticsEvent,
   BriefRow,
   Connection,
   Founder,
@@ -43,6 +45,32 @@ export async function getFounder(
     .maybeSingle();
   if (error) fail("getFounder", error);
   return (data as Founder) ?? null;
+}
+
+export async function getConnectionById(
+  db: SupabaseClient,
+  id: string,
+): Promise<Connection | null> {
+  const { data, error } = await db
+    .from("connections")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) fail("getConnectionById", error);
+  return (data as Connection) ?? null;
+}
+
+export async function getConnectionsForFounder(
+  db: SupabaseClient,
+  founderId: string,
+): Promise<Connection[]> {
+  const { data, error } = await db
+    .from("connections")
+    .select("*")
+    .eq("founder_id", founderId)
+    .eq("status", "active");
+  if (error) fail("getConnectionsForFounder", error);
+  return (data ?? []) as Connection[];
 }
 
 export async function upsertConnection(
@@ -205,4 +233,107 @@ export async function getLatestBriefs(
     .limit(limit);
   if (error) fail("getLatestBriefs", error);
   return (data ?? []) as BriefRow[];
+}
+
+/**
+ * Upsert a connection for a provider that has no shop_domain (ga4/vercel/website).
+ * The partial unique index can't be targeted by supabase-js `onConflict`, so we
+ * select-then-update/insert (one connection per founder+provider).
+ */
+export async function saveProviderConnection(
+  db: SupabaseClient,
+  conn: {
+    founderId: string;
+    provider: Provider;
+    accessToken?: string | null;
+    refreshToken?: string | null;
+    scopes?: string | null;
+    config?: Record<string, unknown>;
+  },
+): Promise<Connection> {
+  const row = {
+    founder_id: conn.founderId,
+    provider: conn.provider,
+    access_token: conn.accessToken ?? null,
+    refresh_token: conn.refreshToken ?? null,
+    scopes: conn.scopes ?? null,
+    config: conn.config ?? {},
+    status: "active" as const,
+  };
+
+  const { data: existing, error: selErr } = await db
+    .from("connections")
+    .select("id")
+    .eq("founder_id", conn.founderId)
+    .eq("provider", conn.provider)
+    .is("shop_domain", null)
+    .maybeSingle();
+  if (selErr) fail("saveProviderConnection.select", selErr);
+
+  if (existing) {
+    const { data, error } = await db
+      .from("connections")
+      .update(row)
+      .eq("id", (existing as { id: string }).id)
+      .select()
+      .single();
+    if (error) fail("saveProviderConnection.update", error);
+    return data as Connection;
+  }
+
+  const { data, error } = await db
+    .from("connections")
+    .insert(row)
+    .select()
+    .single();
+  if (error) fail("saveProviderConnection.insert", error);
+  return data as Connection;
+}
+
+export async function setFounderProfile(
+  db: SupabaseClient,
+  founderId: string,
+  profile: BusinessProfile,
+): Promise<void> {
+  const { error } = await db
+    .from("founders")
+    .update({ business_profile: profile })
+    .eq("id", founderId);
+  if (error) fail("setFounderProfile", error);
+}
+
+export async function insertAnalyticsEvents(
+  db: SupabaseClient,
+  events: AnalyticsEvent[],
+): Promise<number> {
+  if (events.length === 0) return 0;
+  const rows = events.map((e) => ({
+    connection_id: e.connection_id,
+    event_type: e.event_type,
+    path: e.path,
+    referrer: e.referrer,
+    session_id: e.session_id,
+    device_id: e.device_id,
+    occurred_at: e.occurred_at,
+    raw: e.raw,
+  }));
+  const { error } = await db.from("analytics_events").insert(rows);
+  if (error) fail("insertAnalyticsEvents", error);
+  return rows.length;
+}
+
+export async function getAnalyticsEvents(
+  db: SupabaseClient,
+  connectionId: string,
+  startISO: string,
+  endISO: string,
+): Promise<AnalyticsEvent[]> {
+  const { data, error } = await db
+    .from("analytics_events")
+    .select("connection_id,event_type,path,referrer,session_id,device_id,occurred_at,raw")
+    .eq("connection_id", connectionId)
+    .gte("occurred_at", startISO)
+    .lt("occurred_at", endISO);
+  if (error) fail("getAnalyticsEvents", error);
+  return (data ?? []) as AnalyticsEvent[];
 }

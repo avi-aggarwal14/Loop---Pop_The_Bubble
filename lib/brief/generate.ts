@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { GrowthBriefSchema, type GrowthBrief } from "./schema.js";
 import { SYSTEM_PROMPT } from "./prompt.js";
-import { formatMetricsForPrompt, type DerivedMetrics } from "../metrics/types.js";
+import { formatWeeklyDataForPrompt, type WeeklyData } from "../metrics/types.js";
 
 /**
  * Generates a Growth Brief from this week's metrics plus what mubit recalled
@@ -24,7 +24,8 @@ export const BRIEF_MODEL = process.env.OPENAI_MODEL ?? "gpt-5";
 const REASONING_EFFORT = process.env.OPENAI_REASONING_EFFORT ?? "medium";
 
 export interface GenerateBriefInput {
-  metrics: DerivedMetrics;
+  /** The full merged picture for the week (commerce + traffic + business profile). */
+  data: WeeklyData;
   /** Memories recalled from mubit for this founder. May be empty (first brief). */
   recalledMemories: string[];
 }
@@ -79,15 +80,15 @@ const BRIEF_JSON_SCHEMA = {
 } as const;
 
 function buildUserMessage(input: GenerateBriefInput): string {
-  const metricsBlock = formatMetricsForPrompt(input.metrics);
+  const dataBlock = formatWeeklyDataForPrompt(input.data);
   const memoryBlock =
     input.recalledMemories.length > 0
       ? input.recalledMemories.map((m, i) => `  ${i + 1}. ${m}`).join("\n")
       : "  (No prior history yet — this is this founder's first brief.)";
 
   return [
-    "== THIS WEEK'S METRICS ==",
-    metricsBlock,
+    "== THIS WEEK'S DATA ==",
+    dataBlock,
     "",
     "== WHAT YOU REMEMBER ABOUT THIS FOUNDER ==",
     memoryBlock,

@@ -1,6 +1,13 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { runWeeklyBriefs, type WeeklyBriefDeps } from "../pipeline/weekly-brief.js";
 import { recordFounderAction, type RecordActionDeps } from "../pipeline/record-action.js";
-import { getActiveConnections, upsertConnection } from "../db/index.js";
+import {
+  getActiveConnections,
+  getConnectionById,
+  insertAnalyticsEvents,
+  saveProviderConnection,
+  upsertConnection,
+} from "../db/index.js";
 import type { ActionStatus } from "../db/types.js";
 import {
   buildAuthorizeUrl,
@@ -10,6 +17,14 @@ import {
   shopifyConfigFromEnv,
   verifyCallbackHmac,
 } from "../shopify/oauth.js";
+import {
+  buildGoogleAuthUrl,
+  exchangeGoogleCode,
+  googleConfigFromEnv,
+  newGoogleState,
+} from "../ga4/oauth.js";
+import { fetchFirstGa4PropertyId } from "../ga4/ingest.js";
+import { parseDrainNDJSON } from "../vercel/aggregate.js";
 import { createServiceClient } from "../supabase/server.js";
 import { clearCookie, json, redirect, setCookie, type HttpResult } from "./respond.js";
 
@@ -116,4 +131,74 @@ export async function handleShopifyCallback(input: {
 
   const dashboard = `${config.appUrl.replace(/\/+$/, "")}/dashboard?connected=shopify`;
   return redirect(dashboard, { "set-cookie": clearCookie(NONCE_COOKIE) });
+}
+
+// ── GET /api/auth/google  (start GA4 OAuth) ───────────────────────
+const GOOGLE_NONCE_COOKIE = "google_oauth_nonce";
+
+export function handleGoogleStart(input: { founderId: string | null }): HttpResult {
+  const config = googleConfigFromEnv();
+  if (!config) return json(500, { error: "Google/GA4 not configured" });
+  if (!input.founderId) return json(400, { error: "?founder_id required" });
+
+  const nonce = newGoogleState();
+  const state = `${input.founderId}:${nonce}`;
+  const url = buildGoogleAuthUrl({ config, state });
+  const secure = config.appUrl.startsWith("https");
+  return redirect(url, {
+    "set-cookie": setCookie(GOOGLE_NONCE_COOKIE, nonce, { maxAge: 600, secure }),
+  });
+}
+
+// ── GET /api/auth/google/callback ─────────────────────────────────
+export async function handleGoogleCallback(input: {
+  query: Record<string, string>;
+  cookies: Record<string, string>;
+}): Promise<HttpResult> {
+  const config = googleConfigFromEnv();
+  if (!config) return json(500, { error: "Google/GA4 not configured" });
+
+  const { code, state } = input.query;
+  if (input.query.error) return json(400, { error: `Google OAuth error: ${input.query.error}` });
+  if (!code || !state) return json(400, { error: "missing oauth params" });
+
+  const [founderId, nonce] = state.split(":");
+  if (!founderId || !nonce) return json(400, { error: "malformed state" });
+  if (input.cookies[GOOGLE_NONCE_COOKIE] !== nonce) {
+    return json(401, { error: "state/nonce mismatch" });
+  }
+
+  const tokens = await exchangeGoogleCode({ config, code });
+  const propertyId = await fetchFirstGa4PropertyId(tokens.accessToken);
+
+  await saveProviderConnection(createServiceClient(), {
+    founderId,
+    provider: "ga4",
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    scopes: "analytics.readonly",
+    config: { property_id: propertyId },
+  });
+
+  const dashboard = `${config.appUrl.replace(/\/+$/, "")}/dashboard?connected=ga4`;
+  return redirect(dashboard, { "set-cookie": clearCookie(GOOGLE_NONCE_COOKIE) });
+}
+
+// ── POST /api/ingest/vercel  (Vercel Analytics drain → NDJSON) ────
+export async function handleVercelDrain(
+  db: SupabaseClient,
+  input: { connectionId: string | null; secret: string | null; ndjson: string },
+): Promise<HttpResult> {
+  if (!input.connectionId || !input.secret) {
+    return json(401, { error: "cid + secret required" });
+  }
+  const conn = await getConnectionById(db, input.connectionId);
+  if (!conn || conn.provider !== "vercel") return json(404, { error: "no such drain" });
+  if ((conn.config as { drain_secret?: string }).drain_secret !== input.secret) {
+    return json(401, { error: "bad drain secret" });
+  }
+
+  const events = parseDrainNDJSON(input.ndjson, conn.id);
+  const ingested = await insertAnalyticsEvents(db, events);
+  return json(200, { ingested });
 }

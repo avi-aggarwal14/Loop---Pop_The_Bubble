@@ -1,9 +1,10 @@
 import type { DerivedMetrics } from "../metrics/types.js";
 import type { GrowthBrief } from "../brief/schema.js";
+import type { BusinessProfile } from "../website/schema.js";
 
-/** Row shapes mirroring supabase/migrations/0001_init.sql. */
+/** Row shapes mirroring supabase/migrations/0001_init.sql + 0002_connectors.sql. */
 
-export type Provider = "shopify" | "stripe" | "ga4";
+export type Provider = "shopify" | "stripe" | "ga4" | "vercel" | "website";
 export type ConnectionStatus = "active" | "revoked" | "error";
 export type ActionStatus = "pending" | "done" | "skipped";
 
@@ -13,7 +14,10 @@ export interface Connection {
   provider: Provider;
   shop_domain: string | null;
   access_token: string | null;
+  refresh_token: string | null;
   scopes: string | null;
+  /** Provider-specific config: GA4 property_id, Vercel drain secret, website url. */
+  config: Record<string, unknown>;
   status: ConnectionStatus;
   created_at: string;
 }
@@ -22,7 +26,19 @@ export interface Founder {
   id: string;
   email: string | null;
   business_context: string | null;
+  business_profile: BusinessProfile | null;
   created_at: string;
+}
+
+export interface AnalyticsEvent {
+  connection_id: string;
+  event_type: string;
+  path: string | null;
+  referrer: string | null;
+  session_id: string | null;
+  device_id: string | null;
+  occurred_at: string; // ISO
+  raw: unknown;
 }
 
 export interface MetricSnapshotRow {

@@ -1,8 +1,10 @@
+import type { BusinessProfile } from "../website/schema.js";
+
 /**
- * Normalised metrics that feed the brief generator. In Phase 2 these come from
- * hand-seeded fixtures; in Phase 3 `lib/shopify/ingest.ts` + `lib/metrics/derive.ts`
- * produce the same shape from live Shopify data. The brief engine only ever sees
- * this shape, so the data source is swappable without touching generation.
+ * Normalised metrics that feed the brief generator. Commerce metrics
+ * (`DerivedMetrics`) come from Shopify orders; `TrafficMetrics` come from GA4 /
+ * Shopify ShopifyQL / Vercel; `BusinessProfile` from the website scraper. The
+ * collector merges them into one `WeeklyData`, which is all the generator sees.
  */
 
 export interface HeadlineMetric {
@@ -102,4 +104,111 @@ export function formatMetricsForPrompt(m: DerivedMetrics): string {
     for (const n of m.notes) lines.push(`  - ${n}`);
   }
   return lines.join("\n");
+}
+
+// ── Traffic metrics (GA4 / Shopify ShopifyQL / Vercel) ────────────
+
+export interface TrafficSourceShare {
+  name: string;
+  /** Share of sessions/visits, 0..1. */
+  share: number;
+}
+
+export interface TopPage {
+  path: string;
+  views: number;
+}
+
+export interface TrafficMetrics {
+  /** Provenance: "ga4" | "shopify" | "vercel". */
+  source: string;
+  sessions?: number;
+  previousSessions?: number;
+  users?: number;
+  newUsers?: number;
+  pageViews?: number;
+  uniqueVisitors?: number;
+  /** Online-store / site conversion rate, 0..1. */
+  conversionRate?: number;
+  sourceMix?: TrafficSourceShare[];
+  topPages?: TopPage[];
+  notes?: string[];
+}
+
+/**
+ * Everything we know about a founder for one week, merged across sources. The
+ * brief generator consumes this; the output `GrowthBriefSchema` is unchanged.
+ */
+export interface WeeklyData {
+  windowLabel: string;
+  businessContext: string;
+  /** Commerce metrics from Shopify orders. */
+  commerce?: DerivedMetrics;
+  /** One entry per connected analytics source. */
+  traffic?: TrafficMetrics[];
+  businessProfile?: BusinessProfile;
+  /** Provenance list, e.g. ["shopify", "ga4", "vercel", "website"]. */
+  sources: string[];
+}
+
+function formatTraffic(t: TrafficMetrics): string {
+  const lines: string[] = [`From ${t.source}:`];
+  if (t.sessions !== undefined) {
+    const prev =
+      t.previousSessions !== undefined ? ` (was ${t.previousSessions})` : "";
+    lines.push(`  - Sessions: ${t.sessions.toLocaleString()}${prev}`);
+  }
+  if (t.users !== undefined) lines.push(`  - Users: ${t.users.toLocaleString()}`);
+  if (t.newUsers !== undefined)
+    lines.push(`  - New users: ${t.newUsers.toLocaleString()}`);
+  if (t.pageViews !== undefined)
+    lines.push(`  - Page views: ${t.pageViews.toLocaleString()}`);
+  if (t.uniqueVisitors !== undefined)
+    lines.push(`  - Unique visitors: ${t.uniqueVisitors.toLocaleString()}`);
+  if (t.conversionRate !== undefined)
+    lines.push(`  - Conversion rate: ${(t.conversionRate * 100).toFixed(1)}%`);
+  if (t.sourceMix?.length) {
+    lines.push("  - Traffic sources:");
+    for (const s of t.sourceMix)
+      lines.push(`      ${s.name}: ${(s.share * 100).toFixed(0)}%`);
+  }
+  if (t.topPages?.length) {
+    lines.push("  - Top pages:");
+    for (const p of t.topPages.slice(0, 5))
+      lines.push(`      ${p.path} — ${p.views.toLocaleString()} views`);
+  }
+  if (t.notes?.length) for (const n of t.notes) lines.push(`  - ${n}`);
+  return lines.join("\n");
+}
+
+function formatProfile(p: BusinessProfile): string {
+  return [
+    "Business profile (from their website):",
+    `  - Sells: ${p.whatTheySell}`,
+    `  - Value prop: ${p.valueProp}`,
+    `  - Target customer: ${p.targetCustomer}`,
+    `  - Categories: ${p.productCategories.join(", ")}`,
+    `  - Pricing: ${p.pricingSignals}`,
+    `  - Tone: ${p.tone}`,
+    p.notableClaims.length ? `  - Claims: ${p.notableClaims.join("; ")}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** Render the full multi-source picture for the Claude/OpenAI user turn. */
+export function formatWeeklyDataForPrompt(data: WeeklyData): string {
+  const blocks: string[] = [];
+  blocks.push(`Window: ${data.windowLabel}`);
+  blocks.push(`Business: ${data.businessContext}`);
+  blocks.push(`Connected sources: ${data.sources.join(", ") || "none"}`);
+  if (data.businessProfile) blocks.push("\n" + formatProfile(data.businessProfile));
+  if (data.commerce) {
+    blocks.push("\nCommerce (Shopify orders):\n" + formatMetricsForPrompt(data.commerce));
+  }
+  if (data.traffic?.length) {
+    blocks.push("\nTraffic & engagement:");
+    for (const t of data.traffic) blocks.push(formatTraffic(t));
+  }
+  return blocks.join("\n");
 }

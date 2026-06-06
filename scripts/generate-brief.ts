@@ -2,7 +2,7 @@ import "dotenv/config";
 import OpenAI from "openai";
 import { generateBrief } from "../lib/brief/generate.js";
 import { WEEK_ONE, WEEK_TWO } from "../lib/metrics/fixtures.js";
-import type { DerivedMetrics } from "../lib/metrics/types.js";
+import type { DerivedMetrics, WeeklyData } from "../lib/metrics/types.js";
 import {
   MubitClient,
   mubitConfigFromEnv,
@@ -75,8 +75,14 @@ async function main(): Promise<void> {
       `\n[${metrics.windowLabel}] recalled ${recalled.length} memories from mubit`,
     );
 
+    const data: WeeklyData = {
+      windowLabel: metrics.windowLabel,
+      businessContext: metrics.businessContext,
+      commerce: metrics,
+      sources: ["shopify"],
+    };
     const { brief, usage } = await generateBrief(
-      { metrics, recalledMemories: recalled },
+      { data, recalledMemories: recalled },
       openai,
     );
     printBrief(brief);
