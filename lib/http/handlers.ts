@@ -45,10 +45,11 @@ export async function handleCronGenerate(
   if (!secret) return json(500, { error: "CRON_SECRET not configured" });
   if (authToken !== secret) return json(401, { error: "unauthorized" });
 
-  const connections = await getActiveConnections(deps.db, "shopify");
-  const results = await runWeeklyBriefs(deps, connections);
+  const connections = await getActiveConnections(deps.db);
+  const founderIds = [...new Set(connections.map((c) => c.founder_id))];
+  const results = await runWeeklyBriefs(deps, founderIds);
   const generated = results.filter((r) => r.ok).length;
-  return json(200, { generated, total: results.length, results });
+  return json(200, { founders: founderIds.length, generated, results });
 }
 
 // ── POST /api/briefs/:id/action ───────────────────────────────────

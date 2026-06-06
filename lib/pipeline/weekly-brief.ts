@@ -1,27 +1,25 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type OpenAI from "openai";
-import { fetchShopifyWeek } from "../shopify/ingest.js";
-import { deriveMetrics } from "../metrics/derive.js";
 import { generateBrief } from "../brief/generate.js";
 import type { GrowthBrief } from "../brief/schema.js";
-import { MubitClient, founderAgentId } from "../mubit/client.js";
+import { founderAgentId, type MubitClient } from "../mubit/client.js";
 import { BRIEF_RECALL_QUERY, briefMemory } from "../mubit/memory.js";
 import {
   createPendingAction,
+  getConnectionsForFounder,
   getFounder,
   insertBrief,
-  upsertSnapshot,
 } from "../db/index.js";
-import type { Connection } from "../db/types.js";
+import { collectWeeklyData } from "./collect.js";
 import { previousFullWeek, priorWeek, toISODateString } from "../util/dates.js";
 
 /**
- * The weekly loop for ONE founder/connection:
- *   ingest (this week + last week) → derive → persist snapshot → recall (mubit)
- *   → generate brief → remember (mubit) → persist brief + a pending action.
+ * The weekly loop, now FOUNDER-centric and multi-source:
+ *   collect (every connected source → WeeklyData) → recall (mubit) → generate
+ *   → remember (mubit) → persist brief + a pending action.
  *
- * This is the body of the cron route. It's a plain function taking injected
- * clients, so it's testable and reusable outside Next.js.
+ * `collectWeeklyData` does the per-source ingest/merge; everything here stays the
+ * same regardless of which sources a founder has connected.
  */
 
 export interface WeeklyBriefDeps {
@@ -36,79 +34,50 @@ export interface WeeklyBriefResult {
   brief: GrowthBrief;
 }
 
-export async function runWeeklyBriefForConnection(
+export async function runWeeklyBriefForFounder(
   deps: WeeklyBriefDeps,
-  connection: Connection,
+  founderId: string,
   now = new Date(),
 ): Promise<WeeklyBriefResult> {
-  if (connection.provider !== "shopify") {
-    throw new Error(`Unsupported provider for now: ${connection.provider}`);
-  }
-  if (!connection.shop_domain || !connection.access_token) {
-    throw new Error(`Connection ${connection.id} is missing shop_domain/access_token`);
+  const founder = await getFounder(deps.db, founderId);
+  const connections = await getConnectionsForFounder(deps.db, founderId);
+  if (connections.length === 0) {
+    throw new Error(`No active connections for founder ${founderId}`);
   }
 
   const thisWeek = previousFullWeek(now);
   const lastWeek = priorWeek(thisWeek);
 
-  // 1. Ingest both weeks from Shopify.
-  const shop = connection.shop_domain;
-  const accessToken = connection.access_token;
-  const current = await fetchShopifyWeek({
-    shop,
-    accessToken,
-    windowStart: thisWeek.start,
-    windowEnd: thisWeek.end,
-  });
-  const previous = await fetchShopifyWeek({
-    shop,
-    accessToken,
-    windowStart: lastWeek.start,
-    windowEnd: lastWeek.end,
-  });
+  const data = await collectWeeklyData(
+    { db: deps.db },
+    founder,
+    connections,
+    thisWeek,
+    lastWeek,
+  );
+  if (data.sources.length === 0) {
+    throw new Error(`No data collected for founder ${founderId}`);
+  }
 
-  // 2. Derive normalised metrics.
-  const founder = await getFounder(deps.db, connection.founder_id);
-  const businessContext =
-    founder?.business_context ?? `Shopify store ${shop}`;
-  const derived = deriveMetrics({
-    current,
-    previous,
-    businessContext,
-    label: thisWeek.label,
-  });
-
-  // 3. Persist the snapshot.
-  const weekOf = toISODateString(thisWeek.start);
-  await upsertSnapshot(deps.db, {
-    connectionId: connection.id,
-    weekOf,
-    raw: current,
-    derived,
-  });
-
-  // 4. Recall this founder's history from mubit.
-  const agentId = founderAgentId(connection.founder_id);
+  const agentId = founderAgentId(founderId);
   const recalled = deps.mubit
     ? await deps.mubit.recall(agentId, BRIEF_RECALL_QUERY)
     : [];
 
-  // 5. Generate the brief.
   const { brief } = await generateBrief(
-    { metrics: derived, recalledMemories: recalled },
+    { data, recalledMemories: recalled },
     deps.openai,
   );
 
-  // 6. Remember the brief (so next week compounds).
   const memoryIds: string[] = [];
   if (deps.mubit) {
     const { id } = await deps.mubit.remember(agentId, briefMemory(brief));
     if (id) memoryIds.push(id);
   }
 
-  // 7. Persist the brief + a pending action to capture the founder's response.
+  const weekOf = toISODateString(thisWeek.start);
   const row = await insertBrief(deps.db, {
-    founderId: connection.founder_id,
+    founderId,
     weekOf,
     brief,
     mubitMemoryIds: memoryIds,
@@ -119,29 +88,25 @@ export async function runWeeklyBriefForConnection(
 }
 
 export interface BatchOutcome {
-  connectionId: string;
+  founderId: string;
   ok: boolean;
   briefId?: string;
   error?: string;
 }
 
-/** Run the weekly brief for every active connection; one failure never stops the rest. */
+/** Run the weekly brief for each founder; one failure never stops the rest. */
 export async function runWeeklyBriefs(
   deps: WeeklyBriefDeps,
-  connections: Connection[],
+  founderIds: string[],
   now = new Date(),
 ): Promise<BatchOutcome[]> {
   const results: BatchOutcome[] = [];
-  for (const connection of connections) {
+  for (const founderId of founderIds) {
     try {
-      const { briefId } = await runWeeklyBriefForConnection(deps, connection, now);
-      results.push({ connectionId: connection.id, ok: true, briefId });
+      const { briefId } = await runWeeklyBriefForFounder(deps, founderId, now);
+      results.push({ founderId, ok: true, briefId });
     } catch (err) {
-      results.push({
-        connectionId: connection.id,
-        ok: false,
-        error: (err as Error).message,
-      });
+      results.push({ founderId, ok: false, error: (err as Error).message });
     }
   }
   return results;

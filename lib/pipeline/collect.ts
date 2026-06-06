@@ -1,0 +1,116 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchShopifyWeek } from "../shopify/ingest.js";
+import { fetchShopifyTraffic } from "../shopify/analytics.js";
+import { deriveMetrics } from "../metrics/derive.js";
+import { fetchGa4Traffic } from "../ga4/ingest.js";
+import { googleConfigFromEnv, refreshGoogleToken } from "../ga4/oauth.js";
+import { aggregateVercel } from "../vercel/aggregate.js";
+import { getAnalyticsEvents, upsertSnapshot } from "../db/index.js";
+import type { Connection, Founder } from "../db/types.js";
+import type { DerivedMetrics, TrafficMetrics, WeeklyData } from "../metrics/types.js";
+import { toISODateString, type WeekRange } from "../util/dates.js";
+
+/**
+ * Merge every connected source for a founder into one WeeklyData. Each source is
+ * isolated in its own try/catch — one failing (expired token, plan limit, empty
+ * data) never blocks the others or the brief. Shopify persists a commerce
+ * snapshot; traffic sources contribute TrafficMetrics fragments.
+ */
+export async function collectWeeklyData(
+  deps: { db: SupabaseClient },
+  founder: Founder | null,
+  connections: Connection[],
+  thisWeek: WeekRange,
+  lastWeek: WeekRange,
+): Promise<WeeklyData> {
+  const businessProfile = founder?.business_profile ?? undefined;
+  const businessContext =
+    founder?.business_context ??
+    (businessProfile ? businessProfile.whatTheySell : "Business");
+
+  const sources = new Set<string>();
+  let commerce: DerivedMetrics | undefined;
+  const traffic: TrafficMetrics[] = [];
+
+  for (const conn of connections) {
+    try {
+      if (conn.provider === "shopify" && conn.shop_domain && conn.access_token) {
+        const shop = conn.shop_domain;
+        const accessToken = conn.access_token;
+        const current = await fetchShopifyWeek({
+          shop,
+          accessToken,
+          windowStart: thisWeek.start,
+          windowEnd: thisWeek.end,
+        });
+        const previous = await fetchShopifyWeek({
+          shop,
+          accessToken,
+          windowStart: lastWeek.start,
+          windowEnd: lastWeek.end,
+        });
+        commerce = deriveMetrics({ current, previous, businessContext, label: thisWeek.label });
+        await upsertSnapshot(deps.db, {
+          connectionId: conn.id,
+          weekOf: toISODateString(thisWeek.start),
+          raw: current,
+          derived: commerce,
+        });
+        sources.add("shopify");
+
+        const st = await fetchShopifyTraffic({
+          shop,
+          accessToken,
+          windowStart: thisWeek.start,
+          windowEnd: thisWeek.end,
+        });
+        if (st) traffic.push(st);
+      } else if (conn.provider === "ga4" && conn.refresh_token) {
+        const cfg = googleConfigFromEnv();
+        const propertyId = (conn.config as { property_id?: string }).property_id;
+        if (cfg && propertyId) {
+          const { accessToken } = await refreshGoogleToken({
+            config: cfg,
+            refreshToken: conn.refresh_token,
+          });
+          const gt = await fetchGa4Traffic({
+            accessToken,
+            propertyId,
+            windowStart: thisWeek.start,
+            windowEnd: thisWeek.end,
+          });
+          if (gt) {
+            traffic.push(gt);
+            sources.add("ga4");
+          }
+        }
+      } else if (conn.provider === "vercel") {
+        const events = await getAnalyticsEvents(
+          deps.db,
+          conn.id,
+          thisWeek.start.toISOString(),
+          thisWeek.end.toISOString(),
+        );
+        if (events.length) {
+          traffic.push(aggregateVercel(events));
+          sources.add("vercel");
+        }
+      } else if (conn.provider === "website") {
+        sources.add("website");
+      }
+    } catch {
+      // Skip this source; the brief still generates from whatever else connected.
+    }
+  }
+
+  if (businessProfile) sources.add("website");
+
+  return {
+    windowLabel: thisWeek.label,
+    businessContext,
+    commerce,
+    traffic: traffic.length ? traffic : undefined,
+    businessProfile,
+    sources: [...sources],
+  };
+}
