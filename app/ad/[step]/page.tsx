@@ -40,9 +40,15 @@ const steps = [
     scene: "connect",
   },
   {
+    eyebrow: "Data pull",
+    headline: ["Every signal", "becomes one", "memory graph."],
+    sub: "Synapse tracks the raw numbers a founder would normally chase across Shopify, ads, products and fulfilment.",
+    scene: "analytics",
+  },
+  {
     eyebrow: "Shopify pull",
-    headline: ["It reads the", "whole week at once."],
-    sub: "Orders, inventory, conversion, channel mix and product velocity become one model of the business.",
+    headline: ["Then it reads", "the whole week", "at once."],
+    sub: "The graph resolves into the small set of signals that actually changed the business.",
     scene: "overview",
   },
   {
@@ -306,6 +312,146 @@ function Bars() {
   );
 }
 
+function toneColor(tone: string) {
+  if (tone === "down") return C.red;
+  if (tone === "up") return C.accent;
+  return "rgba(17,17,17,0.46)";
+}
+
+function AnalyticsGraph() {
+  const data = SYNTHETIC_SHOPIFY_PULL.analytics_catalog;
+  const center = { x: 50, y: 52 };
+  const groups = Array.from(new Set(data.map((metric) => metric.group)));
+
+  return (
+    <Shell>
+      <div style={{ position: "relative", height: 510 }}>
+        <div style={{ position: "absolute", left: 28, top: 24, zIndex: 3 }}>
+          <Eyebrow>Shopify analytics pull</Eyebrow>
+          <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap", maxWidth: 540 }}>
+            {groups.map((group) => (
+              <span
+                key={group}
+                style={{
+                  fontFamily: F.mono,
+                  fontSize: 9,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: C.muted,
+                  border: `1px solid ${C.hair}`,
+                  borderRadius: 999,
+                  padding: "5px 8px",
+                  background: "rgba(255,255,255,0.7)",
+                }}
+              >
+                {group}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 1 }}>
+          {data.map((metric, i) => (
+            <line
+              key={`${metric.label}-line`}
+              x1={center.x}
+              y1={center.y}
+              x2={metric.x}
+              y2={metric.y}
+              stroke={toneColor(metric.tone)}
+              strokeWidth="0.11"
+              strokeOpacity={metric.tone === "neutral" ? 0.18 : 0.32}
+            >
+              <animate attributeName="stroke-opacity" values="0.08;0.36;0.08" dur={`${3.2 + i * 0.04}s`} repeatCount="indefinite" />
+            </line>
+          ))}
+        </svg>
+
+        <div
+          className="ad-hub-float"
+          style={{
+            position: "absolute",
+            left: `${center.x}%`,
+            top: `${center.y}%`,
+            transform: "translate(-50%, -50%)",
+            zIndex: 4,
+            width: 190,
+            minHeight: 118,
+            borderRadius: 24,
+            border: `1px solid rgba(250,84,0,0.38)`,
+            background: "rgba(255,255,255,0.94)",
+            boxShadow: "0 24px 60px rgba(250,84,0,0.18)",
+            display: "grid",
+            placeItems: "center",
+            textAlign: "center",
+            padding: 18,
+          }}
+        >
+          <Eyebrow>Synapse</Eyebrow>
+          <div style={{ marginTop: 8, fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 38, lineHeight: 0.95 }}>{data.length} signals</div>
+          <div style={{ marginTop: 8, fontFamily: F.mono, fontSize: 10, color: C.muted, letterSpacing: "0.08em" }}>ONE GROWTH MODEL</div>
+        </div>
+
+        {data.map((metric, i) => (
+          <div
+            key={metric.label}
+            style={{
+              position: "absolute",
+              left: `${metric.x}%`,
+              top: `${metric.y}%`,
+              transform: "translate(-50%, -50%)",
+              zIndex: 2,
+              width: 112,
+              minHeight: 58,
+              borderRadius: 12,
+              border: `1px solid ${metric.tone === "neutral" ? C.hair : `${toneColor(metric.tone)}55`}`,
+              background: "rgba(255,255,255,0.88)",
+              boxShadow: "0 10px 30px rgba(33,28,23,0.08)",
+              padding: "8px 9px",
+              animation: `adMetricIn 520ms cubic-bezier(.2,.7,.2,1) ${Math.min(i * 28, 520)}ms both`,
+            }}
+            title={`${metric.source}: ${metric.insight}`}
+          >
+            <div
+              style={{
+                fontFamily: F.mono,
+                fontSize: 7.5,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: C.faint,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {metric.group}
+            </div>
+            <div
+              style={{
+                marginTop: 3,
+                fontFamily: F.sans,
+                fontWeight: 700,
+                fontSize: 10.5,
+                lineHeight: 1.05,
+                color: C.text,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {metric.label}
+            </div>
+            <div style={{ marginTop: 4, display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 6 }}>
+              <span style={{ fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 16, lineHeight: 1, color: C.text }}>{metric.value}</span>
+              <span style={{ fontFamily: F.mono, fontSize: 7.5, color: toneColor(metric.tone), whiteSpace: "nowrap" }}>{metric.delta}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Shell>
+  );
+}
+
 function MiniBrief() {
   const brief = SYNTHETIC_SHOPIFY_PULL.synthetic_growth_brief;
   return (
@@ -377,6 +523,10 @@ function Scene({ name }: { name: (typeof steps)[number]["scene"] }) {
         </div>
       </Shell>
     );
+  }
+
+  if (name === "analytics") {
+    return <AnalyticsGraph />;
   }
 
   if (name === "overview") {
@@ -512,9 +662,12 @@ export default async function AdStepPage({ params }: { params: Promise<{ step: s
       <style>{`
         @keyframes adEnter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
         @keyframes adFloat { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-10px) rotate(1deg); } }
+        @keyframes adHubFloat { 0%, 100% { transform: translate(-50%, -50%) translateY(0); } 50% { transform: translate(-50%, -50%) translateY(-8px); } }
         @keyframes adBar { from { transform: scaleX(.18); } to { transform: scaleX(1); } }
+        @keyframes adMetricIn { from { opacity: 0; transform: translate(-50%, -42%) scale(.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
         .ad-page { animation: adEnter 520ms cubic-bezier(.2,.7,.2,1) both; }
         .ad-float { animation: adFloat 5s ease-in-out infinite; }
+        .ad-hub-float { animation: adHubFloat 5.8s ease-in-out infinite; }
         .ad-bar { transform-origin: left center; animation: adBar 900ms cubic-bezier(.2,.7,.2,1) both; }
         .ad-next:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(250,84,0,.22); }
         @media (max-width: 900px) {

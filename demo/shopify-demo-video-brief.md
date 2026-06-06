@@ -114,6 +114,7 @@ http://localhost:3000/ad/6
 http://localhost:3000/ad/7
 http://localhost:3000/ad/8
 http://localhost:3000/ad/9
+http://localhost:3000/ad/10
 ```
 
 Each page already has the overlay text. Click **Next** between pages while
@@ -144,12 +145,22 @@ Show `/connect`, hover the Shopify card, then cut.
 Scene 3:
 
 ```text
+Every signal becomes one memory graph.
+```
+
+Show the new `/ad/3` graph. It contains 30 synthetic Shopify-style analytics:
+revenue, orders, customers, conversion, channel mix, ad spend, products,
+inventory, fulfillment, and risk signals.
+
+Scene 4:
+
+```text
 Synapse pulls orders, products, inventory, conversion, and channel mix.
 ```
 
-Show `/demo/shopify`, top metrics.
+Show `/ad/4`, the connected Luma & Lane Shopify pull.
 
-Scene 4:
+Scene 5:
 
 ```text
 Revenue up 39%. Orders up 37%. Conversion up from 2.05% to 2.47%.
@@ -157,7 +168,7 @@ Revenue up 39%. Orders up 37%. Conversion up from 2.05% to 2.47%.
 
 Zoom into the four top metric cards.
 
-Scene 5:
+Scene 6:
 
 ```text
 The cause: TikTok jumped from 12% to 31% of new customers.
@@ -165,7 +176,7 @@ The cause: TikTok jumped from 12% to 31% of new customers.
 
 Zoom into channel revenue.
 
-Scene 6:
+Scene 7:
 
 ```text
 The risk: GlowPatch has only 0.5 weeks of stock left.
@@ -173,7 +184,7 @@ The risk: GlowPatch has only 0.5 weeks of stock left.
 
 Zoom into product risks.
 
-Scene 7:
+Scene 8:
 
 ```text
 The cut: Meta spent GBP 520 and returned GBP 440.
@@ -181,7 +192,7 @@ The cut: Meta spent GBP 520 and returned GBP 440.
 
 Zoom into Meta ads / what to cut.
 
-Scene 8:
+Scene 9:
 
 ```text
 One move: Reorder GlowPatch and move Meta spend into TikTok creator seeding.
@@ -189,10 +200,11 @@ One move: Reorder GlowPatch and move Meta spend into TikTok creator seeding.
 
 Zoom into the one-move card.
 
-Scene 9:
+Scene 10:
 
 ```text
 Synapse remembers the action and makes next week's advice sharper.
 ```
 
-Cut to `/brief`.
+Show `/ad/10`; optionally cut to `/brief` after this if you want to prove the
+interactive brief exists.
