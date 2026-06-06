@@ -212,7 +212,9 @@ Entry points: the **weekly cron** (`/api/cron/generate-briefs`) runs the loop fo
 ## 3. Tech stack & the key decisions (with rationale)
 - **Next.js 14 (App Router) + Supabase (Postgres/Auth/RLS) + TypeScript**, deployed on **Vercel**. One TS codebase shared with the landing page.
 - **LLM = Anthropic Claude** (`ANTHROPIC_MODEL`, default `claude-opus-4-8`). **It briefly ran on OpenAI but was switched back to Anthropic** (the team's usable credits are on the Anthropic API). Only `lib/brief/generate.ts` + `lib/website/extract.ts` are provider-specific (they use the `@anthropic-ai/sdk` Messages API). Uses **structured outputs** (`output_config.format` with a `json_schema`) so the model must return our exact shape, validated again with Zod as a backstop. **Adaptive thinking** (`thinking:{type:"adaptive"}`) + env-tunable `effort` (`ANTHROPIC_EFFORT`, default `high`). **Prompt caching** via a `cache_control` breakpoint on the stable system prompt, with volatile data in the user turn — verified hitting (`cache_read_input_tokens` > 0 on the 2nd call).
-- **Memory = mubit (mubit.ai)** — "operational memory for agents." This is the product's differentiator **and worth +10 hackathon points for meaningful use.** REST-only (no TS SDK); one mubit **agent per founder** (`synapse-founder-<id>`). The client is **defensive**: any mubit failure logs and returns empty — it never blocks a brief. Base URL + auth scheme are **env-driven** because mubit's docs are gated and the exact endpoints/fields may differ from the public `/v2/control/*` shapes the client was written against.
+- **Memory = mubit (mubit.ai)** — "continual learning for AI agents": durable typed memory + a learning loop (ingest → recall → **outcome** → reflect). The product's differentiator, **worth +10 hackathon points for meaningful use.** Confirmed from [docs.mubit.ai](https://docs.mubit.ai): REST-only (no TS SDK); base `https://api.mubit.ai`; auth **`Authorization: Bearer <MUBIT_API_KEY>`** (key format `mbt_<instance>_<key_id>_<secret>`). The Control HTTP API (all `POST /v2/control/*`): **ingest** (`{run_id, agent_id, items:[{item_id, content_type:"text/plain", text, intent, user_id, source, lane?, occurrence_time?(unix s), metadata?}]}`), **query** = recall (`{agent_id, user_id, query, entry_types, mode:"AGENT_ROUTED", limit}` → `{final_answer, evidence:[{id,score,content}]}`), **outcome** (`{agent_id, user_id, reference_id, outcome:"success"|"failure", signal:-1..1, rationale, verified_in_production}`), plus `reflect`, `context`, `activity`, `agents/register`. Entry **types/intents**: `fact`, `lesson`, `rule`, `trace`, `archive_block`, `observation`, `reflection`, `task_result`, `mental_model`, `checkpoint`, `step_outcome`, … .
+  - **Synapse's design (the +10-points loop):** keep **one agent per founder** (`synapse-founder-<id>`) for hard tenant isolation — even mubit's run→session→**global** lesson promotion then stays inside that founder's agent, so no cross-founder leakage — and also pass `user_id = founderId`. Per week: (1) **recall** lessons/facts for the founder → feed Claude; (2) after generating, **ingest** the one move as a `lesson` (stable `item_id` = `move-<founderId>-<weekOf>`, `lesson_scope` user/session — NOT global); (3) on the founder's Done/Skipped + note, record an **`outcome`** on that move's id (success/failure + signal + rationale) so mubit *strengthens advice that worked and weakens what didn't*; next week's recall compounds. `run_id = brief-<founderId>-<weekOf>`.
+  - The client is **defensive**: any mubit failure logs and returns empty/false — it never blocks a brief. **⚠️ `lib/mubit/client.ts` was written against guessed shapes and needs aligning to the above (POST query not GET, `items:[]` ingest, unix `occurrence_time`, thread `user_id`, add `recordOutcome()`) — tracked in ROADMAP Phase 2.**
 - **Data sources (4):** Shopify (orders via Admin REST + sessions/conversion via ShopifyQL), Google Analytics GA4 (Data API), Vercel Web Analytics (**push** via Drains — it has *no* pull API), and a **website scraper** (fetch + LLM extract → business profile). `stripe` exists in the provider enum but is **not implemented**.
 - **The brief OUTPUT schema is fixed** (`GrowthBriefSchema`). Adding data sources only enriches the **input** (`WeeklyData`) — the generator and brief shape don't change.
 - **Framework isolation:** all logic lives in `lib/` (pure, testable). The `app/api/*` route files are thin adapters using **web-standard `Request`/`Response` with NO `next` import**, so they neither need Next installed to typecheck nor collide with the teammate's `create-next-app` scaffold.
@@ -279,9 +281,12 @@ lib/
     client.ts        MubitConfig, mubitConfigFromEnv (null if unconfigured), MubitClient with
                      remember()/recall() over /v2/control/{ingest,activity,query}, defensive
                      (timeouts, try/catch, tolerant field parsing). founderAgentId(id) =
-                     "synapse-founder-<id>".
+                     "synapse-founder-<id>". ⚠️ shapes to be aligned to the confirmed Control
+                     HTTP API (POST query not GET; items[] ingest; unix occurrence_time; thread
+                     user_id) + add recordOutcome() — see §3 + ROADMAP Phase 2.
     memory.ts        BRIEF_RECALL_QUERY; briefMemory(brief); actionMemory({weekOf, oneMoveText,
-                     status, outcomeNote}) — centralises WHAT gets remembered.
+                     status, outcomeNote}) — centralises WHAT gets remembered. (actionMemory will
+                     become a recordOutcome() call on the move's lesson id, not a fresh ingest.)
   db/
     types.ts         Provider ('shopify'|'stripe'|'ga4'|'vercel'|'website'), Connection, Founder,
                      AnalyticsEvent, MetricSnapshotRow, BriefRow, ActionRow, status enums.
@@ -369,7 +374,7 @@ RLS pattern: every table is scoped to the owning founder (`auth.uid()`), directl
 | `ANTHROPIC_MODEL` | Brief model (default `claude-opus-4-8`). |
 | `ANTHROPIC_EFFORT` | `low`/`medium`/`high`/`xhigh`/`max`, or `none` to omit (default `high`). |
 | `ANTHROPIC_EXTRACT_MODEL` | Optional override for website-profile extraction. |
-| `MUBIT_API_KEY` / `MUBIT_BASE_URL` / `MUBIT_AUTH_SCHEME` | Memory. Auth scheme `bearer` or `x-api-key`. |
+| `MUBIT_API_KEY` / `MUBIT_BASE_URL` / `MUBIT_AUTH_SCHEME` | Memory. Key format `mbt_<instance>_<key_id>_<secret>` (console.mubit.ai). Base `https://api.mubit.ai`. Auth **confirmed `bearer`** (`Authorization: Bearer <key>`). |
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase client. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only; cron + ingestion (bypasses RLS). |
 | `APP_URL` | Base URL for OAuth redirect URIs (falls back to `SHOPIFY_APP_URL`). |
