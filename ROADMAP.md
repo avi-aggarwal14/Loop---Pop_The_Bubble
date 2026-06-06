@@ -17,6 +17,41 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 
 ---
 
+## Immediate joint execution plan
+
+This is the current working plan for the next push. Keep the focus on real first-party analytics connections; public website scraping is only context enrichment.
+
+### Milestone 1 — Prove one real Shopify data pull
+- [ ] **[YOU]** Get access to any real/borrowed Shopify store or a minimal dev store token. Needed values: `SHOPIFY_SHOP_DOMAIN` and `SHOPIFY_ACCESS_TOKEN`.
+- [ ] **[ME]** Put those values in local `.env`, run `npm run shopify:brief`, and inspect the pulled orders/products/inventory/ShopifyQL traffic.
+- [ ] **[ME]** Fix any scope/API-shape issues in the Shopify connector; rerun `npm run typecheck`, `npm test`, and the live harness.
+- [ ] **[ME/YOU]** Decide whether the resulting brief is good enough for product-demo support. If data is thin, treat it as connector proof only and keep the story on real user data / seeded narrative.
+
+### Milestone 2 — Set up persistence
+- [ ] **[YOU]** Create a Supabase project and share/add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`.
+- [ ] **[YOU]** Run both migrations in Supabase SQL Editor: `supabase/migrations/0001_init.sql`, then `0002_connectors.sql`.
+- [ ] **[ME]** Verify tables/RLS exist and create a simple founder row for testing if needed.
+- [ ] **[ME]** Run a pipeline smoke test that writes a Shopify connection, metric snapshot, brief, and pending action.
+
+### Milestone 3 — Wire Shopify OAuth for real users
+- [ ] **[YOU]** Create/configure the Shopify app with redirect URL `<APP_URL>/api/auth/shopify/callback` and scopes `read_orders,read_customers,read_products,read_reports`.
+- [ ] **[YOU/ME]** Provide a public HTTPS `APP_URL` via Vercel deploy or a local tunnel.
+- [ ] **[ME]** Add `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, `SHOPIFY_SCOPES`, `SHOPIFY_APP_URL`, and `APP_URL` to `.env`.
+- [ ] **[ME]** Run `/api/auth/shopify?shop=<store>.myshopify.com&founder_id=<uuid>` through the install flow and confirm the `connections` row is stored.
+
+### Milestone 4 — Expand analytics coverage
+- [ ] **[YOU]** Create Google Cloud OAuth credentials for GA4 when ready.
+- [ ] **[ME]** Run the GA4 OAuth flow and verify sessions/users/conversion/channel mix/top pages enter `WeeklyData`.
+- [ ] **[YOU]** Decide whether Vercel drains are available/needed.
+- [ ] **[ME]** If available, create a `vercel` connection row with `drain_secret` and verify events aggregate into traffic metrics.
+
+### Milestone 5 — Product UI
+- [ ] **[ME]** Build the real Connect page and real dashboard path once Supabase Auth/session wiring is available.
+- [ ] **[ME]** Replace `founder_id` query params with the authenticated server session.
+- [ ] **[ME]** Wire Done/Skipped/outcome in the UI to `POST /api/briefs/[id]/action`, so mubit outcome learning is used in the real app.
+
+---
+
 ## What I need from you (one-time, unblocks everything)
 
 | # | Thing | Where | Goes into `.env` as |
