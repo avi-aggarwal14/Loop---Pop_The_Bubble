@@ -541,8 +541,9 @@ function ProductHero({ controlIndex = null, onIndex }) {
   );
 }
 
-// Scales a fixed 1280×760 child to fit the page width AND the viewport height
-// (cap 1), centered horizontally — so the hero never overflows past one screen.
+// The hero fills the full viewport (100vh, full width). The fixed 1280×760 stage
+// is "cover"-scaled — scaled up to fill both dimensions and centered, with any
+// overflow cropped (overflow:hidden). No letterbox bars, no side cropping seams.
 function HeroStage({ children, w = 1280, h = 760 }) {
   const wrapRef = useRef(null);
   const stageRef = useRef(null);
@@ -550,12 +551,11 @@ function HeroStage({ children, w = 1280, h = 760 }) {
     const fit = () => {
       if (!wrapRef.current || !stageRef.current) return;
       const cw = wrapRef.current.clientWidth;
-      const vh = window.innerHeight || h;
-      // Bind by whichever is tighter: width or viewport height. Never upscale.
-      const s = Math.min(1, cw / w, vh / h);
-      const offset = Math.max(0, (cw - w * s) / 2);
-      stageRef.current.style.transform = `translateX(${offset}px) scale(${s})`;
-      wrapRef.current.style.height = (h * s) + "px";
+      const ch = wrapRef.current.clientHeight;
+      const s = Math.max(cw / w, ch / h); // cover
+      const x = (cw - w * s) / 2;
+      const y = (ch - h * s) / 2;
+      stageRef.current.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
     };
     fit();
     window.addEventListener("resize", fit);
@@ -563,7 +563,7 @@ function HeroStage({ children, w = 1280, h = 760 }) {
     return () => { window.removeEventListener("resize", fit); clearTimeout(t); };
   }, []);
   return (
-    <div ref={wrapRef} style={{ position: "relative", width: "100%", overflow: "hidden", background: "#0b0b0c" }}>
+    <div ref={wrapRef} style={{ position: "relative", width: "100%", height: "100vh", overflow: "hidden" }}>
       <div ref={stageRef} style={{ width: w, height: h, transformOrigin: "top left" }}>{children}</div>
     </div>
   );
