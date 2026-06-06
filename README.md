@@ -57,13 +57,15 @@ See `CLAUDE.md` for full architecture and `ROADMAP.md` for the current plan.
 For a fast demo video without waiting on a real Shopify store, use:
 
 ```text
+/ad
 /demo/shopify
 /api/demo/shopify-pull
 /api/demo/shopify-growth-plan
 demo/shopify-demo-video-brief.md
 ```
 
-`/demo/shopify` is the polished screen-recording page. The API endpoint returns
+`/ad` is the click-through silent ad flow with the text already on each page.
+`/demo/shopify` is the fuller screen-recording page. The API endpoint returns
 synthetic Shopify-like orders, products, inventory, traffic/channel summaries.
 `/api/demo/shopify-growth-plan` runs that synthetic data through the real Claude
 brief engine when `ANTHROPIC_API_KEY` is configured, falling back to the canned

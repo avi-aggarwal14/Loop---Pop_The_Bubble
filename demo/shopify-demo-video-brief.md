@@ -102,6 +102,22 @@ http://localhost:3000/api/demo/shopify-growth-plan
 ## Silent Demo Edit
 
 No talking. Use captions, cursor movement, zooms, and music.
+The fastest path is to record the built-in ad pages:
+
+```text
+http://localhost:3000/ad/1
+http://localhost:3000/ad/2
+http://localhost:3000/ad/3
+http://localhost:3000/ad/4
+http://localhost:3000/ad/5
+http://localhost:3000/ad/6
+http://localhost:3000/ad/7
+http://localhost:3000/ad/8
+http://localhost:3000/ad/9
+```
+
+Each page already has the overlay text. Click **Next** between pages while
+recording.
 
 Scene 1:
 
