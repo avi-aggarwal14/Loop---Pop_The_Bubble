@@ -6,6 +6,11 @@ dist/
 build/
 out/
 
+# Next.js
+.next/
+next-env.d.ts
+.vercel/
+
 # Logs
 *.log
 npm-debug.log*
