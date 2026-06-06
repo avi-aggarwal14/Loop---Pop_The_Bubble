@@ -303,7 +303,7 @@ function ValidationChatSlide() {
     >
       <StageStyles />
 
-      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px 1fr 36px", gap: 18 }}>
+      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px minmax(0, 1fr) 34px", gap: 14 }}>
         <header style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
           <Brand />
           <SegmentedNav active="AI READ" />
@@ -571,19 +571,19 @@ function SalesBars() {
 function ChannelBars() {
   return (
     <a href="#source-modal" className="drill-card" aria-label="Open revenue by source drilldown">
-      <Frame style={{ padding: 20 }}>
+      <Frame style={{ padding: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
           <Eyebrow>Revenue by source</Eyebrow>
           <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: "0.1em" }}>OPEN</span>
         </div>
-        <div style={{ display: "grid", gap: 12, marginTop: 18 }}>
+        <div style={{ display: "grid", gap: 8, marginTop: 13 }}>
           {channels.map((channel, i) => (
             <div key={channel.name}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: F.mono, fontSize: 10.5, color: C.muted }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontFamily: F.mono, fontSize: 10, color: C.muted }}>
                 <span>{channel.name}</span>
                 <span>{gbp(channel.revenue)}</span>
               </div>
-              <div style={{ height: 9, borderRadius: 999, background: "rgba(17,17,17,0.06)", overflow: "hidden", marginTop: 7 }}>
+              <div style={{ height: 7, borderRadius: 999, background: "rgba(17,17,17,0.06)", overflow: "hidden", marginTop: 5 }}>
                 <div
                   className="bar-x"
                   style={{
@@ -1343,33 +1343,33 @@ function FinalVerdictSlide() {
           <SegmentedNav active="AI READ" />
         </header>
 
-        <section style={{ display: "grid", gridTemplateColumns: "0.58fr 0.42fr", gap: 22, minHeight: 0 }}>
-          <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 16, minHeight: 0 }}>
-            <Frame style={{ padding: 28, borderColor: "rgba(250,84,0,0.32)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
+        <section style={{ display: "grid", gridTemplateColumns: "0.58fr 0.42fr", gap: 18, minHeight: 0 }}>
+          <div style={{ display: "grid", gridTemplateRows: "auto minmax(0, 1fr)", gap: 12, minHeight: 0 }}>
+            <Frame style={{ padding: 24, borderColor: "rgba(250,84,0,0.32)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
                 <Eyebrow>Final verdict</Eyebrow>
                 <span style={{ fontFamily: F.mono, fontSize: 10, color: C.red, letterSpacing: "0.08em" }}>DO NOT REDUCE</span>
               </div>
-              <h1 style={{ margin: "14px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(48px, 5.2vw, 92px)", lineHeight: 0.9 }}>
+              <h1 style={{ margin: "12px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(40px, 4.4vw, 76px)", lineHeight: 0.92 }}>
                 Do not decrease Coconut & Berry.
               </h1>
-              <p style={{ margin: "18px 0 0", color: C.muted, fontSize: 19, lineHeight: 1.48 }}>
+              <p style={{ margin: "14px 0 0", color: C.muted, fontSize: 16, lineHeight: 1.4 }}>
                 The correct move is to increase sales pressure while inventory is still available, then protect the reorder. The product is showing the exact limited-edition breakout pattern Synapse remembers from prior launches.
               </p>
             </Frame>
 
-            <Frame className="scan" style={{ padding: 24, minHeight: 0 }}>
+            <Frame className="scan" style={{ padding: 20, minHeight: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
                 <Eyebrow>What to do instead</Eyebrow>
                 <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>current pull + mubit memory</span>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginTop: 18 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginTop: 14 }}>
                 {[
                   ["1", "Increase Coconut & Berry", "Keep TikTok and search live until stock or reorder confirmation becomes the constraint."],
                   ["2", "Slow the likely fall-offs", "Reduce promotion on other drinks that still look healthy now but memory predicts will fade soon."],
                   ["3", "Move budget into the breakout", "Shift spend and homepage space toward the product with rising conversion and urgent stock risk."],
                 ].map(([number, title, text], index) => (
-                  <Frame key={title} className="card-in" style={{ padding: 18, animationDelay: `${index * 70}ms`, borderColor: index === 0 ? "rgba(250,84,0,0.3)" : C.hair } as React.CSSProperties}>
+                  <Frame key={title} className="card-in" style={{ padding: 15, animationDelay: `${index * 70}ms`, borderColor: index === 0 ? "rgba(250,84,0,0.3)" : C.hair } as React.CSSProperties}>
                     <div
                       style={{
                         width: 30,
@@ -1385,8 +1385,8 @@ function FinalVerdictSlide() {
                     >
                       {number}
                     </div>
-                    <h3 style={{ margin: "15px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 31, lineHeight: 0.98 }}>{title}</h3>
-                    <p style={{ margin: "11px 0 0", color: C.muted, fontSize: 14.5, lineHeight: 1.45 }}>{text}</p>
+                    <h3 style={{ margin: "12px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 26, lineHeight: 0.98 }}>{title}</h3>
+                    <p style={{ margin: "9px 0 0", color: C.muted, fontSize: 13, lineHeight: 1.38 }}>{text}</p>
                   </Frame>
                 ))}
               </div>
