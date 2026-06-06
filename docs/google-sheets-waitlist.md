@@ -11,6 +11,9 @@ account, or API key to manage.
 
 As of 2026-06-06:
 
+- Reviewed during the full project handoff pass. This waitlist path is
+  independent of the Shopify/Red Bull demo flow and remains the current
+  landing-page signup capture path.
 - `app/api/waitlist/route.ts` has a hardcoded `DEFAULT_WEBHOOK_URL` fallback.
   This is intentional. A previous production issue happened because
   `GOOGLE_SHEETS_WEBHOOK_URL` was missing from Vercel, so the route skipped the
