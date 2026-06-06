@@ -134,6 +134,27 @@ const timelineSteps = [
   },
 ];
 
+const verdictAlternatives = [
+  {
+    name: "Watermelon Edition",
+    signal: "predicted to fade",
+    metric: "-18% demand in 14 days",
+    text: "mubit recalls a similar early-summer lift that fell once creator traffic moved back to limited editions.",
+  },
+  {
+    name: "Tropical Edition",
+    signal: "promotion fatigue",
+    metric: "ROAS sliding 3.1 -> 1.7",
+    text: "past briefs show paid spend kept rising after organic intent had already peaked.",
+  },
+  {
+    name: "Peach Edition",
+    signal: "inventory is safe",
+    metric: "7.6 days runway",
+    text: "recent sales look healthy, but memory marks it as a trailing product after the first weekend spike.",
+  },
+];
+
 function gbp(n: number): string {
   return `GBP ${new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 }).format(n)}`;
 }
@@ -231,6 +252,8 @@ function StageStyles() {
       .prediction-link .prediction-overlay { opacity: 0; transition: opacity .22s ease, transform .22s ease; transform: translateY(6px); }
       .prediction-link:hover .prediction-body { filter: blur(4px); opacity: .5; transform: scale(.992); }
       .prediction-link:hover .prediction-overlay { opacity: 1; transform: none; }
+      .validation-reply { opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity .26s ease, transform .26s ease; }
+      .validation-reply:target { opacity: 1; transform: none; pointer-events: auto; }
       .drill-card { display: block; height: 100%; color: inherit; text-decoration: none; cursor: pointer; }
       .drill-card section { height: 100%; transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
       .drill-card:hover section { transform: translateY(-2px); border-color: rgba(250,84,0,.32); box-shadow: 0 20px 52px rgba(33,28,23,.12); }
@@ -263,6 +286,134 @@ function StageStyles() {
         .kpi-row { grid-template-columns: repeat(3, 1fr) !important; }
       }
     `}</style>
+  );
+}
+
+function ValidationChatSlide() {
+  return (
+    <main
+      style={{
+        height: "100vh",
+        background: C.bg,
+        color: C.text,
+        fontFamily: F.sans,
+        padding: "22px clamp(24px, 4vw, 64px)",
+        overflow: "hidden",
+      }}
+    >
+      <StageStyles />
+
+      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px 1fr 36px", gap: 18 }}>
+        <header style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
+          <Brand />
+          <SegmentedNav active="AI READ" />
+        </header>
+
+        <section style={{ display: "grid", gridTemplateColumns: "0.48fr 0.52fr", gap: 24, minHeight: 0, alignItems: "stretch" }}>
+          <div style={{ display: "grid", alignContent: "center", gap: 22 }}>
+            <Eyebrow>Decision validation</Eyebrow>
+            <h1 style={{ margin: 0, fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(58px, 6vw, 110px)", lineHeight: 0.9 }}>
+              Ask before the move.
+            </h1>
+            <p style={{ margin: 0, color: C.muted, fontSize: 21, lineHeight: 1.45, maxWidth: 600 }}>
+              The founder is about to reduce sales pressure on the breakout product. Synapse checks the plan against Shopify data and memory before they act.
+            </p>
+          </div>
+
+          <Frame style={{ padding: 28, display: "grid", gridTemplateRows: "auto auto 1fr", gap: 18, background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,251,254,0.9))" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+              <Eyebrow>Founder prompt</Eyebrow>
+              <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint, letterSpacing: "0.1em" }}>VALIDATE MOVE</span>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 52px", gap: 14, alignItems: "center" }}>
+              <div
+                style={{
+                  border: `1px solid ${C.hairStrong}`,
+                  borderRadius: 16,
+                  padding: "20px 22px",
+                  background: "#fff",
+                  boxShadow: "0 16px 44px rgba(33,28,23,0.08)",
+                  color: C.text,
+                  fontSize: 23,
+                  lineHeight: 1.35,
+                }}
+              >
+                I plan to decrease Red Bull Coconut & Berry sales next week.
+              </div>
+              <a
+                href="#ai-reply"
+                aria-label="Validate founder plan"
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 999,
+                  display: "grid",
+                  placeItems: "center",
+                  textDecoration: "none",
+                  background: C.accent,
+                  color: "#fff",
+                  fontSize: 26,
+                  fontWeight: 800,
+                  boxShadow: "0 16px 36px rgba(250,84,0,0.28)",
+                }}
+              >
+                ✓
+              </a>
+            </div>
+
+            <div
+              id="ai-reply"
+              className="validation-reply"
+              style={{
+                alignSelf: "end",
+                border: `1px solid rgba(250,84,0,0.28)`,
+                borderRadius: 18,
+                padding: 24,
+                background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))",
+                boxShadow: "0 18px 46px rgba(33,28,23,0.08)",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
+                <Eyebrow>Synapse reply</Eyebrow>
+                <span style={{ fontFamily: F.mono, fontSize: 10, color: C.green, letterSpacing: "0.08em" }}>DO NOT DECREASE</span>
+              </div>
+              <h2 style={{ margin: "14px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 48, lineHeight: 0.96 }}>
+                No. Increase Coconut & Berry while demand is still compounding.
+              </h2>
+              <p style={{ margin: "14px 0 0", color: C.muted, fontSize: 17, lineHeight: 1.5 }}>
+                Shopify velocity, TikTok revenue concentration, and remembered limited-edition launches all point to a near-term stockout. Cutting sales now would waste the strongest product signal in the store.
+              </p>
+              <Link
+                href="/ad/2"
+                style={{
+                  display: "inline-block",
+                  marginTop: 20,
+                  color: "#fff",
+                  background: C.accent,
+                  textDecoration: "none",
+                  fontFamily: F.sans,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  borderRadius: 10,
+                  padding: "11px 18px",
+                }}
+              >
+                See product pull
+              </Link>
+            </div>
+          </Frame>
+        </section>
+
+        <footer style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.faint }}>Screen 1 / validate the planned action</div>
+          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.faint }}>Press validate, then continue</div>
+          <Link href="/ad/2" style={{ color: C.muted, textDecoration: "none", fontFamily: F.mono, fontSize: 12 }}>
+            Skip
+          </Link>
+        </footer>
+      </div>
+    </main>
   );
 }
 
@@ -309,7 +460,7 @@ function ProductHero() {
       />
 
       <img
-        className="hero-can"
+        className="hero-can-main"
         src={CAN_IMAGE}
         alt="Red Bull Coconut & Berry can"
         style={{
@@ -343,7 +494,7 @@ function ProductHero() {
       </div>
 
       <Link
-        href="/ad/2"
+        href="/ad/3"
         aria-label="Next slide"
         style={{
           position: "absolute",
@@ -662,7 +813,7 @@ function ConversionDrilldownModal() {
 
 function InsightPanel() {
   return (
-    <Link href="/ad/3" className="prediction-link" style={{ display: "block", color: C.text, textDecoration: "none", height: "100%" }}>
+    <Link href="/ad/4" className="prediction-link" style={{ display: "block", color: C.text, textDecoration: "none", height: "100%" }}>
       <Frame style={{ height: "100%", minHeight: 0, padding: 20, borderColor: "rgba(250,84,0,0.3)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
         <div className="prediction-body">
           <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "center" }}>
@@ -790,12 +941,12 @@ function StatsSlide() {
         </section>
 
         <footer style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Link href="/ad/1" style={{ color: C.muted, textDecoration: "none", fontFamily: F.mono, fontSize: 12 }}>
+          <Link href="/ad/2" style={{ color: C.muted, textDecoration: "none", fontFamily: F.mono, fontSize: 12 }}>
             Back
           </Link>
           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.faint }}>Mock values shaped like a real Shopify product pull</div>
           <Link
-            href="/ad/3"
+            href="/ad/4"
             style={{
               color: "#fff",
               background: C.accent,
@@ -898,12 +1049,12 @@ function PredictionSlide() {
 
         <section style={{ display: "grid", gridTemplateColumns: "0.42fr 0.58fr", gap: 22, minHeight: 0 }}>
           <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 18, minHeight: 0 }}>
-            <Frame style={{ padding: 28, borderColor: "rgba(250,84,0,0.32)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
+            <Frame style={{ padding: 24, overflow: "visible", borderColor: "rgba(250,84,0,0.32)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
               <Eyebrow>Full prediction</Eyebrow>
-              <h1 style={{ margin: "16px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(54px, 5.4vw, 96px)", lineHeight: 0.9 }}>
+              <h1 style={{ margin: "14px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(42px, 4.4vw, 76px)", lineHeight: 0.94 }}>
                 Stockout likely inside the next order cycle.
               </h1>
-              <p style={{ margin: "22px 0 0", color: C.muted, fontSize: 18, lineHeight: 1.5 }}>
+              <p style={{ margin: "16px 0 0", color: C.muted, fontSize: 16, lineHeight: 1.45 }}>
                 Synapse predicts Red Bull Coconut & Berry will run out in 3-4 days unless replenishment is confirmed or promotion is slowed. The prediction is not just based on this week: it matches the store's remembered pattern from prior limited-edition launches.
               </p>
             </Frame>
@@ -927,65 +1078,67 @@ function PredictionSlide() {
                 <EvidenceCard key={item.label} {...item} index={index} />
               ))}
             </div>
-            <Frame className="scan" style={{ padding: 26, minHeight: 0 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-                <Eyebrow>Why Synapse believes this</Eyebrow>
-                <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>current stats + remembered outcomes</span>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "0.34fr 0.66fr", gap: 24, alignItems: "center", marginTop: 22 }}>
-                <img
-                  className="hero-can"
-                  src={CAN_IMAGE}
-                  alt=""
-                  style={{
-                    width: "100%",
-                    maxHeight: 360,
-                    objectFit: "contain",
-                    filter: "drop-shadow(0 28px 58px rgba(33,28,23,0.18))",
-                  }}
-                />
-                <div>
-                  <div style={{ display: "grid", gap: 14 }}>
-                    {[
-                      "Units sold are up 42% while AOV is down 2%, which means the spike is volume-led rather than price-led.",
-                      "Friday through Sunday produced 1,456 units, enough to compress inventory from 3.4 days at average pace to about 2.4 days at weekend pace.",
-                      "TikTok now drives GBP 1,715 of product revenue, the same concentration level that preceded previous limited-edition stockouts.",
-                      "The memory layer recalls two prior launches where creator-led weekend acceleration turned into sellout before the next reorder landed.",
-                    ].map((line, index) => (
-                      <div key={line} style={{ display: "grid", gridTemplateColumns: "34px 1fr", gap: 12, alignItems: "start" }}>
-                        <div
-                          style={{
-                            width: 26,
-                            height: 26,
-                            borderRadius: 999,
-                            display: "grid",
-                            placeItems: "center",
-                            background: index === 3 ? C.accent : "rgba(17,17,17,0.08)",
-                            color: index === 3 ? "#fff" : C.text,
-                            fontFamily: F.mono,
-                            fontSize: 11,
-                          }}
-                        >
-                          {index + 1}
+            <Link href="/ad/5" className="why-link" aria-label="Open memory timeline">
+              <Frame className="scan" style={{ padding: 26, minHeight: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+                  <Eyebrow>Why Synapse believes this</Eyebrow>
+                  <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>OPEN MEMORY TIMELINE</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "0.34fr 0.66fr", gap: 24, alignItems: "center", marginTop: 22 }}>
+                  <img
+                    className="hero-can"
+                    src={CAN_IMAGE}
+                    alt=""
+                    style={{
+                      width: "100%",
+                      maxHeight: 360,
+                      objectFit: "contain",
+                      filter: "drop-shadow(0 28px 58px rgba(33,28,23,0.18))",
+                    }}
+                  />
+                  <div>
+                    <div style={{ display: "grid", gap: 14 }}>
+                      {[
+                        "Units sold are up 42% while AOV is down 2%, which means the spike is volume-led rather than price-led.",
+                        "Friday through Sunday produced 1,456 units, enough to compress inventory from 3.4 days at average pace to about 2.4 days at weekend pace.",
+                        "TikTok now drives GBP 1,715 of product revenue, the same concentration level that preceded previous limited-edition stockouts.",
+                        "The memory layer recalls two prior launches where creator-led weekend acceleration turned into sellout before the next reorder landed.",
+                      ].map((line, index) => (
+                        <div key={line} style={{ display: "grid", gridTemplateColumns: "34px 1fr", gap: 12, alignItems: "start" }}>
+                          <div
+                            style={{
+                              width: 26,
+                              height: 26,
+                              borderRadius: 999,
+                              display: "grid",
+                              placeItems: "center",
+                              background: index === 3 ? C.accent : "rgba(17,17,17,0.08)",
+                              color: index === 3 ? "#fff" : C.text,
+                              fontFamily: F.mono,
+                              fontSize: 11,
+                            }}
+                          >
+                            {index + 1}
+                          </div>
+                          <p style={{ margin: 0, color: C.muted, lineHeight: 1.46, fontSize: 16 }}>{line}</p>
                         </div>
-                        <p style={{ margin: 0, color: C.muted, lineHeight: 1.46, fontSize: 16 }}>{line}</p>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 24, borderTop: `1px solid ${C.hair}`, paddingTop: 18 }}>
+                      <Eyebrow>Recommended move</Eyebrow>
+                      <div style={{ marginTop: 8, fontFamily: F.serif, fontStyle: "italic", fontSize: 38, fontWeight: 700, lineHeight: 1 }}>
+                        Confirm reorder first, then keep TikTok live.
                       </div>
-                    ))}
-                  </div>
-                  <div style={{ marginTop: 24, borderTop: `1px solid ${C.hair}`, paddingTop: 18 }}>
-                    <Eyebrow>Recommended move</Eyebrow>
-                    <div style={{ marginTop: 8, fontFamily: F.serif, fontStyle: "italic", fontSize: 38, fontWeight: 700, lineHeight: 1 }}>
-                      Confirm reorder first, then keep TikTok live.
                     </div>
                   </div>
                 </div>
-              </div>
-            </Frame>
+              </Frame>
+            </Link>
           </div>
         </section>
 
         <footer style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Link href="/ad/2" style={{ color: C.muted, textDecoration: "none", fontFamily: F.mono, fontSize: 12 }}>
+          <Link href="/ad/3" style={{ color: C.muted, textDecoration: "none", fontFamily: F.mono, fontSize: 12 }}>
             Back
           </Link>
           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.faint }}>Prediction backed by product stats and past memory</div>
@@ -1010,11 +1163,315 @@ function PredictionSlide() {
   );
 }
 
+function MemoryTimelineSlide() {
+  return (
+    <main
+      style={{
+        height: "100vh",
+        background: C.bg,
+        color: C.text,
+        fontFamily: F.sans,
+        padding: "22px clamp(24px, 4vw, 64px)",
+        overflow: "hidden",
+      }}
+    >
+      <StageStyles />
+
+      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px 15vh 1fr 36px", gap: 14 }}>
+        <header style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
+          <Brand />
+          <SegmentedNav active="AI READ" />
+        </header>
+
+        <section
+          style={{
+            borderTop: `1px solid ${C.hair}`,
+            borderBottom: `1px solid ${C.hair}`,
+            display: "grid",
+            gridTemplateColumns: "0.44fr 0.56fr",
+            gap: 26,
+            alignItems: "center",
+            minHeight: 0,
+          }}
+        >
+          <div>
+            <Eyebrow>Memory-backed reasoning</Eyebrow>
+            <h1 style={{ margin: "8px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(34px, 3.8vw, 68px)", lineHeight: 0.92 }}>
+              Four signals point to the same move.
+            </h1>
+          </div>
+          <p style={{ margin: 0, color: C.muted, fontSize: 17, lineHeight: 1.44 }}>
+            Synapse compares the live Shopify pull with remembered launch outcomes, then shows the causal chain behind the stockout prediction.
+          </p>
+        </section>
+
+        <section style={{ display: "grid", gridTemplateRows: "106px 1fr", gap: 14, minHeight: 0 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
+            {timelineSteps.map((step, index) => (
+              <a
+                key={step.id}
+                href={`#timeline-${step.id}`}
+                className={`timeline-step ${step.id} card-in`}
+                style={{
+                  border: `1px solid ${C.hair}`,
+                  borderRadius: 16,
+                  padding: 16,
+                  boxShadow: "0 16px 42px rgba(33,28,23,0.07)",
+                  animationDelay: `${index * 55}ms`,
+                } as React.CSSProperties}
+              >
+                <div style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", opacity: 0.64 }}>
+                  0{index + 1} / {step.label}
+                </div>
+                <div style={{ marginTop: 10, fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 29, lineHeight: 0.95 }}>{step.metric}</div>
+              </a>
+            ))}
+          </div>
+
+          <div style={{ position: "relative", minHeight: 0 }}>
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.55, pointerEvents: "none" }}>
+              <polyline className="path-draw" points="3,20 18,35 31,28 46,48 61,34 79,52 97,40" fill="none" stroke="rgba(250,84,0,0.16)" strokeWidth="0.18" />
+              <polyline className="path-draw" points="6,84 21,68 38,76 54,58 70,64 87,44 96,51" fill="none" stroke="rgba(23,124,194,0.13)" strokeWidth="0.18" />
+            </svg>
+
+            {timelineSteps.map((step, index) => (
+              <div
+                key={step.id}
+                id={`timeline-${step.id}`}
+                className="timeline-detail"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  gridTemplateColumns: "minmax(0, 0.62fr) minmax(330px, 0.38fr)",
+                  gap: 16,
+                  minHeight: 0,
+                }}
+              >
+                <Frame style={{ padding: 28, display: "grid", gridTemplateRows: "auto 1fr auto", gap: 22, borderColor: index === 3 ? "rgba(250,84,0,0.28)" : C.hair }}>
+                  <div>
+                    <Eyebrow>{step.label} signal</Eyebrow>
+                    <h2 style={{ margin: "12px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(42px, 4.4vw, 78px)", lineHeight: 0.94 }}>
+                      {step.title}
+                    </h2>
+                  </div>
+                  <p style={{ margin: 0, alignSelf: "center", color: C.muted, fontSize: 23, lineHeight: 1.42, maxWidth: 860 }}>{step.text}</p>
+                  <div style={{ borderTop: `1px solid ${C.hair}`, paddingTop: 18, display: "flex", justifyContent: "space-between", gap: 18, alignItems: "baseline" }}>
+                    <Eyebrow>Resulting move</Eyebrow>
+                    <div style={{ fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 37, lineHeight: 1, textAlign: "right" }}>Replenish before amplifying demand.</div>
+                  </div>
+                </Frame>
+
+                <div style={{ display: "grid", gridTemplateRows: "1fr auto", gap: 14, minHeight: 0 }}>
+                  <Frame style={{ padding: 22, display: "grid", placeItems: "center", background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,251,254,0.9))" }}>
+                    <img
+                      className="hero-can"
+                      src={CAN_IMAGE}
+                      alt=""
+                      style={{
+                        maxHeight: "min(42vh, 370px)",
+                        width: "auto",
+                        maxWidth: "86%",
+                        objectFit: "contain",
+                        filter: "drop-shadow(0 30px 68px rgba(33,28,23,0.18))",
+                      }}
+                    />
+                  </Frame>
+
+                  <Frame style={{ padding: 22, borderColor: "rgba(250,84,0,0.28)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
+                      <Eyebrow>Past memory</Eyebrow>
+                      <span style={{ fontFamily: F.mono, fontSize: 10, color: C.green, letterSpacing: "0.08em" }}>RECALLED</span>
+                    </div>
+                    <p style={{ margin: "13px 0 0", color: C.muted, fontSize: 16, lineHeight: 1.48 }}>{step.memory}</p>
+                    <div
+                      style={{
+                        marginTop: 18,
+                        border: `1px solid ${C.hair}`,
+                        borderRadius: 12,
+                        padding: "12px 14px",
+                        fontFamily: F.mono,
+                        fontSize: 11,
+                        lineHeight: 1.5,
+                        color: C.text,
+                        background: "rgba(255,255,255,0.72)",
+                      }}
+                    >
+                      {step.memoryMetric}
+                    </div>
+                  </Frame>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <footer style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Link href="/ad/4" style={{ color: C.muted, textDecoration: "none", fontFamily: F.mono, fontSize: 12 }}>
+            Back
+          </Link>
+          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.faint }}>Click each signal to reveal the remembered evidence</div>
+          <Link
+            href="/ad/6"
+            style={{
+              color: "#fff",
+              background: C.accent,
+              textDecoration: "none",
+              fontFamily: F.sans,
+              fontSize: 14,
+              fontWeight: 700,
+              borderRadius: 10,
+              padding: "10px 18px",
+            }}
+          >
+            Final verdict
+          </Link>
+        </footer>
+      </div>
+    </main>
+  );
+}
+
+function FinalVerdictSlide() {
+  return (
+    <main
+      style={{
+        height: "100vh",
+        background: C.bg,
+        color: C.text,
+        fontFamily: F.sans,
+        padding: "22px clamp(24px, 4vw, 64px)",
+        overflow: "hidden",
+      }}
+    >
+      <StageStyles />
+
+      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px 1fr 36px", gap: 18 }}>
+        <header style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
+          <Brand />
+          <SegmentedNav active="AI READ" />
+        </header>
+
+        <section style={{ display: "grid", gridTemplateColumns: "0.58fr 0.42fr", gap: 22, minHeight: 0 }}>
+          <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 16, minHeight: 0 }}>
+            <Frame style={{ padding: 28, borderColor: "rgba(250,84,0,0.32)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
+                <Eyebrow>Final verdict</Eyebrow>
+                <span style={{ fontFamily: F.mono, fontSize: 10, color: C.red, letterSpacing: "0.08em" }}>DO NOT REDUCE</span>
+              </div>
+              <h1 style={{ margin: "14px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(48px, 5.2vw, 92px)", lineHeight: 0.9 }}>
+                Do not decrease Coconut & Berry.
+              </h1>
+              <p style={{ margin: "18px 0 0", color: C.muted, fontSize: 19, lineHeight: 1.48 }}>
+                The correct move is to increase sales pressure while inventory is still available, then protect the reorder. The product is showing the exact limited-edition breakout pattern Synapse remembers from prior launches.
+              </p>
+            </Frame>
+
+            <Frame className="scan" style={{ padding: 24, minHeight: 0 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+                <Eyebrow>What to do instead</Eyebrow>
+                <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>current pull + mubit memory</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginTop: 18 }}>
+                {[
+                  ["1", "Increase Coconut & Berry", "Keep TikTok and search live until stock or reorder confirmation becomes the constraint."],
+                  ["2", "Slow the likely fall-offs", "Reduce promotion on other drinks that still look healthy now but memory predicts will fade soon."],
+                  ["3", "Move budget into the breakout", "Shift spend and homepage space toward the product with rising conversion and urgent stock risk."],
+                ].map(([number, title, text], index) => (
+                  <Frame key={title} className="card-in" style={{ padding: 18, animationDelay: `${index * 70}ms`, borderColor: index === 0 ? "rgba(250,84,0,0.3)" : C.hair } as React.CSSProperties}>
+                    <div
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 999,
+                        display: "grid",
+                        placeItems: "center",
+                        background: index === 0 ? C.accent : "rgba(17,17,17,0.08)",
+                        color: index === 0 ? "#fff" : C.text,
+                        fontFamily: F.mono,
+                        fontSize: 12,
+                      }}
+                    >
+                      {number}
+                    </div>
+                    <h3 style={{ margin: "15px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 31, lineHeight: 0.98 }}>{title}</h3>
+                    <p style={{ margin: "11px 0 0", color: C.muted, fontSize: 14.5, lineHeight: 1.45 }}>{text}</p>
+                  </Frame>
+                ))}
+              </div>
+            </Frame>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateRows: "0.82fr 1fr", gap: 14, minHeight: 0 }}>
+            <Frame style={{ padding: 22, display: "grid", placeItems: "center", background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,251,254,0.9))" }}>
+              <img
+                className="hero-can"
+                src={CAN_IMAGE}
+                alt=""
+                style={{
+                  maxHeight: "min(39vh, 340px)",
+                  width: "auto",
+                  maxWidth: "84%",
+                  objectFit: "contain",
+                  filter: "drop-shadow(0 28px 62px rgba(33,28,23,0.18))",
+                }}
+              />
+            </Frame>
+
+            <Frame style={{ padding: 22, minHeight: 0 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
+                <Eyebrow>Decrease these instead</Eyebrow>
+                <span style={{ fontFamily: F.mono, fontSize: 10, color: C.green, letterSpacing: "0.08em" }}>MUBIT FORECAST</span>
+              </div>
+              <div style={{ display: "grid", gap: 10, marginTop: 15 }}>
+                {verdictAlternatives.map((drink, index) => (
+                  <Frame key={drink.name} className="card-in" style={{ padding: 14, animationDelay: `${index * 70}ms` } as React.CSSProperties}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
+                      <h3 style={{ margin: 0, fontFamily: F.serif, fontStyle: "italic", fontSize: 26, lineHeight: 1 }}>{drink.name}</h3>
+                      <span style={{ fontFamily: F.mono, color: C.red, fontSize: 10, letterSpacing: "0.06em" }}>{drink.metric}</span>
+                    </div>
+                    <div style={{ marginTop: 8, fontFamily: F.mono, color: C.faint, fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase" }}>{drink.signal}</div>
+                    <p style={{ margin: "8px 0 0", color: C.muted, fontSize: 13.5, lineHeight: 1.42 }}>{drink.text}</p>
+                  </Frame>
+                ))}
+              </div>
+            </Frame>
+          </div>
+        </section>
+
+        <footer style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Link href="/ad/5" style={{ color: C.muted, textDecoration: "none", fontFamily: F.mono, fontSize: 12 }}>
+            Back
+          </Link>
+          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.faint }}>Final answer: increase the breakout, reduce the predicted fall-offs</div>
+          <Link
+            href="/ad/1"
+            style={{
+              color: "#fff",
+              background: C.accent,
+              textDecoration: "none",
+              fontFamily: F.sans,
+              fontSize: 14,
+              fontWeight: 700,
+              borderRadius: 10,
+              padding: "10px 18px",
+            }}
+          >
+            Restart
+          </Link>
+        </footer>
+      </div>
+    </main>
+  );
+}
+
 export default async function AdStepPage({ params }: { params: Promise<{ step: string }> }) {
   const { step } = await params;
   const stepNumber = Number(step);
-  if (!Number.isInteger(stepNumber) || stepNumber < 1 || stepNumber > 3) notFound();
-  if (stepNumber === 1) return <ProductHero />;
-  if (stepNumber === 2) return <StatsSlide />;
-  return <PredictionSlide />;
+  if (!Number.isInteger(stepNumber) || stepNumber < 1 || stepNumber > 6) notFound();
+  if (stepNumber === 1) return <ValidationChatSlide />;
+  if (stepNumber === 2) return <ProductHero />;
+  if (stepNumber === 3) return <StatsSlide />;
+  if (stepNumber === 4) return <PredictionSlide />;
+  if (stepNumber === 5) return <MemoryTimelineSlide />;
+  return <FinalVerdictSlide />;
 }
