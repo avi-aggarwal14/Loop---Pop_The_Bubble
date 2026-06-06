@@ -1,6 +1,9 @@
 // Waitlist capture → Kit (ConvertKit). Keys are server-side only.
-// Swappable: change only this file to move to Mailchimp/Loops/etc.
-// If Kit isn't configured yet, it logs and returns ok so the demo never breaks.
+// Two ways to configure (either works):
+//   A) KIT_FORM_ACTION = the form's HTML-embed action URL, e.g.
+//      https://app.kit.com/forms/1234567/subscriptions   (no API key needed)
+//   B) KIT_API_KEY + KIT_FORM_ID = the v3 API (Settings → Advanced → API)
+// If neither is set, it logs and returns ok so the demo never breaks.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -20,29 +23,46 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ ok: false, error: "invalid email" }, { status: 400 });
   }
 
+  const formAction = process.env.KIT_FORM_ACTION;
   const apiKey = process.env.KIT_API_KEY;
   const formId = process.env.KIT_FORM_ID;
 
-  // Not configured yet → don't block the demo; log so nothing is lost locally.
-  if (!apiKey || !formId) {
-    console.log(`[waitlist] (unconfigured) ${email} · source=${source}`);
-    return Response.json({ ok: true, queued: true });
-  }
-
   try {
-    const res = await fetch(`https://api.convertkit.com/v3/forms/${formId}/subscribe`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ api_key: apiKey, email, fields: { source } }),
-    });
-    if (!res.ok) {
-      const detail = await res.text().catch(() => "");
-      console.error(`[waitlist] Kit error ${res.status}: ${detail}`);
-      return Response.json({ ok: false, error: "subscribe failed" }, { status: 502 });
+    // A) HTML-embed form action — no API key required.
+    if (formAction) {
+      const res = await fetch(formAction, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+        body: new URLSearchParams({ email_address: email, "fields[source]": source }).toString(),
+      });
+      if (res.status >= 400) {
+        const detail = await res.text().catch(() => "");
+        console.error(`[waitlist] Kit form error ${res.status}: ${detail}`);
+        return Response.json({ ok: false, error: "subscribe failed" }, { status: 502 });
+      }
+      return Response.json({ ok: true });
     }
-    return Response.json({ ok: true });
+
+    // B) v3 API.
+    if (apiKey && formId) {
+      const res = await fetch(`https://api.convertkit.com/v3/forms/${formId}/subscribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ api_key: apiKey, email, fields: { source } }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        console.error(`[waitlist] Kit API error ${res.status}: ${detail}`);
+        return Response.json({ ok: false, error: "subscribe failed" }, { status: 502 });
+      }
+      return Response.json({ ok: true });
+    }
   } catch (err) {
     console.error("[waitlist] Kit request failed:", err);
     return Response.json({ ok: false, error: "network" }, { status: 502 });
   }
+
+  // Not configured yet → don't block the demo; log so nothing is lost locally.
+  console.log(`[waitlist] (unconfigured) ${email} · source=${source}`);
+  return Response.json({ ok: true, queued: true });
 }
