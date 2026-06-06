@@ -1,12 +1,13 @@
 "use client";
 
-// Founder dashboard — one page, state-driven. The whole page moves through the
-// founder journey from the spec:
-//   EMPTY  → (connect a source) → SYNCING (pull + remember history) → READY
-// In demo mode the journey is walked through live (Connect → Syncing → Ready,
-// with a simulated history backfill), and "Restart" replays it for recording.
-// Same component reads real connection/brief data once it exists — the states
-// just swap their data source (Supabase connections, getLatestBriefs, mubit).
+// Founder dashboard — the real product + onboarding. DEFAULT IS BLANK: a brand-new
+// founder sees an onboarding-first dashboard with NO fabricated data (no business
+// name, no sample brief, no fake history, nothing pre-connected). Connect buttons
+// start the real OAuth flows; the brief / history / capture stay empty until real
+// per-founder data exists (Supabase + the engine wire in next).
+//
+// The recordable demo walk-through (simulated Connect → Syncing → Ready with a
+// sample brief) is OPT-IN via ?demo=1 — it never shows for a real user.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GrowthBrief, TrendDirection } from "@/lib/brief/schema";
@@ -31,9 +32,7 @@ const C = {
   down: "#F43F5E",
 };
 
-const FOUNDER_ID = "demo";
-const BUSINESS = "Aveline Threads";
-const HISTORY_WEEKS = 62; // ~14 months — the backfill we "remember" on connect
+const HISTORY_WEEKS = 62; // ~14 months — only used in the ?demo=1 walk-through
 
 const dirColor = (d: TrendDirection) => (d === "up" ? C.up : d === "down" ? C.down : C.muted);
 const dirArrow = (d: TrendDirection) => (d === "up" ? "↑" : d === "down" ? "↓" : "→");
@@ -52,6 +51,13 @@ const SOURCES: Source[] = [
   { id: "shopify", name: "Shopify", desc: "Orders, products, inventory & full sales history", tint: "#95BF47", kind: "shopify" },
   { id: "ga4", name: "Google Analytics", desc: "Traffic, sessions & conversion", tint: "#E8710A", kind: "google" },
   { id: "website", name: "Your website", desc: "What you sell & how you position it", tint: "#60A5FA", kind: "website" },
+];
+
+// Demo-only sample history (shown only in ?demo=1).
+const DEMO_HISTORY = [
+  { week_of: "Week of 26 May", move: "Double down on Instagram Reels — your only positive-ROAS channel.", status: "done" as const },
+  { week_of: "Week of 19 May", move: "Pause the Facebook prospecting set; reallocate to email.", status: "done" as const },
+  { week_of: "Week of 12 May", move: "Reorder the Linen Shirt — 1.5 weeks of stock at current pace.", status: "skipped" as const },
 ];
 
 function SynMark({ size = 22 }: { size?: number }) {
@@ -85,7 +91,7 @@ const btnGhost: React.CSSProperties = {
   border: `1px solid ${C.border2}`, borderRadius: 9, padding: "9px 15px", cursor: "pointer", whiteSpace: "nowrap",
 };
 
-// ── Connect card (state-driven) ──────────────────────────────────────────────
+// ── Connect card ─────────────────────────────────────────────────────────────
 function ConnectCard({
   source, status, progress, weeksDone, onConnect,
 }: {
@@ -192,18 +198,18 @@ function BriefCard({ brief, live }: { brief: GrowthBrief; live: boolean }) {
   );
 }
 
-const HISTORY = [
-  { week_of: "Week of 26 May", move: "Double down on Instagram Reels — your only positive-ROAS channel.", status: "done" as const },
-  { week_of: "Week of 19 May", move: "Pause the Facebook prospecting set; reallocate to email.", status: "done" as const },
-  { week_of: "Week of 12 May", move: "Reorder the Linen Shirt — 1.5 weeks of stock at current pace.", status: "skipped" as const },
-];
-
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function FounderDashboard() {
+  // Default = real/blank. ?demo=1 turns on the simulated walk-through (recording).
+  const [demo, setDemo] = useState(false);
+  useEffect(() => {
+    setDemo(new URLSearchParams(window.location.search).get("demo") === "1");
+  }, []);
+
   const [connected, setConnected] = useState<Partial<Record<SourceId, boolean>>>({});
   const [syncSource, setSyncSource] = useState<SourceId | null>(null);
   const [progress, setProgress] = useState(0);
-  const [brief, setBrief] = useState<GrowthBrief>(SAMPLE_BRIEF);
+  const [brief, setBrief] = useState<GrowthBrief | null>(null);
   const [briefLive, setBriefLive] = useState(false);
   const [briefLoading, setBriefLoading] = useState(false);
   const [action, setAction] = useState<"pending" | "done" | "skipped">("pending");
@@ -214,7 +220,15 @@ export default function FounderDashboard() {
 
   const connectedCount = Object.values(connected).filter(Boolean).length;
   const syncing = syncSource !== null;
-  const phase: "empty" | "syncing" | "ready" = syncing ? "syncing" : connectedCount > 0 ? "ready" : "empty";
+  // Real mode never fabricates a "ready" state — it stays in onboarding until real
+  // data exists. Only the demo walk-through advances to syncing/ready.
+  const phase: "empty" | "syncing" | "ready" = !demo
+    ? "empty"
+    : syncing
+    ? "syncing"
+    : connectedCount > 0
+    ? "ready"
+    : "empty";
   const weeksDone = Math.round((progress / 100) * HISTORY_WEEKS);
 
   const loadBrief = useCallback(async () => {
@@ -223,19 +237,34 @@ export default function FounderDashboard() {
       const r = await fetch("/api/brief/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ week: 1 }) });
       const j = (await r.json()) as { brief?: GrowthBrief; live?: boolean };
       if (j.brief) { setBrief(j.brief); setBriefLive(Boolean(j.live)); }
+      else { setBrief(SAMPLE_BRIEF); setBriefLive(false); }
     } catch {
-      /* keep sample */
+      setBrief(SAMPLE_BRIEF); setBriefLive(false);
     } finally {
       setBriefLoading(false);
     }
   }, []);
 
-  const connect = useCallback((id: SourceId) => {
+  const connect = useCallback((id: SourceId, value: string) => {
+    // REAL mode → start the actual OAuth flow (no fabricated data).
+    if (!demo) {
+      if (id === "shopify") {
+        const d = value.trim();
+        if (!d) return;
+        const domain = d.includes(".") ? d : `${d}.myshopify.com`;
+        window.location.href = `/api/auth/shopify?shop=${encodeURIComponent(domain)}`;
+      } else if (id === "ga4") {
+        window.location.href = `/api/auth/google`;
+      }
+      // website: handled at onboarding once auth + the scraper route are wired.
+      return;
+    }
+    // DEMO mode → simulate the connect → backfill → first brief journey.
     if (connected[id] || timer.current) return;
     const firstEver = Object.values(connected).filter(Boolean).length === 0;
     setSyncSource(id);
     setProgress(0);
-    const dur = id === "shopify" ? 3800 : 1800; // Shopify carries the full history backfill
+    const dur = id === "shopify" ? 3800 : 1800;
     const t0 = Date.now();
     timer.current = setInterval(() => {
       const p = Math.min(100, ((Date.now() - t0) / dur) * 100);
@@ -248,14 +277,14 @@ export default function FounderDashboard() {
         if (firstEver) loadBrief();
       }
     }, 50);
-  }, [connected, loadBrief]);
+  }, [demo, connected, loadBrief]);
 
   const reset = useCallback(() => {
     if (timer.current) { clearInterval(timer.current); timer.current = null; }
     setConnected({});
     setSyncSource(null);
     setProgress(0);
-    setBrief(SAMPLE_BRIEF);
+    setBrief(null);
     setBriefLive(false);
     setBriefLoading(false);
     setAction("pending");
@@ -264,12 +293,14 @@ export default function FounderDashboard() {
   const statusOf = (id: SourceId): SourceStatus =>
     connected[id] ? "connected" : syncSource === id ? "syncing" : "not_connected";
 
+  const business = demo && phase === "ready" ? "Aveline Threads" : null;
+
   const greeting =
-    phase === "empty"
-      ? { h: "Let's wire up your store.", p: "Connect a source — Synapse reads your whole history and writes your first brief in minutes, not months." }
+    phase === "ready"
+      ? { h: `Good morning, ${business}.`, p: `${connectedCount} source${connectedCount === 1 ? "" : "s"} connected · your next move is ready below.` }
       : phase === "syncing"
       ? { h: "Building your store's memory…", p: `Reading ${HISTORY_WEEKS} weeks of history so your first brief already knows your past.` }
-      : { h: `Good morning, ${BUSINESS}.`, p: `${connectedCount} source${connectedCount === 1 ? "" : "s"} connected · your next move is ready below.` };
+      : { h: "Welcome to Synapse.", p: "Connect your store below and Synapse reads your whole history, then writes a weekly Growth Brief that ends in one clear move — informed by your past, not a blank slate." };
 
   return (
     <main style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: F.sans, padding: "clamp(20px,4vw,44px) 18px 96px", display: "flex", justifyContent: "center" }}>
@@ -289,29 +320,31 @@ export default function FounderDashboard() {
             <span style={{ fontFamily: F.serif, fontWeight: 700, fontSize: 20, letterSpacing: "-0.01em" }}>Synapse</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            {phase !== "empty" && (
+            {demo && phase !== "empty" && (
               <button type="button" onClick={reset} style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: "0.06em", color: C.faint, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 100, padding: "5px 11px", cursor: "pointer" }}>
                 ↺ Restart
               </button>
             )}
-            <div style={{ display: "flex", alignItems: "center", gap: 9, fontFamily: F.sans, fontSize: 13, color: C.muted }}>
-              <span style={{ width: 26, height: 26, borderRadius: "50%", background: C.accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.serif, fontWeight: 700, fontSize: 13 }}>
-                {BUSINESS[0]}
-              </span>
-              {BUSINESS}
-            </div>
+            {business && (
+              <div style={{ display: "flex", alignItems: "center", gap: 9, fontFamily: F.sans, fontSize: 13, color: C.muted }}>
+                <span style={{ width: 26, height: 26, borderRadius: "50%", background: C.accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.serif, fontWeight: 700, fontSize: 13 }}>
+                  {business[0]}
+                </span>
+                {business}
+              </div>
+            )}
           </div>
         </header>
 
         {/* Greeting */}
         <div style={{ marginBottom: 26 }}>
           <h1 style={{ margin: 0, fontFamily: F.serif, fontWeight: 700, fontSize: "clamp(26px,5vw,38px)", letterSpacing: "-0.02em" }}>{greeting.h}</h1>
-          <p style={{ margin: "8px 0 0", fontFamily: F.sans, fontSize: 15.5, color: C.muted, maxWidth: 560, lineHeight: 1.5 }}>{greeting.p}</p>
+          <p style={{ margin: "8px 0 0", fontFamily: F.sans, fontSize: 15.5, color: C.muted, maxWidth: 600, lineHeight: 1.5 }}>{greeting.p}</p>
         </div>
 
         {/* Connect your data */}
         <section style={{ marginBottom: 30 }}>
-          <Eyebrow>Connect your data</Eyebrow>
+          <Eyebrow>{phase === "empty" ? "Step 1 — Connect your data" : "Connect your data"}</Eyebrow>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 12 }}>
             {SOURCES.map((s) => (
               <ConnectCard key={s.id} source={s} status={statusOf(s.id)} progress={progress} weeksDone={weeksDone} onConnect={connect} />
@@ -323,9 +356,10 @@ export default function FounderDashboard() {
         <section style={{ marginBottom: 16 }}>
           {phase === "empty" && (
             <div style={{ background: C.card, border: `1px dashed ${C.border2}`, borderRadius: 18, padding: "40px 30px", textAlign: "center" }}>
-              <div style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text }}>Your first brief is one connection away.</div>
-              <p style={{ margin: "10px auto 0", maxWidth: 440, fontFamily: F.sans, fontSize: 14.5, color: C.muted, lineHeight: 1.55 }}>
-                Connect Shopify above and Synapse reads your full sales history, then writes a Growth Brief that already understands your past.
+              <Eyebrow>Step 2 — Your first brief</Eyebrow>
+              <div style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginTop: 4 }}>It appears here the moment you connect.</div>
+              <p style={{ margin: "10px auto 0", maxWidth: 460, fontFamily: F.sans, fontSize: 14.5, color: C.muted, lineHeight: 1.55 }}>
+                As soon as a source is connected, Synapse reads your full history and writes a Growth Brief — what&apos;s working, what to cut, and the one move to make this week.
               </p>
             </div>
           )}
@@ -340,7 +374,7 @@ export default function FounderDashboard() {
             </div>
           )}
 
-          {phase === "ready" && (briefLoading ? (
+          {phase === "ready" && (briefLoading || !brief ? (
             <div className="syn-shimmer" style={{ border: `1px solid ${C.border}`, borderRadius: 18, padding: 34, fontFamily: F.mono, fontSize: 13, color: C.muted }}>
               Generating this week&apos;s brief with Claude…
             </div>
@@ -349,8 +383,8 @@ export default function FounderDashboard() {
           ))}
         </section>
 
-        {/* Capture — only when a brief is showing */}
-        {phase === "ready" && !briefLoading && (
+        {/* Capture — only when a real brief is showing */}
+        {phase === "ready" && !briefLoading && brief && (
           <div style={{ marginBottom: 30, background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px 20px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             {action === "pending" ? (
               <>
@@ -369,17 +403,15 @@ export default function FounderDashboard() {
           </div>
         )}
 
-        {/* Ask Synapse — preview */}
+        {/* Ask Synapse — preview of the upcoming advisor */}
         <section style={{ marginBottom: 30 }}>
           <Eyebrow>Ask Synapse</Eyebrow>
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "18px 20px" }}>
             <p style={{ margin: "0 0 14px", fontFamily: F.sans, fontSize: 14, color: C.muted, lineHeight: 1.55 }}>
-              {phase === "ready"
-                ? "Facing a decision? Ask in plain English — Synapse answers from everything it remembers about your store."
-                : "Once your data is connected, ask Synapse about any decision and it answers from your store's memory."}
+              Once your data is connected, ask Synapse about any decision in plain English and it answers from your store&apos;s memory.
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <input value={ask} onChange={(e) => setAsk(e.target.value)} placeholder="e.g. Should I discount the Linen Shirt this week?" className="syn-in" style={{ ...inputStyle, flex: 1, minWidth: 240, height: 44 }} />
+              <input value={ask} onChange={(e) => setAsk(e.target.value)} placeholder="e.g. Should I discount the Linen Shirt this week?" className="syn-in" style={{ ...inputStyle, flex: 1, minWidth: 240, height: 44 }} disabled />
               <button type="button" style={{ ...btnPrimary, opacity: 0.5, cursor: "not-allowed" }} disabled title="Coming this week">Ask →</button>
             </div>
             <div style={{ marginTop: 10, fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.06em", color: C.faint, textTransform: "uppercase" }}>
@@ -393,7 +425,7 @@ export default function FounderDashboard() {
           <Eyebrow>Brief history</Eyebrow>
           {phase === "ready" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {HISTORY.map((h, i) => (
+              {DEMO_HISTORY.map((h, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "13px 16px" }}>
                   <span style={{ fontFamily: F.mono, fontSize: 11.5, color: C.muted, whiteSpace: "nowrap", flex: "0 0 auto", width: 110 }}>{h.week_of}</span>
                   <span style={{ flex: 1, fontFamily: F.sans, fontSize: 13.5, color: C.text, lineHeight: 1.4 }}>{h.move}</span>
@@ -405,14 +437,10 @@ export default function FounderDashboard() {
             </div>
           ) : (
             <div style={{ background: C.card, border: `1px dashed ${C.border2}`, borderRadius: 12, padding: "20px", fontFamily: F.sans, fontSize: 13.5, color: C.muted }}>
-              Your past briefs and the moves you took will appear here.
+              Your weekly briefs and the moves you took will appear here as they&apos;re generated.
             </div>
           )}
         </section>
-
-        <p style={{ fontFamily: F.mono, fontSize: 11, color: C.faint, marginTop: 26, lineHeight: 1.6 }}>
-          Founder dashboard. Demo walk-through: Connect → Syncing → Ready (history backfill simulated; brief generated live by the engine). Real connection status, per-founder briefs, the capture write-back, and the Ask advisor wire in next.
-        </p>
       </div>
     </main>
   );
