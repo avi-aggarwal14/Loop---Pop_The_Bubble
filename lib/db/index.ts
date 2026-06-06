@@ -47,6 +47,25 @@ export async function getFounder(
   return (data as Founder) ?? null;
 }
 
+export async function upsertFounder(
+  db: SupabaseClient,
+  founder: { id: string; email?: string | null },
+): Promise<Founder> {
+  const { data, error } = await db
+    .from("founders")
+    .upsert(
+      {
+        id: founder.id,
+        email: founder.email ?? null,
+      },
+      { onConflict: "id" },
+    )
+    .select()
+    .single();
+  if (error) fail("upsertFounder", error);
+  return data as Founder;
+}
+
 export async function getConnectionById(
   db: SupabaseClient,
   id: string,
@@ -100,6 +119,24 @@ export async function upsertConnection(
     .single();
   if (error) fail("upsertConnection", error);
   return data as Connection;
+}
+
+export async function revokeShopifyConnectionsForShop(
+  db: SupabaseClient,
+  shopDomain: string,
+): Promise<number> {
+  const { data, error } = await db
+    .from("connections")
+    .update({
+      status: "revoked",
+      access_token: null,
+      refresh_token: null,
+    })
+    .eq("provider", "shopify")
+    .eq("shop_domain", shopDomain)
+    .select("id");
+  if (error) fail("revokeShopifyConnectionsForShop", error);
+  return data?.length ?? 0;
 }
 
 export async function upsertSnapshot(

@@ -95,6 +95,18 @@ export function verifyCallbackHmac(
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+export function verifyWebhookHmac(
+  rawBody: string,
+  hmacHeader: string | null,
+  apiSecret: string,
+): boolean {
+  if (!hmacHeader) return false;
+  const digest = createHmac("sha256", apiSecret).update(rawBody, "utf8").digest("base64");
+  const a = Buffer.from(digest, "utf8");
+  const b = Buffer.from(hmacHeader, "utf8");
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export interface ShopifyToken {
   accessToken: string;
   scope: string;
