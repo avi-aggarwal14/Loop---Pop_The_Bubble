@@ -19,6 +19,13 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 
 ## Immediate joint execution plan
 
+### Milestone 0 - Lock the multi-merchant Shopify app path
+- [x] **[ME]** Confirmed the code shape is the correct production shape: `/api/auth/shopify` starts OAuth for an arbitrary shop, `/callback` stores one `connections` row per `founder_id + provider + shop_domain`, so hundreds of merchants can connect their own stores without sharing one token.
+- [x] **[ME]** Hardened OAuth config: `APP_URL` is now the canonical app URL, default scopes include `read_reports`, and the callback rejects partial scope grants before storing the connection.
+- [ ] **[YOU]** In Shopify Partners, create a **public app** if we want broad external merchant installs/app review, or a **custom-distribution app** only if testing with selected stores. Do not build around an admin-created custom app token for production.
+- [ ] **[ME]** Replace the temporary `founder_id` query param with Supabase Auth session lookup before real users touch the flow.
+- [ ] **[ME]** Add app lifecycle handling before launch: app-uninstalled webhook marks the matching `shopify` connection `revoked`; token encryption/Vault before production.
+
 This is the current working plan for the next push. Keep the focus on real first-party analytics connections; public website scraping is only context enrichment.
 
 ### Milestone 1 — Prove one real Shopify data pull

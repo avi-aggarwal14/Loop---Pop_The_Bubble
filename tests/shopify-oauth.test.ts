@@ -4,7 +4,9 @@ import { createHmac } from "node:crypto";
 import {
   buildAuthorizeUrl,
   isValidShopDomain,
+  missingRequiredScopes,
   verifyCallbackHmac,
+  shopifyConfigFromEnv,
 } from "../lib/shopify/oauth";
 
 const SECRET = "shpss_testsecret";
@@ -40,6 +42,32 @@ test("buildAuthorizeUrl includes the required OAuth params", () => {
 test("buildAuthorizeUrl rejects a bad shop domain", () => {
   assert.throws(() =>
     buildAuthorizeUrl({ shop: "evil.com", config: CONFIG, state: "x" }),
+  );
+});
+
+test("shopifyConfigFromEnv prefers APP_URL and includes analytics scope by default", () => {
+  const config = shopifyConfigFromEnv({
+    SHOPIFY_API_KEY: "key",
+    SHOPIFY_API_SECRET: "secret",
+    APP_URL: "https://app.synapse.test",
+    SHOPIFY_APP_URL: "https://old.synapse.test",
+  });
+
+  assert.equal(config?.appUrl, "https://app.synapse.test");
+  assert.match(config?.scopes ?? "", /read_reports/);
+});
+
+test("missingRequiredScopes catches partial Shopify installs", () => {
+  assert.deepEqual(
+    missingRequiredScopes(
+      "read_orders,read_customers,read_products,read_reports",
+      "read_orders, read_products",
+    ),
+    ["read_customers", "read_reports"],
+  );
+  assert.deepEqual(
+    missingRequiredScopes("read_orders,read_products", "read_products,read_orders"),
+    [],
   );
 });
 

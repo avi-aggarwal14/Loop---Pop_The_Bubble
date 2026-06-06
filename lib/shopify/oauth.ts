@@ -20,15 +20,17 @@ export interface ShopifyOAuthConfig {
   appUrl: string;
 }
 
-export function shopifyConfigFromEnv(env = process.env): ShopifyOAuthConfig | null {
+export function shopifyConfigFromEnv(
+  env: Record<string, string | undefined> = process.env,
+): ShopifyOAuthConfig | null {
   const apiKey = env.SHOPIFY_API_KEY;
   const apiSecret = env.SHOPIFY_API_SECRET;
   if (!apiKey || !apiSecret) return null;
   return {
     apiKey,
     apiSecret,
-    scopes: env.SHOPIFY_SCOPES ?? "read_orders,read_customers,read_products",
-    appUrl: env.SHOPIFY_APP_URL ?? "http://localhost:3000",
+    scopes: env.SHOPIFY_SCOPES ?? "read_orders,read_customers,read_products,read_reports",
+    appUrl: env.APP_URL ?? env.SHOPIFY_APP_URL ?? "http://localhost:3000",
   };
 }
 
@@ -39,6 +41,20 @@ export function isValidShopDomain(shop: string): boolean {
 
 export function newOAuthState(): string {
   return randomBytes(16).toString("hex");
+}
+
+export function parseShopifyScopes(scopes: string): Set<string> {
+  return new Set(
+    scopes
+      .split(/[,\s]+/)
+      .map((scope) => scope.trim())
+      .filter(Boolean),
+  );
+}
+
+export function missingRequiredScopes(required: string, granted: string): string[] {
+  const grantedSet = parseShopifyScopes(granted);
+  return [...parseShopifyScopes(required)].filter((scope) => !grantedSet.has(scope));
 }
 
 export function buildAuthorizeUrl(opts: {

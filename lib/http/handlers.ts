@@ -13,6 +13,7 @@ import {
   buildAuthorizeUrl,
   exchangeCodeForToken,
   isValidShopDomain,
+  missingRequiredScopes,
   newOAuthState,
   shopifyConfigFromEnv,
   verifyCallbackHmac,
@@ -122,6 +123,14 @@ export async function handleShopifyCallback(input: {
   }
 
   const token = await exchangeCodeForToken({ shop, code, config });
+  const missingScopes = missingRequiredScopes(config.scopes, token.scope);
+  if (missingScopes.length > 0) {
+    return json(400, {
+      error: "Shopify granted fewer scopes than Synapse requires",
+      missingScopes,
+    });
+  }
+
   await upsertConnection(createServiceClient(), {
     founderId,
     provider: "shopify",

@@ -237,7 +237,7 @@ export default function ConnectSources() {
           <SourceCard
             icon={<ShoppingBag size={20} />}
             title="Shopify"
-            subtitle="Orders, products, line items, inventory, customer/order source, and best-effort ShopifyQL sessions/conversion."
+            subtitle="One Synapse Shopify app, many merchant installs. Each store grants its own orders, products, inventory, and best-effort ShopifyQL analytics token."
             status={<StatusPill tone="green">route ready</StatusPill>}
           >
             <div style={{ display: "grid", gap: 10 }}>
