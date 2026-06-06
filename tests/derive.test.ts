@@ -13,6 +13,7 @@ function order(p: Partial<ShopifyOrder>): ShopifyOrder {
     referringSite: null,
     customerId: "c1",
     customerOrdersCount: 1,
+    lineItems: [],
     ...p,
   };
 }
