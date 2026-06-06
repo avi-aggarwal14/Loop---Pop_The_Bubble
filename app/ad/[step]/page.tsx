@@ -605,35 +605,27 @@ function ChannelBars() {
 
 function Funnel() {
   return (
-    <a href="#conversion-modal" className="drill-card" aria-label="Open conversion path drilldown">
-      <Frame style={{ padding: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
-          <Eyebrow>Conversion path</Eyebrow>
-          <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: "0.1em" }}>OPEN</span>
-        </div>
-        <div style={{ display: "grid", gap: 10, marginTop: 18 }}>
-          {funnel.map((step, i) => (
-            <div key={step.label}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontFamily: F.mono, fontSize: 10.5, color: C.muted }}>
-                <span>{step.label}</span>
-                <span>{step.value.toLocaleString()}</span>
-              </div>
-              <div style={{ height: 17, borderRadius: 5, background: "rgba(17,17,17,0.06)", marginTop: 6, overflow: "hidden" }}>
-                <div
-                  className="bar-x"
-                  style={{
-                    width: `${step.width}%`,
-                    height: "100%",
-                    borderRadius: 5,
-                    background: i === funnel.length - 1 ? C.accent : `rgba(23,124,194,${0.68 - i * 0.1})`,
-                    animationDelay: `${i * 80}ms`,
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </Frame>
+    <a
+      href="#conversion-modal"
+      aria-label="Open conversion path drilldown"
+      style={{
+        height: 46,
+        borderRadius: 999,
+        border: `1px solid ${C.hairStrong}`,
+        background: "rgba(255,255,255,0.92)",
+        color: C.text,
+        textDecoration: "none",
+        display: "grid",
+        gridTemplateColumns: "1fr auto",
+        alignItems: "center",
+        padding: "0 18px 0 20px",
+        boxShadow: "0 14px 34px rgba(33,28,23,0.07)",
+      }}
+    >
+      <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: "0.22em", textTransform: "uppercase", color: C.accent }}>
+        Conversion path
+      </span>
+      <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: "0.1em" }}>OPEN</span>
     </a>
   );
 }
@@ -814,28 +806,28 @@ function ConversionDrilldownModal() {
 function InsightPanel() {
   return (
     <Link href="/ad/4" className="prediction-link" style={{ display: "block", color: C.text, textDecoration: "none", height: "100%" }}>
-      <Frame style={{ height: "100%", minHeight: 0, padding: 20, borderColor: "rgba(250,84,0,0.3)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
+      <Frame style={{ height: "100%", minHeight: 0, padding: 16, borderColor: "rgba(250,84,0,0.3)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
         <div className="prediction-body">
           <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "center" }}>
             <Eyebrow>Synapse prediction</Eyebrow>
             <span style={{ fontFamily: F.mono, color: C.green, fontSize: 10, letterSpacing: "0.08em" }}>CONFIDENCE 91%</span>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "88px 1fr", gap: 16, alignItems: "center", marginTop: 15 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "66px 1fr", gap: 14, alignItems: "center", marginTop: 12 }}>
             <img
               src={CAN_IMAGE}
               alt=""
               style={{
-                width: 76,
-                height: 126,
+                width: 58,
+                height: 96,
                 objectFit: "cover",
                 objectPosition: "center 18%",
-                borderRadius: 13,
+                borderRadius: 11,
                 boxShadow: "0 12px 28px rgba(33,28,23,0.12)",
               }}
             />
             <div>
-              <h3 style={{ margin: 0, fontFamily: F.serif, fontStyle: "italic", fontSize: 32, lineHeight: 0.98 }}>Coconut & Berry will likely sell out in 3-4 days.</h3>
-              <p style={{ margin: "11px 0 0", color: C.muted, lineHeight: 1.42, fontSize: 14 }}>
+              <h3 style={{ margin: 0, fontFamily: F.serif, fontStyle: "italic", fontSize: 25, lineHeight: 0.98 }}>Coconut & Berry will likely sell out in 3-4 days.</h3>
+              <p style={{ margin: "8px 0 0", color: C.muted, lineHeight: 1.34, fontSize: 12.5 }}>
                 Weekend unit velocity is climbing faster than inventory, TikTok is now the leading revenue source, and past limited-edition drops with this same pattern stocked out within the next order cycle.
               </p>
             </div>
@@ -888,7 +880,7 @@ function StatsSlide() {
     >
       <StageStyles />
 
-      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px 19vh 1fr 36px", gap: 14 }}>
+      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px minmax(112px, 16vh) minmax(0, 1fr) 34px", gap: 12 }}>
         <header style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
           <Brand />
           <SegmentedNav active="SHOPIFY" />
@@ -907,11 +899,11 @@ function StatsSlide() {
         >
           <div>
             <Eyebrow>Product-level pull</Eyebrow>
-            <h1 style={{ margin: "10px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(38px, 4.2vw, 76px)", lineHeight: 0.92 }}>
+            <h1 style={{ margin: "8px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(34px, 3.8vw, 66px)", lineHeight: 0.92 }}>
               Red Bull Coconut & Berry is about to sell out.
             </h1>
           </div>
-          <p style={{ margin: 0, color: C.muted, fontSize: 18, lineHeight: 1.48 }}>
+          <p style={{ margin: 0, color: C.muted, fontSize: 16, lineHeight: 1.42 }}>
             Synapse pulled product sales, source mix, conversion movement, inventory runway, and past launch memory into one prediction.
           </p>
         </section>
@@ -922,7 +914,7 @@ function StatsSlide() {
             <polyline className="path-draw" points="6,82 18,72 31,80 46,66 62,71 78,58 96,64" fill="none" stroke="rgba(23,124,194,0.14)" strokeWidth="0.2" />
           </svg>
 
-          <div style={{ position: "relative", zIndex: 2, height: "100%", display: "grid", gridTemplateRows: "auto 1fr", gap: 12 }}>
+          <div style={{ position: "relative", zIndex: 2, height: "100%", display: "grid", gridTemplateRows: "auto minmax(0, 1fr)", gap: 10 }}>
             <div className="kpi-row" style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 10 }}>
               {stats.map((stat, index) => (
                 <StatCard key={stat.label} {...stat} index={index} />
@@ -931,7 +923,7 @@ function StatsSlide() {
 
             <div className="chart-grid" style={{ display: "grid", gridTemplateColumns: "1.08fr 0.92fr", gap: 12, minHeight: 0 }}>
               <SalesBars />
-              <div style={{ display: "grid", gridTemplateRows: "0.82fr 0.82fr 1fr", gap: 12, minHeight: 0 }}>
+              <div style={{ display: "grid", gridTemplateRows: "minmax(210px, 1fr) 46px minmax(142px, 0.7fr)", gap: 10, minHeight: 0 }}>
                 <ChannelBars />
                 <Funnel />
                 <InsightPanel />
@@ -1007,22 +999,22 @@ function SegmentedNav({ active }: { active: "PRODUCT" | "SHOPIFY" | "AI READ" })
 
 function EvidenceCard({ label, value, detail, index }: { label: string; value: string; detail: string; index: number }) {
   return (
-    <Frame className="card-in" style={{ padding: 18, animationDelay: `${index * 70}ms` } as React.CSSProperties}>
+    <Frame className="card-in" style={{ padding: 15, animationDelay: `${index * 70}ms` } as React.CSSProperties}>
       <Eyebrow muted>{label}</Eyebrow>
-      <div style={{ marginTop: 9, fontFamily: F.serif, fontStyle: "italic", fontSize: 34, fontWeight: 700, lineHeight: 0.95 }}>{value}</div>
-      <p style={{ margin: "10px 0 0", color: C.muted, lineHeight: 1.42, fontSize: 14 }}>{detail}</p>
+      <div style={{ marginTop: 8, fontFamily: F.serif, fontStyle: "italic", fontSize: 29, fontWeight: 700, lineHeight: 0.95 }}>{value}</div>
+      <p style={{ margin: "8px 0 0", color: C.muted, lineHeight: 1.35, fontSize: 12.5 }}>{detail}</p>
     </Frame>
   );
 }
 
 function MemoryCard({ title, when, text, index }: { title: string; when: string; text: string; index: number }) {
   return (
-    <Frame className="card-in" style={{ padding: 18, borderColor: index === 2 ? "rgba(250,84,0,0.34)" : C.hair, animationDelay: `${220 + index * 80}ms` } as React.CSSProperties}>
+    <Frame className="card-in" style={{ padding: 15, borderColor: index === 2 ? "rgba(250,84,0,0.34)" : C.hair, animationDelay: `${220 + index * 80}ms` } as React.CSSProperties}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
-        <h3 style={{ margin: 0, fontFamily: F.serif, fontStyle: "italic", fontSize: 28, lineHeight: 1 }}>{title}</h3>
+        <h3 style={{ margin: 0, fontFamily: F.serif, fontStyle: "italic", fontSize: 25, lineHeight: 1 }}>{title}</h3>
         <span style={{ fontFamily: F.mono, fontSize: 9, color: C.faint, letterSpacing: "0.1em", textTransform: "uppercase" }}>{when}</span>
       </div>
-      <p style={{ margin: "12px 0 0", color: C.muted, lineHeight: 1.44, fontSize: 14.5 }}>{text}</p>
+      <p style={{ margin: "9px 0 0", color: C.muted, lineHeight: 1.36, fontSize: 13.5 }}>{text}</p>
     </Frame>
   );
 }
@@ -1041,30 +1033,30 @@ function PredictionSlide() {
     >
       <StageStyles />
 
-      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px 1fr 36px", gap: 16 }}>
+      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px minmax(0, 1fr) 34px", gap: 14 }}>
         <header style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
           <Brand />
           <SegmentedNav active="AI READ" />
         </header>
 
-        <section style={{ display: "grid", gridTemplateColumns: "0.42fr 0.58fr", gap: 22, minHeight: 0 }}>
-          <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 18, minHeight: 0 }}>
-            <Frame style={{ padding: 24, overflow: "visible", borderColor: "rgba(250,84,0,0.32)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
+        <section style={{ display: "grid", gridTemplateColumns: "0.42fr 0.58fr", gap: 18, minHeight: 0 }}>
+          <div style={{ display: "grid", gridTemplateRows: "auto minmax(0, 1fr)", gap: 14, minHeight: 0 }}>
+            <Frame style={{ padding: 22, overflow: "visible", borderColor: "rgba(250,84,0,0.32)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
               <Eyebrow>Full prediction</Eyebrow>
-              <h1 style={{ margin: "14px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(42px, 4.4vw, 76px)", lineHeight: 0.94 }}>
+              <h1 style={{ margin: "12px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(38px, 4vw, 68px)", lineHeight: 0.94 }}>
                 Stockout likely inside the next order cycle.
               </h1>
-              <p style={{ margin: "16px 0 0", color: C.muted, fontSize: 16, lineHeight: 1.45 }}>
+              <p style={{ margin: "14px 0 0", color: C.muted, fontSize: 15, lineHeight: 1.42 }}>
                 Synapse predicts Red Bull Coconut & Berry will run out in 3-4 days unless replenishment is confirmed or promotion is slowed. The prediction is not just based on this week: it matches the store's remembered pattern from prior limited-edition launches.
               </p>
             </Frame>
 
-            <Frame style={{ padding: 22, minHeight: 0 }}>
+            <Frame style={{ padding: 18, minHeight: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                 <Eyebrow>Past memory</Eyebrow>
                 <span style={{ fontFamily: F.mono, fontSize: 10, color: C.green, letterSpacing: "0.08em" }}>mubit recall</span>
               </div>
-              <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
+              <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
                 {memoryCards.map((memory, index) => (
                   <MemoryCard key={memory.title} {...memory} index={index} />
                 ))}
@@ -1072,14 +1064,14 @@ function PredictionSlide() {
             </Frame>
           </div>
 
-          <div style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 12, minHeight: 0 }}>
+          <div style={{ display: "grid", gridTemplateRows: "auto minmax(0, 1fr)", gap: 10, minHeight: 0 }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
               {predictionEvidence.map((item, index) => (
                 <EvidenceCard key={item.label} {...item} index={index} />
               ))}
             </div>
             <Link href="/ad/5" className="why-link" aria-label="Open memory timeline">
-              <Frame className="scan" style={{ padding: 26, minHeight: 0 }}>
+              <Frame className="scan" style={{ padding: 22, minHeight: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
                   <Eyebrow>Why Synapse believes this</Eyebrow>
                   <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>OPEN MEMORY TIMELINE</span>
@@ -1177,7 +1169,7 @@ function MemoryTimelineSlide() {
     >
       <StageStyles />
 
-      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px 15vh 1fr 36px", gap: 14 }}>
+      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px minmax(96px, 13vh) minmax(0, 1fr) 34px", gap: 12 }}>
         <header style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
           <Brand />
           <SegmentedNav active="AI READ" />
@@ -1196,16 +1188,16 @@ function MemoryTimelineSlide() {
         >
           <div>
             <Eyebrow>Memory-backed reasoning</Eyebrow>
-            <h1 style={{ margin: "8px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(34px, 3.8vw, 68px)", lineHeight: 0.92 }}>
+            <h1 style={{ margin: "7px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(30px, 3.4vw, 58px)", lineHeight: 0.92 }}>
               Four signals point to the same move.
             </h1>
           </div>
-          <p style={{ margin: 0, color: C.muted, fontSize: 17, lineHeight: 1.44 }}>
+          <p style={{ margin: 0, color: C.muted, fontSize: 15, lineHeight: 1.38 }}>
             Synapse compares the live Shopify pull with remembered launch outcomes, then shows the causal chain behind the stockout prediction.
           </p>
         </section>
 
-        <section style={{ display: "grid", gridTemplateRows: "106px 1fr", gap: 14, minHeight: 0 }}>
+        <section style={{ display: "grid", gridTemplateRows: "88px minmax(0, 1fr)", gap: 12, minHeight: 0 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
             {timelineSteps.map((step, index) => (
               <a
@@ -1215,7 +1207,7 @@ function MemoryTimelineSlide() {
                 style={{
                   border: `1px solid ${C.hair}`,
                   borderRadius: 16,
-                  padding: 16,
+                  padding: 13,
                   boxShadow: "0 16px 42px rgba(33,28,23,0.07)",
                   animationDelay: `${index * 55}ms`,
                 } as React.CSSProperties}
@@ -1223,7 +1215,7 @@ function MemoryTimelineSlide() {
                 <div style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", opacity: 0.64 }}>
                   0{index + 1} / {step.label}
                 </div>
-                <div style={{ marginTop: 10, fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 29, lineHeight: 0.95 }}>{step.metric}</div>
+                <div style={{ marginTop: 8, fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 24, lineHeight: 0.95 }}>{step.metric}</div>
               </a>
             ))}
           </div>
@@ -1247,17 +1239,17 @@ function MemoryTimelineSlide() {
                   minHeight: 0,
                 }}
               >
-                <Frame style={{ padding: 28, display: "grid", gridTemplateRows: "auto 1fr auto", gap: 22, borderColor: index === 3 ? "rgba(250,84,0,0.28)" : C.hair }}>
+                <Frame style={{ padding: 24, display: "grid", gridTemplateRows: "auto minmax(0, 1fr) auto", gap: 16, borderColor: index === 3 ? "rgba(250,84,0,0.28)" : C.hair }}>
                   <div>
                     <Eyebrow>{step.label} signal</Eyebrow>
-                    <h2 style={{ margin: "12px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(42px, 4.4vw, 78px)", lineHeight: 0.94 }}>
+                    <h2 style={{ margin: "10px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(34px, 3.8vw, 62px)", lineHeight: 0.94 }}>
                       {step.title}
                     </h2>
                   </div>
-                  <p style={{ margin: 0, alignSelf: "center", color: C.muted, fontSize: 23, lineHeight: 1.42, maxWidth: 860 }}>{step.text}</p>
-                  <div style={{ borderTop: `1px solid ${C.hair}`, paddingTop: 18, display: "flex", justifyContent: "space-between", gap: 18, alignItems: "baseline" }}>
+                  <p style={{ margin: 0, alignSelf: "center", color: C.muted, fontSize: 19, lineHeight: 1.36, maxWidth: 860 }}>{step.text}</p>
+                  <div style={{ borderTop: `1px solid ${C.hair}`, paddingTop: 14, display: "flex", justifyContent: "space-between", gap: 18, alignItems: "baseline" }}>
                     <Eyebrow>Resulting move</Eyebrow>
-                    <div style={{ fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 37, lineHeight: 1, textAlign: "right" }}>Replenish before amplifying demand.</div>
+                    <div style={{ fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 31, lineHeight: 1, textAlign: "right" }}>Replenish before amplifying demand.</div>
                   </div>
                 </Frame>
 
