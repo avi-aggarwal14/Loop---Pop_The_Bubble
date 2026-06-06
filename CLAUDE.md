@@ -189,6 +189,7 @@ A sharp hero beats a complete but mediocre full page every time.
 
 Newest entries at the top. Record meaningful developments here.
 
+- **2026-06-06** — Added **`ROADMAP.md`** at repo root: the step-by-step plan from "engine code-complete" → live demo, with owner tags ([YOU]/[ME]/[TEAM]), the keys needed, and per-phase acceptance criteria. Use it to track what unblocks what.
 - **2026-06-06** — **Full backend built out (Phases 2–4, framework-agnostic).** Extended the engine into the complete server loop — all new code, all typechecked, 11 unit tests passing (`npm test`), no live keys required to build:
   - **Shopify integration:** `lib/shopify/oauth.ts` (authorize URL, HMAC + state verification, token exchange, `*.myshopify.com` SSRF guard) and `lib/shopify/ingest.ts` (paginated Admin REST pull of orders/customers/products → normalised `ShopifyWeekRaw`).
   - **Metrics:** `lib/metrics/derive.ts` (two weeks of Shopify → `DerivedMetrics`: revenue/orders/AOV/new-customers WoW + new-customer channel mix; **honestly notes** that sessions/conversion/ad-spend aren't in Shopify's API rather than inventing them). `lib/util/dates.ts` (Mon–Mon week math).
