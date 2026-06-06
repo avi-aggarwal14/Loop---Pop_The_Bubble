@@ -273,7 +273,7 @@ export default function FounderDashboard() {
       setAsking(true);
       setAskErr("");
       try {
-        const r = await fetch("/api/advice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q }) });
+        const r = await fetch("/api/advice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q, demo }) });
         const j = (await r.json()) as { advice?: Advice; live?: boolean };
         if (j.advice) { setAdvice(j.advice); setAdviceLive(Boolean(j.live)); }
         else setAskErr("Couldn't get an answer — try again.");
@@ -283,7 +283,7 @@ export default function FounderDashboard() {
         setAsking(false);
       }
     },
-    [askInput, asking],
+    [askInput, asking, demo],
   );
 
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
