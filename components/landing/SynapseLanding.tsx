@@ -103,8 +103,26 @@ function pal(co) {
   return Object.assign({}, co.theme, { g: co.g, band: b[0], bandText: b[1], bandSub: b[2], you: YOU[co.id] || "company" });
 }
 
-// Product imagery slots — filled by dropping real catalogue photos. Empty here.
-const PRODUCT_IMG = {};
+// Product imagery — slot id → file in /public/products/. Missing files fall
+// back to the placeholder (ImageSlot handles onError), so it's safe to wire
+// these before the photos are added. See public/products/_README.md.
+const PRODUCT_IMG = {
+  // NIKE
+  "prod-nike-vomero": "/products/nike-phantom-6-elite.png",   // Phantom 6 Elite
+  "prod-nike-p6000": "/products/nike-jordan-1-low.png",        // Jordan 1 Low
+  "prod-nike-dn": "/products/nike-jordan-1.png",               // Jordan 1
+  "prod-nike-shox": "/products/nike-free-ride.png",            // Free Ride
+  // HONI POKE
+  "prod-honi-salmon": "/products/honi-spicy-prawn.png",        // Spicy Prawn
+  "prod-honi-tuna": "/products/honi-ahi-tuna.png",             // Ahi Tuna
+  "prod-honi-katsu": "/products/honi-salmon.png",              // Honi Salmon
+  "prod-honi-boba": "/products/honi-california.png",           // California
+  // RED BULL
+  "prod-redbull-red": "/products/redbull-coconut-berry.png",   // Coconut Berry
+  "prod-redbull-white": "/products/redbull-zero.png",          // Zero
+  "prod-redbull-tropical": "/products/redbull-tropical-edition.png", // Tropical Edition
+  "prod-redbull-summer": "/products/redbull-summer-edition.png",     // Summer Edition
+};
 
 // 3-step "how the memory works" content.
 const STEPS = [
@@ -118,10 +136,12 @@ const STEPS = [
 // src/PRODUCT_IMG entry exists, otherwise a clean empty placeholder.
 function ImageSlot({ src, fit = "cover", radius = 12, shape = "rounded", placeholder = "Image", style }) {
   const br = shape === "circle" ? "50%" : shape === "pill" ? "9999px" : shape === "rect" ? "0" : `${radius}px`;
+  const [err, setErr] = useState(false);
+  useEffect(() => { setErr(false); }, [src]);
   return (
     <div style={{ position: "relative", overflow: "hidden", borderRadius: br, ...style }}>
-      {src ? (
-        <img src={src} alt={placeholder} style={{ width: "100%", height: "100%", objectFit: fit, display: "block" }} />
+      {src && !err ? (
+        <img src={src} alt={placeholder} onError={() => setErr(true)} style={{ width: "100%", height: "100%", objectFit: fit, display: "block" }} />
       ) : (
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column",
           alignItems: "center", justifyContent: "center", gap: 8, padding: 12, textAlign: "center",
@@ -470,7 +490,8 @@ function ProductHero({ controlIndex = null, onIndex }) {
   );
 }
 
-// Scales a fixed 1280×760 child to the page width (cap 1).
+// Scales a fixed 1280×760 child to fit the page width AND the viewport height
+// (cap 1), centered horizontally — so the hero never overflows past one screen.
 function HeroStage({ children, w = 1280, h = 760 }) {
   const wrapRef = useRef(null);
   const stageRef = useRef(null);
@@ -478,8 +499,11 @@ function HeroStage({ children, w = 1280, h = 760 }) {
     const fit = () => {
       if (!wrapRef.current || !stageRef.current) return;
       const cw = wrapRef.current.clientWidth;
-      const s = Math.min(1, cw / w);
-      stageRef.current.style.transform = `scale(${s})`;
+      const vh = window.innerHeight || h;
+      // Bind by whichever is tighter: width or viewport height. Never upscale.
+      const s = Math.min(1, cw / w, vh / h);
+      const offset = Math.max(0, (cw - w * s) / 2);
+      stageRef.current.style.transform = `translateX(${offset}px) scale(${s})`;
       wrapRef.current.style.height = (h * s) + "px";
     };
     fit();
