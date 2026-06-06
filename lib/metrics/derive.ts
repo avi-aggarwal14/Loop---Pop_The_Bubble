@@ -1,5 +1,11 @@
-import type { ShopifyOrder, ShopifyWeekRaw } from "../shopify/ingest.js";
-import type { ChannelStat, DerivedMetrics, HeadlineMetric } from "./types.js";
+import type { ShopifyOrder, ShopifyProduct, ShopifyWeekRaw } from "../shopify/ingest.js";
+import type {
+  ChannelStat,
+  DerivedMetrics,
+  HeadlineMetric,
+  ProductLine,
+  ProductMetrics,
+} from "./types.js";
 
 /**
  * Turn two weeks of normalised Shopify data (this week + last week) into the
@@ -80,6 +86,87 @@ export interface DeriveInput {
   previous: ShopifyWeekRaw;
   businessContext: string;
   label: string;
+  /** Catalogue, for per-product inventory + titles. */
+  products?: ShopifyProduct[];
+}
+
+/** Aggregate order line items by product → { units, revenue, title }. */
+function aggregateByProduct(
+  orders: ShopifyOrder[],
+): Map<string, { units: number; revenue: number; title: string }> {
+  const m = new Map<string, { units: number; revenue: number; title: string }>();
+  for (const o of orders) {
+    for (const li of o.lineItems) {
+      const key = li.productId ?? `title:${li.title}`;
+      const rev = li.quantity * li.price - li.totalDiscount;
+      const cur = m.get(key) ?? { units: 0, revenue: 0, title: li.title };
+      cur.units += li.quantity;
+      cur.revenue += rev;
+      m.set(key, cur);
+    }
+  }
+  return m;
+}
+
+/** Per-product performance: revenue/units WoW, inventory-vs-velocity, dead stock. */
+export function deriveProductMetrics(
+  currentOrders: ShopifyOrder[],
+  previousOrders: ShopifyOrder[],
+  products?: ShopifyProduct[],
+): ProductMetrics {
+  const cur = aggregateByProduct(currentOrders);
+  const prev = aggregateByProduct(previousOrders);
+
+  const inventoryByProduct = new Map<string, number>();
+  const titleByProduct = new Map<string, string>();
+  const catalogue: { productId: string; title: string }[] = [];
+  for (const p of products ?? []) {
+    titleByProduct.set(p.id, p.title);
+    catalogue.push({ productId: p.id, title: p.title });
+    const tracked = p.variants.some((v) => v.inventoryQuantity !== null);
+    if (tracked) {
+      inventoryByProduct.set(
+        p.id,
+        p.variants.reduce((acc, v) => acc + (v.inventoryQuantity ?? 0), 0),
+      );
+    }
+  }
+
+  const lines: ProductLine[] = [];
+  for (const [key, c] of cur) {
+    const p = prev.get(key);
+    const inventory = inventoryByProduct.has(key) ? inventoryByProduct.get(key)! : null;
+    const weeksOfStockLeft =
+      inventory !== null && c.units > 0
+        ? Math.round((inventory / c.units) * 10) / 10
+        : null;
+    lines.push({
+      productId: key,
+      title: titleByProduct.get(key) ?? c.title,
+      unitsSold: c.units,
+      revenue: Math.round(c.revenue),
+      previousUnits: p?.units,
+      previousRevenue: p ? Math.round(p.revenue) : undefined,
+      inventory,
+      weeksOfStockLeft,
+    });
+  }
+
+  const topByRevenue = [...lines].sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+  const lowStock = lines
+    .filter(
+      (l) =>
+        l.weeksOfStockLeft !== null &&
+        l.weeksOfStockLeft !== undefined &&
+        l.weeksOfStockLeft < 2 &&
+        l.unitsSold > 0,
+    )
+    .sort((a, b) => (a.weeksOfStockLeft ?? 0) - (b.weeksOfStockLeft ?? 0));
+
+  const soldKeys = new Set(cur.keys());
+  const noSales = catalogue.filter((p) => !soldKeys.has(p.productId)).slice(0, 5);
+
+  return { topByRevenue, lowStock, noSales };
 }
 
 export function deriveMetrics(input: DeriveInput): DerivedMetrics {
@@ -148,12 +235,15 @@ export function deriveMetrics(input: DeriveInput): DerivedMetrics {
     notes.push(`Catalogue size: ${current.productCount} products.`);
   }
 
+  const products = deriveProductMetrics(current.orders, previous.orders, input.products);
+
   return {
     windowLabel: input.label,
     businessContext: input.businessContext,
     headline,
     channels,
     adSpend: [], // not available from Shopify alone
+    products,
     notes,
   };
 }

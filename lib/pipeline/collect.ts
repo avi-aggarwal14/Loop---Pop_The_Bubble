@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { fetchShopifyWeek } from "../shopify/ingest.js";
+import {
+  fetchShopifyWeek,
+  fetchShopifyProducts,
+  fetchShopInfo,
+  type ShopifyProduct,
+} from "../shopify/ingest.js";
 import { fetchShopifyTraffic } from "../shopify/analytics.js";
 import { deriveMetrics } from "../metrics/derive.js";
 import { fetchGa4Traffic } from "../ga4/ingest.js";
@@ -24,7 +29,7 @@ export async function collectWeeklyData(
   lastWeek: WeekRange,
 ): Promise<WeeklyData> {
   const businessProfile = founder?.business_profile ?? undefined;
-  const businessContext =
+  let businessContext =
     founder?.business_context ??
     (businessProfile ? businessProfile.whatTheySell : "Business");
 
@@ -37,6 +42,15 @@ export async function collectWeeklyData(
       if (conn.provider === "shopify" && conn.shop_domain && conn.access_token) {
         const shop = conn.shop_domain;
         const accessToken = conn.access_token;
+
+        // Enrich business context from the shop profile when the founder gave none.
+        if (!founder?.business_context && !businessProfile) {
+          const info = await fetchShopInfo({ shop, accessToken });
+          if (info) {
+            businessContext = `${info.name} (Shopify${info.planName ? `, ${info.planName} plan` : ""})`;
+          }
+        }
+
         const current = await fetchShopifyWeek({
           shop,
           accessToken,
@@ -49,7 +63,22 @@ export async function collectWeeklyData(
           windowStart: lastWeek.start,
           windowEnd: lastWeek.end,
         });
-        commerce = deriveMetrics({ current, previous, businessContext, label: thisWeek.label });
+
+        // Catalogue (products + inventory) for per-product metrics. Optional.
+        let products: ShopifyProduct[] | undefined;
+        try {
+          products = await fetchShopifyProducts({ shop, accessToken });
+        } catch {
+          products = undefined;
+        }
+
+        commerce = deriveMetrics({
+          current,
+          previous,
+          businessContext,
+          label: thisWeek.label,
+          products,
+        });
         await upsertSnapshot(deps.db, {
           connectionId: conn.id,
           weekOf: toISODateString(thisWeek.start),

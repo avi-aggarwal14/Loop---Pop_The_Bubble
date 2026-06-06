@@ -32,6 +32,28 @@ export interface AdSpend {
   roas?: number;
 }
 
+/** One product's performance this week (from order line items + the catalogue). */
+export interface ProductLine {
+  productId: string;
+  title: string;
+  unitsSold: number;
+  revenue: number;
+  previousUnits?: number;
+  previousRevenue?: number;
+  /** Total inventory across variants (null when not tracked). */
+  inventory?: number | null;
+  /** inventory ÷ this week's units sold ⇒ weeks of stock left (null when unknown). */
+  weeksOfStockLeft?: number | null;
+}
+
+export interface ProductMetrics {
+  topByRevenue: ProductLine[];
+  /** Selling well but < 2 weeks of stock left — reorder candidates. */
+  lowStock: ProductLine[];
+  /** In the catalogue but zero sales this week. */
+  noSales: { productId: string; title: string }[];
+}
+
 export interface DerivedMetrics {
   /** Human window label, e.g. "Week of 2 June". */
   windowLabel: string;
@@ -40,6 +62,8 @@ export interface DerivedMetrics {
   headline: HeadlineMetric[];
   channels?: ChannelStat[];
   adSpend?: AdSpend[];
+  /** Per-product performance (from line items + catalogue). */
+  products?: ProductMetrics;
   /** Anything else worth handing the model. */
   notes?: string[];
 }
@@ -98,6 +122,31 @@ export function formatMetricsForPrompt(m: DerivedMetrics): string {
       );
     }
   }
+  const p = m.products;
+  if (p && (p.topByRevenue.length || p.lowStock.length || p.noSales.length)) {
+    lines.push("");
+    lines.push("Products:");
+    if (p.topByRevenue.length) {
+      lines.push("  Top sellers this week (by revenue):");
+      for (const pr of p.topByRevenue) {
+        const wow =
+          pr.previousRevenue !== undefined ? ` (prev rev ${pr.previousRevenue})` : "";
+        lines.push(`    - ${pr.title}: ${pr.unitsSold} units, rev ${pr.revenue}${wow}`);
+      }
+    }
+    if (p.lowStock.length) {
+      lines.push("  Low stock vs sales pace (reorder candidates):");
+      for (const pr of p.lowStock) {
+        lines.push(
+          `    - ${pr.title}: ${pr.inventory} in stock, ~${pr.weeksOfStockLeft} weeks left at current pace`,
+        );
+      }
+    }
+    if (p.noSales.length) {
+      lines.push(`  No sales this week: ${p.noSales.map((n) => n.title).join(", ")}`);
+    }
+  }
+
   if (m.notes?.length) {
     lines.push("");
     lines.push("Context:");

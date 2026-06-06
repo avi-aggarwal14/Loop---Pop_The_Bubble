@@ -28,6 +28,17 @@ export const WEEK_ONE: DerivedMetrics = {
     { channel: "Facebook ads", spend: 180, currency: "£", conversions: 0, roas: 0 },
     { channel: "Instagram boosted", spend: 60, currency: "£", conversions: 7, roas: 3.1 },
   ],
+  products: {
+    topByRevenue: [
+      { productId: "p1", title: "Vitamin C Serum", unitsSold: 120, revenue: 3600, previousUnits: 95, previousRevenue: 2850, inventory: 80, weeksOfStockLeft: 0.7 },
+      { productId: "p2", title: "Hydrating Moisturiser", unitsSold: 60, revenue: 1800, previousUnits: 64, previousRevenue: 1920, inventory: 400, weeksOfStockLeft: 6.7 },
+      { productId: "p3", title: "Gentle Cleanser", unitsSold: 40, revenue: 800, previousUnits: 38, previousRevenue: 760, inventory: 220, weeksOfStockLeft: 5.5 },
+    ],
+    lowStock: [
+      { productId: "p1", title: "Vitamin C Serum", unitsSold: 120, revenue: 3600, inventory: 80, weeksOfStockLeft: 0.7 },
+    ],
+    noSales: [{ productId: "p9", title: "Travel Kit" }],
+  },
   notes: [
     "Instagram traffic jumped from 18% to 34% of new customers week over week.",
     "Facebook ads spent £180 with zero conversions.",
