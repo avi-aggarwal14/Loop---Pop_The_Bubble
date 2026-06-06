@@ -10,7 +10,7 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 ## Current state (2026-06-06)
 
 - **Built, typechecked, pushed:** the brief engine (**Anthropic Claude**), the memory layer (mubit), **four data connectors** (Shopify orders **+ per-product/inventory**, GA4, Vercel drains, website scraper), the multi-source pipeline, all API routes, two SQL migrations, and **21 unit tests**.
-- **🟢 Build is green** — `npm run typecheck` clean, `npm test` = 21. The Shopify per-product upgrade (Phase 3b) is **complete**: line items + catalogue/inventory → per-product revenue, top sellers, inventory-vs-sales-velocity, and dead stock, all flowing into the brief.
+- **🟢 Build is green** — `npm run typecheck` clean, `npm test` = 25 (now incl. brief-engine tests). The Shopify per-product upgrade (Phase 3b) is **complete**: line items + catalogue/inventory → per-product revenue, top sellers, inventory-vs-sales-velocity, and dead stock, all flowing into the brief.
 - **✅ The brief engine now runs LIVE on Anthropic Claude** (`claude-opus-4-8`) — `ANTHROPIC_API_KEY` is wired in `.env` and `npm run generate-brief` produces real, schema-valid briefs (Phase 1 done). Everything else below is still keys-blocked and ordered by dependency.
 
 ---
@@ -52,7 +52,8 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 ---
 
 ## Phase 2 — Lock in mubit (the +10-points memory)  ·  ~30 min
-- [ ] **[YOU]** Paste me mubit's quickstart `curl` snippet (base URL + auth header).
+> The compounding **demo UI is already built** (`/brief` 2-week flow) using simulated memory passed client-side — exactly the shape mubit returns. All that's left is to swap that for real `MubitClient.recall()`/`remember()`.
+- [ ] **[YOU]** Paste me mubit's quickstart `curl` snippet (base URL + auth header) + the API key.
 - [ ] **[ME]** Point `lib/mubit/client.ts` at the real endpoints/fields (already env-driven + defensive; small adjustment).
 - [ ] **[ME]** Re-run the harness: week 1 → record action → **week 2 brief references the week-1 move + outcome.**
 - [ ] **[YOU/ME]** Confirm the memories show in the mubit dashboard.
