@@ -405,7 +405,7 @@ function LogoMark({ logo, name, theme, size = 22 }) {
 function Star({ theme, hero, selected, onHover }) {
   return (
     <div onMouseEnter={onHover} style={{ position: "absolute", left: `${hero.x * 100}%`, top: `${hero.y * 100}%`,
-      transform: "translate(-50%,-50%)", display: "flex", alignItems: "center", gap: 9, cursor: "pointer", zIndex: 16 }}>
+      transform: "translate(-50%,-50%)", display: "flex", alignItems: "center", gap: 9, cursor: "pointer", zIndex: 16, pointerEvents: "auto" }}>
       <span style={{ position: "relative", width: 12, height: 12, flex: "0 0 auto" }}>
         {selected && <span className="syn-star-ring" style={{ position: "absolute", left: "50%", top: "50%",
           width: 36, height: 36, marginLeft: -18, marginTop: -18, borderRadius: "50%", border: `1px solid ${theme.accent}` }} />}
@@ -427,7 +427,7 @@ function ProductCard({ theme, hero, anchor, onHover, card }) {
   const img = PRODUCT_IMG[hero.slot];
   return (
     <div onMouseEnter={onHover} style={{ position: "absolute", left: `${anchor.x * 100}%`, top: "50%",
-      transform: "translate(-50%,-50%)", width: W, zIndex: 12 }}>
+      transform: "translate(-50%,-50%)", width: W, zIndex: 12, pointerEvents: "auto" }}>
       <div className="syn-prod-glow" style={{ position: "absolute", left: "50%", top: H / 2, width: 540, height: 540,
         transform: "translate(-50%,-50%)", borderRadius: "50%", zIndex: 0, pointerEvents: "none",
         background: `radial-gradient(circle, ${theme.accent}44 0%, ${theme.accent}12 36%, transparent 64%)` }} />
@@ -523,7 +523,7 @@ function ProductHero({ controlIndex = null, onIndex }) {
               <div style={{ marginTop: 26, width: 380 }}><CycCapture theme={t} /></div>
             </div>
 
-            <div onMouseLeave={() => setHover(false)} style={{ position: "absolute", inset: 0, zIndex: 14 }}>
+            <div onMouseLeave={() => setHover(false)} style={{ position: "absolute", inset: 0, zIndex: 14, pointerEvents: "none" }}>
               {heroes.map((h, idx) => (
                 <Star key={idx} theme={t} hero={h} selected={idx === sel}
                   onHover={() => { setSel(idx); setHover(true); }} />
