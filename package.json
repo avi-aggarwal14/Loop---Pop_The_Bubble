@@ -10,7 +10,7 @@
     "start": "next start",
     "generate-brief": "tsx scripts/generate-brief.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test tests/dates.test.ts tests/derive.test.ts tests/shopify-oauth.test.ts tests/ga4.test.ts tests/vercel.test.ts tests/weekly-data.test.ts tests/website.test.ts"
+    "test": "node --import tsx --test tests/dates.test.ts tests/derive.test.ts tests/shopify-oauth.test.ts tests/ga4.test.ts tests/vercel.test.ts tests/weekly-data.test.ts tests/website.test.ts tests/products.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.107.0",

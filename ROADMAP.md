@@ -7,10 +7,10 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 
 ---
 
-## ⚠️ Current state (2026-06-06)
+## Current state (2026-06-06)
 
-- **Built, typechecked, pushed:** the brief engine (OpenAI), the memory layer (mubit), **four data connectors** (Shopify orders, GA4, Vercel drains, website scraper), the multi-source pipeline, all API routes, two SQL migrations, and 19 unit tests.
-- **🟡 `main` is GREEN; there's an UNCOMMITTED local WIP that doesn't compile.** A Shopify *per-product* upgrade was started and **paused mid-change** in `lib/shopify/ingest.ts` (line items + product/shop-info types added; `ShopifyOrder` gained a **required** `lineItems` field that breaks `tests/derive.test.ts`; downstream wiring not done). **This change was NOT committed/pushed** — a fresh clone of `main` builds fine. If the WIP is in your working tree, resolve it: (a) **finish** (Phase 3b below), (b) **`git restore lib/shopify/ingest.ts`**, or (c) quick-patch (`lineItems: []` in the test helper / make it optional).
+- **Built, typechecked, pushed:** the brief engine (OpenAI), the memory layer (mubit), **four data connectors** (Shopify orders **+ per-product/inventory**, GA4, Vercel drains, website scraper), the multi-source pipeline, all API routes, two SQL migrations, and **21 unit tests**.
+- **🟢 Build is green** — `npm run typecheck` clean, `npm test` = 21. The Shopify per-product upgrade (Phase 3b) is **complete**: line items + catalogue/inventory → per-product revenue, top sellers, inventory-vs-sales-velocity, and dead stock, all flowing into the brief.
 - **Nothing has been run live** — no API keys/accounts are wired yet. Everything below is ordered by dependency.
 
 ---
@@ -69,14 +69,14 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 
 **Done when:** a brief generates end-to-end from real Shopify orders.
 
-## Phase 3b — Shopify per-product depth  *(in progress — finish this)*
-The API exposes far more than we currently use. This phase adds product-level intelligence so the "one move" can be product-specific.
-- [ ] **[ME]** Finish the started ingest upgrade: `fetchShopifyProducts()` (products + variants + `inventory_quantity`) and `fetchShopInfo()` (name/plan/currency) in `lib/shopify/ingest.ts`; line-items already added.
-- [ ] **[ME]** `ProductMetrics` type + `deriveProductMetrics()` in `lib/metrics/{types,derive}.ts`: units sold + revenue **per product** WoW, top sellers, **inventory-vs-velocity** ("weeks of stock left"), zero-sales products.
-- [ ] **[ME]** Wire products into `lib/pipeline/collect.ts` (Shopify branch) and render in the prompt; add product data to fixtures + a `tests/products.test.ts`.
-- [ ] **[ME]** Restore green build (the current blocker), `npm test` + `npm run typecheck`.
+## Phase 3b — Shopify per-product depth  *(✅ CODE-COMPLETE — verify live during Phase 3)*
+Product-level intelligence so the "one move" can be product-specific.
+- [x] **[ME]** `fetchShopifyProducts()` (products + variants + `inventory_quantity`) and `fetchShopInfo()` (name/plan/currency) in `lib/shopify/ingest.ts`; order line-items added.
+- [x] **[ME]** `ProductMetrics` type + `deriveProductMetrics()` in `lib/metrics/{types,derive}.ts`: units + revenue **per product** WoW, top sellers, **inventory-vs-velocity** ("weeks of stock left"), zero-sales products.
+- [x] **[ME]** Wired into `lib/pipeline/collect.ts` (Shopify branch) + rendered in the prompt; fixtures updated; `tests/products.test.ts` added; build green (21 tests).
+- [ ] **[ME/YOU]** Verify against a real dev store during Phase 3 (needs `read_products`, already in scopes).
 
-**Done when:** a brief can say things like *"Product X is 40% of revenue but 6 days from stockout — reorder now."*
+**Done when:** a brief can say things like *"Product X is 40% of revenue but ~1 week from stockout — reorder now."* (Code path is ready; just needs live data.)
 
 ## Phase 3c — Shopify web analytics (ShopifyQL)
 - [ ] **[ME]** Already coded (`lib/shopify/analytics.ts`). Verify sessions/conversion return on the dev store's plan; it degrades to null if the plan/scope doesn't allow it.
@@ -137,8 +137,8 @@ The API exposes far more than we currently use. This phase adds product-level in
 
 ## Future / Backlog (post-demo)
 
-- **Finish Shopify product depth** (Phase 3b) — the immediate next code task.
 - **Visitor-level Shopify data** — the Admin API only gives *aggregated* sessions; for per-visitor storefront journeys use Shopify's **Web Pixels API** (or rely on GA4/Vercel).
+- **Per-variant + product trends** — extend the (now per-product) metrics to per-variant and multi-week product trendlines.
 - **Stripe connector** — `stripe` is in the provider enum but unimplemented; add MRR/churn for SaaS founders (mirror the Shopify connector shape).
 - **Encrypt tokens at rest** — `connections.access_token`/`refresh_token` are plaintext; move to Supabase Vault / pgsodium.
 - **Shopify Protected Customer Data approval** — required to read customer PII (name/email/address) in production; fine on a dev store now.
@@ -155,13 +155,12 @@ The API exposes far more than we currently use. This phase adds product-level in
 ```bash
 npm install            # deps
 npm run generate-brief # run the engine on seeded data (needs OPENAI_API_KEY)
-npm test               # unit tests (19; no keys needed) — currently RED until the per-product change is resolved
-npm run typecheck      # full type check — currently RED (same reason)
+npm test               # 21 unit tests (no keys needed) — green
+npm run typecheck      # full type check — green
 ```
 
 ## Dependency order (what blocks what)
 ```
-(resolve the in-progress per-product change → green build)
 OpenAI key ─────────► Phase 1 (engine) + Phase 4 (website scraper)
 mubit details ──────► Phase 2 (memory)            ┐
 Supabase project ───► Phases 0/3/5/6/7 (persist)  ├─► Phase 8 (deploy) ─► Phase 9 (demo)

@@ -191,10 +191,8 @@ A sharp hero beats a complete but mediocre full page every time.
 
 > **Audience:** any developer or AI agent taking over. This section is self-contained: read it and you understand the entire product engine — what it does, how it's built, what's verified, what's left, and every convention/gotcha. Last updated 2026-06-06.
 
-> ### 🟡 CURRENT WORKING-TREE STATE — READ FIRST
-> **`main` is GREEN at the last commit. There is an UNCOMMITTED, NOT-pushed local WIP** in `lib/shopify/ingest.ts` (a started Shopify *per-product* upgrade) that **does not compile** — so if that file is in your working tree, `npm run typecheck`/`npm test` fail. A fresh clone of `main` is fine.
-> **What the WIP did:** line-items are now pulled (`ShopifyLineItem` + a **required** `lineItems` field on `ShopifyOrder`); `ShopifyVariant`/`ShopifyProduct`/`ShopInfo` types added. **Unfinished:** `fetchShopifyProducts()` / `fetchShopInfo()` functions; `ProductMetrics` + `deriveProductMetrics()` in `lib/metrics/{types,derive}.ts`; wiring in `lib/pipeline/collect.ts`; product data in fixtures; `tests/products.test.ts`.
-> **Why it's red:** `ShopifyOrder.lineItems` is required, so `tests/derive.test.ts`'s `order()` helper (which omits it) fails `tsc`. **Three ways to resolve:** (a) **finish** the upgrade — ROADMAP.md **Phase 3b** (intended path; gives per-product revenue, top sellers, inventory-vs-velocity); (b) **`git restore lib/shopify/ingest.ts`** to drop the WIP; (c) **quick-patch** — add `lineItems: []` to the test helper or make the field optional. **Everything else in this doc describes the design as intended.**
+> ### 🟢 CURRENT STATE — GREEN
+> Build is healthy: `npm run typecheck` clean, `npm test` = **21/21**. The Shopify **per-product** integration is complete — orders now include **line items**, and `fetchShopifyProducts()` pulls the catalogue + inventory, so `deriveProductMetrics()` produces **per-product revenue/units (WoW), top sellers, inventory-vs-sales-velocity ("weeks of stock left"), and dead stock**. `fetchShopInfo()` enriches business context. Nothing has been run **live** yet — that's only blocked on API keys/accounts (see §9 + ROADMAP.md).
 
 ## 1. TL;DR
 Synapse is an **AI growth partner for founders**. A founder connects their data sources; once a week Synapse ingests everything, asks an LLM to write a **Growth Brief** (headline numbers → what's working → what to cut → **exactly one prioritised move**), stores it, and **remembers** the brief + whether the founder acted on it so next week's advice **compounds**.
@@ -239,21 +237,21 @@ lib/
                      TrafficSourceShare, TopPage; WeeklyData (commerce + traffic[] +
                      businessProfile + sources[]); formatWeeklyDataForPrompt (renders the
                      full multi-source picture for the LLM user turn).
-    derive.ts        deriveMetrics({current, previous, businessContext, label}) → DerivedMetrics.
-                     Revenue/Orders/AOV/New-customers WoW + new-customer channel mix from
-                     order referrer/source. classifyChannel() exported. Honestly NOTES that
-                     sessions/conversion/ad-spend aren't in Shopify's order API. adSpend = [].
+    derive.ts        deriveMetrics({current, previous, businessContext, label, products?}) →
+                     DerivedMetrics. Revenue/Orders/AOV/New-customers WoW + new-customer channel
+                     mix from order referrer/source. classifyChannel() exported. Honestly NOTES
+                     that sessions/conversion/ad-spend aren't in Shopify's order API. adSpend = [].
+                     deriveProductMetrics() (exported) → per-product revenue/units WoW, top
+                     sellers, inventory-vs-velocity, dead stock.
     fixtures.ts      WEEK_ONE / WEEK_TWO seed DerivedMetrics (week 1 = the CLAUDE.md mock;
                      week 2 = after the founder acts) — used by the harness + the compounding demo.
   shopify/
     oauth.ts         shopifyConfigFromEnv, isValidShopDomain (SSRF guard, *.myshopify.com only),
                      newOAuthState, buildAuthorizeUrl, verifyCallbackHmac (constant-time),
                      exchangeCodeForToken.
-    ingest.ts        fetchShopifyWeek() → ShopifyWeekRaw (orders paginated via Link header,
-                     productCount). ShopifyOrder type. customerOrdersCount===1 ⇒ new customer.
-                     ⚠️ IN PROGRESS (build red): line-items + ShopifyProduct/ShopInfo types added;
-                     fetchShopifyProducts()/fetchShopInfo() + per-product metrics not finished.
-                     See "Current Working-Tree State" above.
+    ingest.ts        fetchShopifyWeek() → ShopifyWeekRaw (orders + line items, paginated;
+                     productCount). fetchShopifyProducts() → catalogue + variants + inventory.
+                     fetchShopInfo() → name/plan/currency. customerOrdersCount===1 ⇒ new customer.
     analytics.ts     fetchShopifyTraffic() → TrafficMetrics | null. ShopifyQL (GraphQL Admin
                      shopifyqlQuery) for sessions + conversion. BEST-EFFORT: returns null on any
                      failure (plan/scope-gated). Never throws.
@@ -374,12 +372,11 @@ npm run typecheck      # full TS check (tsc --noEmit)
 Deps: runtime `@anthropic-ai/sdk` was **removed**; now `openai ^6`, `zod ^4`, `@supabase/supabase-js ^2`, `dotenv ^17`. Dev: `typescript ^6`, `tsx ^4`, `@types/node ^25`. Module system: **ESM (`"type":"module"`), NodeNext** — relative imports MUST use the `.js` extension (e.g. `import { x } from "./y.js"`). Tests run via `node --import tsx --test`.
 
 ## 8. Verified vs NOT verified
-- 🟡 **`main` (last commit) is GREEN; an uncommitted local WIP is RED.** On `main`: `npm run typecheck` clean and `npm test` = 19/19. If you have the uncommitted Shopify per-product WIP in `lib/shopify/ingest.ts`, both fail until you finish/restore it (see "Current Working-Tree State").
-- ✅ **Green state (main / a fresh clone):** `npm run typecheck` clean; `npm test` = 19/19 pass; runtime module-load smoke test (engine imports resolve, key guards fire).
+- ✅ **Verified:** `npm run typecheck` clean; `npm test` = **21/21** pass; runtime module-load smoke test (engine imports resolve, key guards fire).
 - ❌ **NOT verified (needs live keys, never run end-to-end):** a real OpenAI generation; any mubit call (and the exact mubit API shape); any Supabase query (no project provisioned); Shopify/GA4 OAuth + data pulls; Vercel drain ingestion; ShopifyQL; the website scraper against a real site.
 
 ## 9. What's left to build / do (see ROADMAP.md for the full ordered plan)
-0. **🔴 IMMEDIATE: resolve the red build** — finish the Shopify per-product upgrade (ROADMAP **Phase 3b**: `fetchShopifyProducts`/`fetchShopInfo`, `ProductMetrics` + `deriveProductMetrics`, `collect.ts` wiring, fixtures, `tests/products.test.ts`) **or** revert `lib/shopify/ingest.ts`. Nothing else can be verified until the build is green.
+0. **✅ DONE — Shopify per-product depth** (ROADMAP Phase 3b): line items + catalogue/inventory → `deriveProductMetrics` (per-product revenue/units WoW, top sellers, inventory-vs-velocity, dead stock), wired through `collect.ts`, rendered in the brief input, fixtures + `tests/products.test.ts` added. Build green (21 tests).
 1. **Keys/accounts** (the blocker to live runs): OpenAI key; mubit key + confirm base URL/auth from console.mubit.ai (then adjust `lib/mubit/client.ts`); Supabase project + run **both** migrations; Shopify Partners app + dev store; Google Cloud OAuth client (GA4); `APP_URL`; `CRON_SECRET`; (optional) Vercel Pro for drains.
 2. **Dashboard UI** — founder-facing app (list briefs via `getLatestBriefs`, render the brief, Done/Skipped + outcome → `/api/briefs/[id]/action`, a Connect page → the OAuth/drain links, onboarding to capture `business_context` + trigger the website scraper). Lives in the teammate's Next.js app.
 3. **Founder session wiring** — the Shopify/Google connect links currently take `founder_id` as a query param; replace with the server session once Supabase Auth (`@supabase/ssr`) is wired. See the `NOTE` in `handleShopifyStart`/`handleGoogleStart`.
@@ -408,6 +405,7 @@ Deps: runtime `@anthropic-ai/sdk` was **removed**; now `openai ^6`, `zod ^4`, `@
 
 Newest entries at the top. Record meaningful developments here.
 
+- **2026-06-06** — **Shopify per-product integration COMPLETED — build green, 21 tests.** Finished the upgrade that was paused below. `lib/shopify/ingest.ts` now pulls order **line items** plus `fetchShopifyProducts()` (catalogue + variants + inventory) and `fetchShopInfo()` (name/plan/currency). `lib/metrics/{types,derive}.ts` gained `ProductMetrics` + exported `deriveProductMetrics()` → **per-product revenue/units WoW, top sellers, inventory-vs-sales-velocity ("weeks of stock left"), and dead stock**; rendered in `formatMetricsForPrompt` so the brief can reason per product. Wired through `lib/pipeline/collect.ts` (Shopify branch fetches products + uses shop name/plan to enrich `businessContext` when the founder gave none). Fixtures updated; `tests/products.test.ts` added. `npm run typecheck` clean; `npm test` 19→**21** pass. This supersedes the "paused/red" entry below.
 - **2026-06-06** — **Shopify per-product upgrade STARTED then PAUSED — UNCOMMITTED local WIP (not pushed; `main` stays green).** Began deepening the Shopify connector to per-product/line-item depth. Done so far in `lib/shopify/ingest.ts`: added `ShopifyLineItem` + `lineItems` on `ShopifyOrder` (now pulls `line_items`), and added `ShopifyVariant`/`ShopifyProduct`/`ShopInfo` types. **NOT done:** `fetchShopifyProducts()`/`fetchShopInfo()` functions, `ProductMetrics` in `lib/metrics/{types,derive}.ts`, `collect.ts` wiring, fixtures, `tests/products.test.ts`. **⚠️ With this WIP in the tree, `ShopifyOrder.lineItems` is required and breaks `tests/derive.test.ts` → `npm run typecheck`/`npm test` FAIL.** Resolve by finishing (ROADMAP Phase 3b), `git restore lib/shopify/ingest.ts`, or quick-patching (`lineItems: []` in the test helper / make it optional). Paused at the user's request to fully refresh CLAUDE.md + ROADMAP.md (this entry). **Only the docs were committed; the WIP `ingest.ts` was intentionally left uncommitted.**
 - **2026-06-06** — Added a complete **[§ Engineering Handoff](#-engineering-handoff--full-project-state)** section to this file: full architecture, file-by-file map, data flow, DB schema, env vars, commands, verified-vs-not, what's left, and conventions/gotchas — written so any developer or AI agent can take over cold. Also updated the top header (this file now documents both the landing page and the product engine, not "landing page only").
 - **2026-06-06** — **Data-ingestion layer built (4 sources, multi-source pipeline).** Approved plan: extend the brief input from Shopify-orders-only to a full picture. All new code, typechecked, **19 unit tests passing** (`npm test`), no live keys needed to build. Brief *output* schema unchanged — only the *input* got richer.

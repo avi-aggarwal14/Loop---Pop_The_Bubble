@@ -63,9 +63,21 @@ export const WEEK_TWO: DerivedMetrics = {
     { channel: "Facebook ads", spend: 0, currency: "£", conversions: 0 },
     { channel: "Instagram boosted", spend: 90, currency: "£", conversions: 12, roas: 3.4 },
   ],
+  products: {
+    topByRevenue: [
+      { productId: "p1", title: "Vitamin C Serum", unitsSold: 150, revenue: 4500, previousUnits: 120, previousRevenue: 3600, inventory: 320, weeksOfStockLeft: 2.1 },
+      { productId: "p2", title: "Hydrating Moisturiser", unitsSold: 72, revenue: 2160, previousUnits: 60, previousRevenue: 1800, inventory: 360, weeksOfStockLeft: 5.0 },
+      { productId: "p4", title: "Reel-featured Serum Duo", unitsSold: 55, revenue: 2200, previousUnits: 0, previousRevenue: 0, inventory: 90, weeksOfStockLeft: 1.6 },
+    ],
+    lowStock: [
+      { productId: "p4", title: "Reel-featured Serum Duo", unitsSold: 55, revenue: 2200, inventory: 90, weeksOfStockLeft: 1.6 },
+    ],
+    noSales: [{ productId: "p9", title: "Travel Kit" }],
+  },
   notes: [
     "Founder posted 3 product demo Reels last week, as advised.",
     "Facebook ads were paused — £180/week saved, no drop in revenue.",
     "Instagram's share of new customers rose again, 34% → 41%.",
+    "The Serum Duo featured in the Reels sold out fast — only ~1.6 weeks of stock left.",
   ],
 };
