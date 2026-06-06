@@ -1,0 +1,42 @@
+# Copy this to shopify.app.toml after creating/linking the real Shopify app,
+# or run `npm run shopify:config:link` and let Shopify CLI generate it.
+
+name = "Synapse"
+handle = "synapse"
+client_id = "PASTE_SHOPIFY_CLIENT_ID"
+application_url = "https://YOUR_APP_URL"
+embedded = false
+web_directories = ["."]
+
+[access_scopes]
+scopes = "read_orders,read_customers,read_products,read_reports"
+# The existing OAuth route requests scopes in the authorize URL. Shopify managed
+# install is preferable later, but this matches the current code path.
+use_legacy_install_flow = true
+
+[auth]
+redirect_urls = [
+  "https://YOUR_APP_URL/api/auth/shopify/callback",
+]
+
+[webhooks]
+api_version = "2026-04"
+
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "/api/webhooks/shopify/app-uninstalled"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/data_request"]
+uri = "/api/webhooks/shopify/customers-data-request"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/redact"]
+uri = "/api/webhooks/shopify/customers-redact"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["shop/redact"]
+uri = "/api/webhooks/shopify/shop-redact"
+
+[build]
+automatically_update_urls_on_dev = true

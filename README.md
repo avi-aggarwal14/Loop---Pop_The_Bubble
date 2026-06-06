@@ -10,6 +10,9 @@ lessons/outcomes so advice compounds.
 Synapse should be configured as one Shopify app that many merchants can install.
 Do not build production around a single admin-created store token.
 
+The official Shopify CLI is installed locally in this repo. Use `npm run
+shopify:*` commands so everyone works from the same CLI version.
+
 1. Create/configure a Shopify app in the Shopify Partner/Dev Dashboard.
 2. Set the app URL to `APP_URL`.
 3. Add redirect URL `<APP_URL>/api/auth/shopify/callback`.
@@ -30,5 +33,21 @@ Do not build production around a single admin-created store token.
 Local smoke tests may set `ALLOW_QUERY_FOUNDER_ID=true` and pass
 `?founder_id=<uuid>` while the auth UI is still being wired. Keep that disabled
 in production.
+
+## Shopify CLI commands
+
+```bash
+npm run shopify:version          # verify local CLI
+npm run shopify:config:link      # link this repo to the Shopify app
+npm run shopify:config:pull      # pull dashboard config into shopify.app.toml
+npm run shopify:config:validate  # validate Shopify app config
+npm run shopify:dev              # run Shopify dev preview + this Next app
+npm run shopify:deploy           # deploy app config/extensions to Shopify
+npm run shopify:info             # show linked app/dev-store info
+```
+
+`shopify.web.toml` points Shopify CLI at this existing Next app. Use
+`shopify.app.example.toml` as the template if you need to create
+`shopify.app.toml` by hand; otherwise prefer `npm run shopify:config:link`.
 
 See `CLAUDE.md` for full architecture and `ROADMAP.md` for the current plan.
