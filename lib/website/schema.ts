@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * Structured business profile extracted from the founder's public website.
  * Feeds the brief generator so the AI understands WHO it's advising — not just
- * the numbers. All fields required (OpenAI strict json_schema).
+ * the numbers. All fields required (Claude structured-output json_schema).
  */
 export const BusinessProfileSchema = z.object({
   whatTheySell: z.string().describe("Plain summary of the products/services sold."),
