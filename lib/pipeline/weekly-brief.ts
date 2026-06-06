@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type OpenAI from "openai";
+import type Anthropic from "@anthropic-ai/sdk";
 import { generateBrief } from "../brief/generate";
 import type { GrowthBrief } from "../brief/schema";
 import { founderAgentId, type MubitClient } from "../mubit/client";
@@ -24,7 +24,7 @@ import { previousFullWeek, priorWeek, toISODateString } from "../util/dates";
 
 export interface WeeklyBriefDeps {
   db: SupabaseClient;
-  openai: OpenAI;
+  anthropic: Anthropic;
   mubit: MubitClient | null;
 }
 
@@ -66,7 +66,7 @@ export async function runWeeklyBriefForFounder(
 
   const { brief } = await generateBrief(
     { data, recalledMemories: recalled },
-    deps.openai,
+    deps.anthropic,
   );
 
   const memoryIds: string[] = [];

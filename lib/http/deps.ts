@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { createServiceClient, createUserClient } from "../supabase/server";
 import { MubitClient, mubitConfigFromEnv } from "../mubit/client";
 import type { WeeklyBriefDeps } from "../pipeline/weekly-brief";
@@ -15,7 +15,7 @@ function mubitFromEnv(): MubitClient | null {
 export function buildServiceDeps(): WeeklyBriefDeps {
   return {
     db: createServiceClient(),
-    openai: new OpenAI(),
+    anthropic: new Anthropic(),
     mubit: mubitFromEnv(),
   };
 }

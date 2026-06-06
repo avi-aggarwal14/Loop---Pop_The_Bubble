@@ -1,5 +1,5 @@
 import "dotenv/config";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { generateBrief } from "../lib/brief/generate";
 import { WEEK_ONE, WEEK_TWO } from "../lib/metrics/fixtures";
 import type { DerivedMetrics, WeeklyData } from "../lib/metrics/types";
@@ -45,15 +45,15 @@ function printBrief(brief: GrowthBrief): void {
 }
 
 async function main(): Promise<void> {
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     console.error(
-      "✗ OPENAI_API_KEY is not set.\n" +
+      "✗ ANTHROPIC_API_KEY is not set.\n" +
         "  Copy .env.example → .env and add your key (and optionally mubit's).",
     );
     process.exit(1);
   }
 
-  const openai = new OpenAI();
+  const anthropic = new Anthropic();
   const founderId = "demo";
   const agentId = founderAgentId(founderId);
 
@@ -83,7 +83,7 @@ async function main(): Promise<void> {
     };
     const { brief, usage } = await generateBrief(
       { data, recalledMemories: recalled },
-      openai,
+      anthropic,
     );
     printBrief(brief);
     console.log(

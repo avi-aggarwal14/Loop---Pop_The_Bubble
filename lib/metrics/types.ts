@@ -245,7 +245,7 @@ function formatProfile(p: BusinessProfile): string {
     .join("\n");
 }
 
-/** Render the full multi-source picture for the Claude/OpenAI user turn. */
+/** Render the full multi-source picture for the Claude user turn. */
 export function formatWeeklyDataForPrompt(data: WeeklyData): string {
   const blocks: string[] = [];
   blocks.push(`Window: ${data.windowLabel}`);
