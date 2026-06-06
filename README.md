@@ -57,10 +57,11 @@ See `CLAUDE.md` for full architecture and `ROADMAP.md` for the current plan.
 For a fast demo video without waiting on a real Shopify store, use:
 
 ```text
+/demo/shopify
 /api/demo/shopify-pull
 demo/shopify-demo-video-brief.md
 ```
 
-That endpoint returns synthetic Shopify-like orders, products, inventory,
-traffic/channel summaries, and a ready Growth Brief story. It is fictional demo
-data, not merchant data.
+`/demo/shopify` is the polished screen-recording page. The API endpoint returns
+synthetic Shopify-like orders, products, inventory, traffic/channel summaries,
+and a ready Growth Brief story. It is fictional demo data, not merchant data.

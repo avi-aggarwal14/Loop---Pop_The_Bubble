@@ -184,7 +184,7 @@ Product-level intelligence so the "one move" can be product-specific.
 ---
 
 ## Phase 9 — Demo polish
-- [x] **[ME]** Added synthetic Shopify pull endpoint for the demo video: `/api/demo/shopify-pull`, backed by `lib/demo/shopify-synthetic.ts`, plus `demo/shopify-demo-video-brief.md` with the narrative.
+- [x] **[ME]** Added synthetic Shopify pull endpoint and screen-recording page for the demo video: `/api/demo/shopify-pull` + `/demo/shopify`, backed by `lib/demo/shopify-synthetic.ts`, plus `demo/shopify-demo-video-brief.md` with the narrative.
 - [ ] **[ME]** Seed a believable 2–3 week founder story so the compounding is obvious on stage.
 - [ ] **[TEAM]** Mobile pass.
 - [ ] **[ME/YOU]** Rehearse: brief → "your one move" → (founder acts) → next brief references it → *"and it remembers everything."*

@@ -79,11 +79,11 @@ spike has nothing to sell.
 
 ## Demo Video Flow
 
-1. Show `/connect`.
+1. Show `https://synapse-acceleration.vercel.app/connect`.
 2. Say: "A founder connects Shopify."
-3. Show `/api/demo/shopify-pull` or the JSON source briefly.
+3. Show `https://synapse-acceleration.vercel.app/demo/shopify`.
 4. Say: "Synapse pulls orders, products, inventory, sessions, channel mix, and product velocity."
-5. Show the brief/dashboard.
+5. Zoom into the AI Growth Brief and the product-risk cards.
 6. Say: "Instead of dumping charts, it gives one move."
 7. Show the move: "Reorder GlowPatch and move Meta spend to TikTok creator seeding."
 8. Say: "Next week, Synapse remembers whether the founder acted and gets sharper."
@@ -91,5 +91,8 @@ spike has nothing to sell.
 ## Useful Screen URL
 
 ```text
+https://synapse-acceleration.vercel.app/demo/shopify
+https://synapse-acceleration.vercel.app/api/demo/shopify-pull
+http://localhost:3000/demo/shopify
 http://localhost:3000/api/demo/shopify-pull
 ```
