@@ -9,9 +9,9 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 
 ## Current state (2026-06-06)
 
-- **Built, typechecked, pushed:** the brief engine (OpenAI), the memory layer (mubit), **four data connectors** (Shopify orders **+ per-product/inventory**, GA4, Vercel drains, website scraper), the multi-source pipeline, all API routes, two SQL migrations, and **21 unit tests**.
+- **Built, typechecked, pushed:** the brief engine (**Anthropic Claude**), the memory layer (mubit), **four data connectors** (Shopify orders **+ per-product/inventory**, GA4, Vercel drains, website scraper), the multi-source pipeline, all API routes, two SQL migrations, and **21 unit tests**.
 - **🟢 Build is green** — `npm run typecheck` clean, `npm test` = 21. The Shopify per-product upgrade (Phase 3b) is **complete**: line items + catalogue/inventory → per-product revenue, top sellers, inventory-vs-sales-velocity, and dead stock, all flowing into the brief.
-- **Nothing has been run live** — no API keys/accounts are wired yet. Everything below is ordered by dependency.
+- **✅ The brief engine now runs LIVE on Anthropic Claude** (`claude-opus-4-8`) — `ANTHROPIC_API_KEY` is wired in `.env` and `npm run generate-brief` produces real, schema-valid briefs (Phase 1 done). Everything else below is still keys-blocked and ordered by dependency.
 
 ---
 
@@ -19,7 +19,7 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 
 | # | Thing | Where | Goes into `.env` as |
 |---|-------|-------|---------------------|
-| 1 | **OpenAI API key** | platform.openai.com → API keys (confirm the $1000 shows in Billing → Credits) | `OPENAI_API_KEY` |
+| 1 | ✅ **Anthropic API key** (DONE — in `.env`) | console.anthropic.com → API keys (`sk-ant-…`) | `ANTHROPIC_API_KEY` |
 | 2 | **mubit** key + API details | console.mubit.ai → API keys; copy their quickstart `curl` snippet for me | `MUBIT_API_KEY`, `MUBIT_BASE_URL`, `MUBIT_AUTH_SCHEME` |
 | 3 | **Supabase** project | supabase.com → new project → Settings → API | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` |
 | 4 | **Shopify** app + dev store | Shopify Partners → create app + a development store | `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET` |
@@ -28,7 +28,7 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 | 7 | **App URL** | your deployed/ngrok URL (localhost for dev) | `APP_URL` |
 | 8 | **Cron secret** | make up any long random string | `CRON_SECRET` |
 
-> Start with **#1 alone** — that's enough to see a real Growth Brief generate and to run the website scraper.
+> #1 alone (the Anthropic key, already wired) is enough to see a real Growth Brief generate and to run the website scraper.
 
 ---
 
@@ -42,10 +42,10 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 
 ---
 
-## Phase 1 — Prove the brief engine (seeded data)  ·  ~20 min  *(needs only OpenAI)*
-- [ ] **[ME]** `npm run generate-brief` → a real Growth Brief prints from the seeded fixtures.
-- [ ] **[ME]** Tune `lib/brief/prompt.ts`, `OPENAI_MODEL`, `OPENAI_REASONING_EFFORT` until the voice + the "one move" are sharp.
-- [ ] **[ME]** Confirm structured output is stable (schema-enforced) and prompt caching hits (watch `cacheRead` on the 2nd brief).
+## Phase 1 — Prove the brief engine (seeded data)  ·  ✅ DONE  *(needs only the Anthropic key)*
+- [x] **[ME]** `npm run generate-brief` → a real Growth Brief prints from the seeded fixtures (verified on Claude `claude-opus-4-8`).
+- [ ] **[ME]** Tune `lib/brief/prompt.ts`, `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT` until the voice + the "one move" are sharp. (First output already reads well.)
+- [x] **[ME]** Confirmed structured output is stable (schema-enforced + Zod parse) and prompt caching hits (`cacheRead` populated on the 2nd brief).
 
 **Done when:** a brief that reads as well as the CLAUDE.md mock comes out of `npm run generate-brief`.
 
@@ -83,7 +83,7 @@ Product-level intelligence so the "one move" can be product-specific.
 
 ---
 
-## Phase 4 — Website scraper (business context)  ·  ~10 min  *(needs only OpenAI)*
+## Phase 4 — Website scraper (business context)  ·  ~10 min  *(needs only the Anthropic key)*
 - [ ] **[YOU]** Nothing but the founder's URL.
 - [ ] **[ME]** Run `fetchSite()` → `extractBusinessProfile()` on a real site; store via `setFounderProfile`; eyeball the profile.
 
@@ -154,14 +154,14 @@ Product-level intelligence so the "one move" can be product-specific.
 ## Quick command reference
 ```bash
 npm install            # deps
-npm run generate-brief # run the engine on seeded data (needs OPENAI_API_KEY)
+npm run generate-brief # run the engine on seeded data (needs ANTHROPIC_API_KEY)
 npm test               # 21 unit tests (no keys needed) — green
 npm run typecheck      # full type check — green
 ```
 
 ## Dependency order (what blocks what)
 ```
-OpenAI key ─────────► Phase 1 (engine) + Phase 4 (website scraper)
+Anthropic key (✅) ─► Phase 1 (engine, DONE) + Phase 4 (website scraper)
 mubit details ──────► Phase 2 (memory)            ┐
 Supabase project ───► Phases 0/3/5/6/7 (persist)  ├─► Phase 8 (deploy) ─► Phase 9 (demo)
 Shopify dev store ──► Phase 3 / 3b / 3c           │

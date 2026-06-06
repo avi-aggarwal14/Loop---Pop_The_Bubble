@@ -1,5 +1,5 @@
 # Synapse — Project Source of Truth
-**Stack:** Next.js 14 (App Router) + Supabase + TypeScript · **LLM:** OpenAI · **Memory:** mubit · **Deploy:** Vercel
+**Stack:** Next.js 14 (App Router) + Supabase + TypeScript · **LLM:** Anthropic Claude · **Memory:** mubit · **Deploy:** Vercel
 
 > **Maintenance note (read first):** This file is the single source of truth for the project and is auto-loaded at the start of every session. Whenever a meaningful development happens (section built, deploy, stack/scope change, decision made), append it to the **Project Log** at the bottom. Keep the doc accurate as scope evolves.
 
@@ -192,17 +192,17 @@ A sharp hero beats a complete but mediocre full page every time.
 > **Audience:** any developer or AI agent taking over. This section is self-contained: read it and you understand the entire product engine — what it does, how it's built, what's verified, what's left, and every convention/gotcha. Last updated 2026-06-06.
 
 > ### 🟢 CURRENT STATE — GREEN
-> Build is healthy: `npm run typecheck` clean, `npm test` = **21/21**. The Shopify **per-product** integration is complete — orders now include **line items**, and `fetchShopifyProducts()` pulls the catalogue + inventory, so `deriveProductMetrics()` produces **per-product revenue/units (WoW), top sellers, inventory-vs-sales-velocity ("weeks of stock left"), and dead stock**. `fetchShopInfo()` enriches business context. Nothing has been run **live** yet — that's only blocked on API keys/accounts (see §9 + ROADMAP.md).
+> Build is healthy: `npm run typecheck` clean, `npm test` = **21/21**. **The brief engine now runs LIVE on Anthropic Claude** (`claude-opus-4-8`) — `npm run generate-brief` produces real, schema-valid Growth Briefs, and prompt caching hits across calls. The Shopify **per-product** integration is complete — orders now include **line items**, and `fetchShopifyProducts()` pulls the catalogue + inventory, so `deriveProductMetrics()` produces **per-product revenue/units (WoW), top sellers, inventory-vs-sales-velocity ("weeks of stock left"), and dead stock**. `fetchShopInfo()` enriches business context. Still not run live: mubit (no key yet → no cross-week compounding), Supabase, and the source connectors (see §8/§9 + ROADMAP.md).
 
 ## 1. TL;DR
 Synapse is an **AI growth partner for founders**. A founder connects their data sources; once a week Synapse ingests everything, asks an LLM to write a **Growth Brief** (headline numbers → what's working → what to cut → **exactly one prioritised move**), stores it, and **remembers** the brief + whether the founder acted on it so next week's advice **compounds**.
 
-**The backend engine is code-complete, typechecked, and unit-tested (19 tests). It has NOT been run live yet** — that's only blocked on API keys/accounts (OpenAI, mubit, Supabase, Shopify dev store, Google Cloud). There is **no UI yet** (that's the teammate's Next.js app + a dashboard still to build). The engine is written **framework-agnostic in `lib/`** plus thin **`app/api/*` route handlers**, so it drops into the Next.js app without collisions.
+**The backend engine is code-complete, typechecked, and unit-tested (21 tests). The brief engine has now run live on Anthropic Claude** (real briefs generate via `npm run generate-brief`); the rest is still blocked on API keys/accounts (mubit, Supabase, Shopify dev store, Google Cloud). There is **no UI yet** (that's the teammate's Next.js app + a dashboard still to build). The engine is written **framework-agnostic in `lib/`** plus thin **`app/api/*` route handlers**, so it drops into the Next.js app without collisions.
 
 ## 2. The core loop (what the product actually does)
 ```
 Connect ─► Ingest ─► Collect/Merge ─► Recall ─► Generate ─► Persist ─► Capture ─► (next week)
- founder    each      WeeklyData       mubit     OpenAI      Supabase   founder      advice
+ founder    each      WeeklyData       mubit     Claude      Supabase   founder      advice
  OAuth/     source     (commerce +      history   writes the  brief +    marks the    compounds
  paste/     (defensive) traffic +                 Growth      pending    one move     via mubit
  drain                  profile)                  Brief       action     done/skipped
@@ -211,7 +211,7 @@ Entry points: the **weekly cron** (`/api/cron/generate-briefs`) runs the loop fo
 
 ## 3. Tech stack & the key decisions (with rationale)
 - **Next.js 14 (App Router) + Supabase (Postgres/Auth/RLS) + TypeScript**, deployed on **Vercel**. One TS codebase shared with the landing page.
-- **LLM = OpenAI** (`OPENAI_MODEL`, default `gpt-5`). **It started as Anthropic Claude (`claude-opus-4-8`) and was switched to OpenAI because the team has $1000 of OpenAI API credits.** Only `lib/brief/generate.ts` + `lib/website/extract.ts` are provider-specific. Uses **structured outputs** (`response_format: json_schema`, `strict:true`) so the model must return our exact shape, validated again with Zod. OpenAI's **automatic prompt caching** is exploited by keeping the stable system prompt first and volatile data in the user turn.
+- **LLM = Anthropic Claude** (`ANTHROPIC_MODEL`, default `claude-opus-4-8`). **It briefly ran on OpenAI but was switched back to Anthropic** (the team's usable credits are on the Anthropic API). Only `lib/brief/generate.ts` + `lib/website/extract.ts` are provider-specific (they use the `@anthropic-ai/sdk` Messages API). Uses **structured outputs** (`output_config.format` with a `json_schema`) so the model must return our exact shape, validated again with Zod as a backstop. **Adaptive thinking** (`thinking:{type:"adaptive"}`) + env-tunable `effort` (`ANTHROPIC_EFFORT`, default `high`). **Prompt caching** via a `cache_control` breakpoint on the stable system prompt, with volatile data in the user turn — verified hitting (`cache_read_input_tokens` > 0 on the 2nd call).
 - **Memory = mubit (mubit.ai)** — "operational memory for agents." This is the product's differentiator **and worth +10 hackathon points for meaningful use.** REST-only (no TS SDK); one mubit **agent per founder** (`synapse-founder-<id>`). The client is **defensive**: any mubit failure logs and returns empty — it never blocks a brief. Base URL + auth scheme are **env-driven** because mubit's docs are gated and the exact endpoints/fields may differ from the public `/v2/control/*` shapes the client was written against.
 - **Data sources (4):** Shopify (orders via Admin REST + sessions/conversion via ShopifyQL), Google Analytics GA4 (Data API), Vercel Web Analytics (**push** via Drains — it has *no* pull API), and a **website scraper** (fetch + LLM extract → business profile). `stripe` exists in the provider enum but is **not implemented**.
 - **The brief OUTPUT schema is fixed** (`GrowthBriefSchema`). Adding data sources only enriches the **input** (`WeeklyData`) — the generator and brief shape don't change.
@@ -228,10 +228,11 @@ lib/
                      how to use recalled memory so advice compounds. NEVER put per-request
                      data here (would break the cached prefix).
     generate.ts      generateBrief({data: WeeklyData, recalledMemories}, client?) → {brief, usage}.
-                     OpenAI chat.completions, strict json_schema (BRIEF_JSON_SCHEMA mirrors the
-                     Zod schema), then GrowthBriefSchema.parse() as a backstop.
-                     Model = OPENAI_MODEL ?? "gpt-5"; reasoning_effort = OPENAI_REASONING_EFFORT
-                     ?? "medium" (sent only if != "none").
+                     Anthropic messages.create with output_config.format json_schema
+                     (BRIEF_JSON_SCHEMA mirrors the Zod schema), then GrowthBriefSchema.parse()
+                     as a backstop. Adaptive thinking; cache_control on the system prompt.
+                     Model = ANTHROPIC_MODEL ?? "claude-opus-4-8"; effort = ANTHROPIC_EFFORT
+                     ?? "high" (sent only if != "none").
   metrics/
     types.ts         DerivedMetrics (commerce) + formatMetricsForPrompt; TrafficMetrics,
                      TrafficSourceShare, TopPage; WeeklyData (commerce + traffic[] +
@@ -271,8 +272,9 @@ lib/
     fetch.ts         normalizeStartUrl, htmlToText (exported, tested), fetchSite() → FetchedSite.
                      Fetches the founder's URL + up to 8 same-host internal pages (about/products/
                      pricing prioritised), strips to text. Only the founder's own domain.
-    extract.ts       extractBusinessProfile(site, client?) → BusinessProfile via OpenAI strict
-                     json_schema. Model = OPENAI_EXTRACT_MODEL ?? OPENAI_MODEL ?? "gpt-5".
+    extract.ts       extractBusinessProfile(site, client?) → BusinessProfile via Anthropic
+                     output_config.format json_schema (no thinking). Model =
+                     ANTHROPIC_EXTRACT_MODEL ?? ANTHROPIC_MODEL ?? "claude-opus-4-8".
   mubit/
     client.ts        MubitConfig, mubitConfigFromEnv (null if unconfigured), MubitClient with
                      remember()/recall() over /v2/control/{ingest,activity,query}, defensive
@@ -298,7 +300,7 @@ lib/
                      others). Shopify also persists a commerce snapshot.
     weekly-brief.ts  runWeeklyBriefForFounder(deps, founderId, now) — collect → recall → generate →
                      remember → insertBrief + createPendingAction. runWeeklyBriefs(deps, founderIds)
-                     → BatchOutcome[] (per founder, fault-isolated). WeeklyBriefDeps = {db, openai, mubit}.
+                     → BatchOutcome[] (per founder, fault-isolated). WeeklyBriefDeps = {db, anthropic, mubit}.
     record-action.ts recordFounderAction(deps, {briefId, status, outcomeNote}) → ActionRow; writes
                      actionMemory() to mubit so the next brief compounds.
   http/
@@ -349,10 +351,10 @@ RLS pattern: every table is scoped to the owning founder (`auth.uid()`), directl
 ## 6. Environment variables (all server-only unless `NEXT_PUBLIC_`)
 | Var | Purpose |
 |---|---|
-| `OPENAI_API_KEY` | Brief engine + website extraction. Must be a platform.openai.com **API** key. |
-| `OPENAI_MODEL` | Brief model (default `gpt-5`). |
-| `OPENAI_REASONING_EFFORT` | `minimal`/`low`/`medium`/`high`, or `none` to omit (default `medium`). |
-| `OPENAI_EXTRACT_MODEL` | Optional override for website-profile extraction. |
+| `ANTHROPIC_API_KEY` | Brief engine + website extraction. Must be a console.anthropic.com **API** key (`sk-ant-…`). |
+| `ANTHROPIC_MODEL` | Brief model (default `claude-opus-4-8`). |
+| `ANTHROPIC_EFFORT` | `low`/`medium`/`high`/`xhigh`/`max`, or `none` to omit (default `high`). |
+| `ANTHROPIC_EXTRACT_MODEL` | Optional override for website-profile extraction. |
 | `MUBIT_API_KEY` / `MUBIT_BASE_URL` / `MUBIT_AUTH_SCHEME` | Memory. Auth scheme `bearer` or `x-api-key`. |
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase client. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only; cron + ingestion (bypasses RLS). |
@@ -365,26 +367,26 @@ RLS pattern: every table is scoped to the owning founder (`auth.uid()`), directl
 ## 7. Commands
 ```bash
 npm install            # deps
-npm run generate-brief # run the engine on seeded fixtures (needs OPENAI_API_KEY)
-npm test               # 19 unit tests (no keys needed)
+npm run generate-brief # run the engine on seeded fixtures (needs ANTHROPIC_API_KEY)
+npm test               # 21 unit tests (no keys needed)
 npm run typecheck      # full TS check (tsc --noEmit)
 ```
-Deps: runtime `@anthropic-ai/sdk` was **removed**; now `openai ^6`, `zod ^4`, `@supabase/supabase-js ^2`, `dotenv ^17`. Dev: `typescript ^6`, `tsx ^4`, `@types/node ^25`. Module system: **ESM (`"type":"module"`), NodeNext** — relative imports MUST use the `.js` extension (e.g. `import { x } from "./y.js"`). Tests run via `node --import tsx --test`.
+Deps: runtime `@anthropic-ai/sdk ^0.101`, `zod ^4`, `@supabase/supabase-js ^2`, `dotenv ^17`, `next ^16`, `react/react-dom ^18`, `lucide-react`. (`openai` was **removed** when the engine switched back to Claude.) Dev: `typescript ^6`, `tsx ^4`, `@types/node ^25`, `tailwindcss`, `postcss`, `autoprefixer`. Module system: **ESM (`"type":"module"`)**, `tsconfig` `moduleResolution: "bundler"` → relative imports are **extensionless** (no `.js`). Tests run via `node --import tsx --test`.
 
 ## 8. Verified vs NOT verified
-- ✅ **Verified:** `npm run typecheck` clean; `npm test` = **21/21** pass; runtime module-load smoke test (engine imports resolve, key guards fire).
-- ❌ **NOT verified (needs live keys, never run end-to-end):** a real OpenAI generation; any mubit call (and the exact mubit API shape); any Supabase query (no project provisioned); Shopify/GA4 OAuth + data pulls; Vercel drain ingestion; ShopifyQL; the website scraper against a real site.
+- ✅ **Verified:** `npm run typecheck` clean; `npm test` = **21/21** pass; **a real Anthropic Claude generation** — `npm run generate-brief` produces schema-valid Growth Briefs end-to-end (structured output + Zod parse), with prompt caching hitting on the 2nd call.
+- ❌ **NOT verified (needs live keys, never run end-to-end):** any mubit call (and the exact mubit API shape) — so cross-week compounding is still untested; any Supabase query (no project provisioned); Shopify/GA4 OAuth + data pulls; Vercel drain ingestion; ShopifyQL; the website scraper against a real site.
 
 ## 9. What's left to build / do (see ROADMAP.md for the full ordered plan)
 0. **✅ DONE — Shopify per-product depth** (ROADMAP Phase 3b): line items + catalogue/inventory → `deriveProductMetrics` (per-product revenue/units WoW, top sellers, inventory-vs-velocity, dead stock), wired through `collect.ts`, rendered in the brief input, fixtures + `tests/products.test.ts` added. Build green (21 tests).
-1. **Keys/accounts** (the blocker to live runs): OpenAI key; mubit key + confirm base URL/auth from console.mubit.ai (then adjust `lib/mubit/client.ts`); Supabase project + run **both** migrations; Shopify Partners app + dev store; Google Cloud OAuth client (GA4); `APP_URL`; `CRON_SECRET`; (optional) Vercel Pro for drains.
+1. **Keys/accounts** (the blocker to remaining live runs): ✅ Anthropic key (done — brief engine runs live); mubit key + confirm base URL/auth from console.mubit.ai (then adjust `lib/mubit/client.ts`); Supabase project + run **both** migrations; Shopify Partners app + dev store; Google Cloud OAuth client (GA4); `APP_URL`; `CRON_SECRET`; (optional) Vercel Pro for drains.
 2. **Dashboard UI** — founder-facing app (list briefs via `getLatestBriefs`, render the brief, Done/Skipped + outcome → `/api/briefs/[id]/action`, a Connect page → the OAuth/drain links, onboarding to capture `business_context` + trigger the website scraper). Lives in the teammate's Next.js app.
 3. **Founder session wiring** — the Shopify/Google connect links currently take `founder_id` as a query param; replace with the server session once Supabase Auth (`@supabase/ssr`) is wired. See the `NOTE` in `handleShopifyStart`/`handleGoogleStart`.
 4. **Automation** — Vercel Cron (weekly) → `/api/cron/generate-briefs` with `CRON_SECRET`.
 5. **Future / backlog** (full list in ROADMAP.md → *Future / Backlog*): visitor-level Shopify via the **Web Pixels API**; **Stripe** connector (enum exists, unimplemented); **encrypt tokens at rest** (Vault/pgsodium); Shopify **Protected Customer Data** approval for PII; **abandoned checkouts** (`read_checkouts`); founder-scoped merged `WeeklyData` snapshots; website-scrape **refresh schedule**; multi-store / multi-GA4-property; **email/Slack brief delivery**; cron observability.
 
 ## 10. Conventions & gotchas (read before editing)
-- **ESM `.js` import extensions are mandatory** (NodeNext). Omitting them fails `tsc`.
+- **Relative imports are extensionless** — `tsconfig` uses `moduleResolution: "bundler"` (a Next 16 default), so `import { x } from "./y"` is correct; do NOT add `.js`. (Older log entries that say "`.js` mandatory / NodeNext" are stale — the repo moved to bundler resolution.)
 - **Route handlers are deliberately Next-free** — they use global `Request`/`Response`. Keep new HTTP *logic* in `lib/http/handlers.ts` (testable) and keep `app/api/*` files as 5-line adapters.
 - **Sources must stay defensive** — every connector returns `null`/`[]` on failure and `collectWeeklyData` isolates each in try/catch. A broken/expired source must never break the brief.
 - **Prompt caching** depends on the system prompt staying byte-stable — never interpolate the week/founder/metrics into `SYSTEM_PROMPT`; volatile data goes in the user turn only.
@@ -405,6 +407,7 @@ Deps: runtime `@anthropic-ai/sdk` was **removed**; now `openai ^6`, `zod ^4`, `@
 
 Newest entries at the top. Record meaningful developments here.
 
+- **2026-06-06** — **Brief engine switched back OpenAI → Anthropic Claude — and now runs LIVE (first real generation).** The team's usable LLM credits are on the Anthropic API, so the engine was migrated off OpenAI. Swapped the dependency (`openai` removed, `@anthropic-ai/sdk ^0.101` added). Rewrote the two provider-specific files to the **Messages API**: `lib/brief/generate.ts` and `lib/website/extract.ts` now use `anthropic.messages.create` with **structured outputs** (`output_config.format` json_schema) + the existing Zod `.parse()` backstop; the brief call adds **adaptive thinking** (`thinking:{type:"adaptive"}`) and env-tunable `effort`, plus a `cache_control` breakpoint on the stable system prompt. Renamed `WeeklyBriefDeps.openai → .anthropic` (updated `lib/pipeline/weekly-brief.ts`, `lib/http/deps.ts`, `scripts/generate-brief.ts`). New env: `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` (default `claude-opus-4-8`) / `ANTHROPIC_EFFORT` (default `high`) / `ANTHROPIC_EXTRACT_MODEL`; `.env.example` + `.env` updated (the live key is in `.env`, which is gitignored — **rotate it**, it was pasted in chat). **Verified:** `npm run typecheck` clean, `npm test` **21/21**, and `npm run generate-brief` produced two real, sharp, schema-valid briefs end-to-end — **prompt caching even hit** (week-2 `cache_read_input_tokens` = the week-1 system-prefix write). mubit still unconfigured, so cross-week *compounding* is the one piece left to see live. Also corrected a stale doc gotcha: imports are **extensionless** (tsconfig `moduleResolution: "bundler"`), not NodeNext/`.js`.
 - **2026-06-06** — **Shopify per-product integration COMPLETED — build green, 21 tests.** Finished the upgrade that was paused below. `lib/shopify/ingest.ts` now pulls order **line items** plus `fetchShopifyProducts()` (catalogue + variants + inventory) and `fetchShopInfo()` (name/plan/currency). `lib/metrics/{types,derive}.ts` gained `ProductMetrics` + exported `deriveProductMetrics()` → **per-product revenue/units WoW, top sellers, inventory-vs-sales-velocity ("weeks of stock left"), and dead stock**; rendered in `formatMetricsForPrompt` so the brief can reason per product. Wired through `lib/pipeline/collect.ts` (Shopify branch fetches products + uses shop name/plan to enrich `businessContext` when the founder gave none). Fixtures updated; `tests/products.test.ts` added. `npm run typecheck` clean; `npm test` 19→**21** pass. This supersedes the "paused/red" entry below.
 - **2026-06-06** — **Shopify per-product upgrade STARTED then PAUSED — UNCOMMITTED local WIP (not pushed; `main` stays green).** Began deepening the Shopify connector to per-product/line-item depth. Done so far in `lib/shopify/ingest.ts`: added `ShopifyLineItem` + `lineItems` on `ShopifyOrder` (now pulls `line_items`), and added `ShopifyVariant`/`ShopifyProduct`/`ShopInfo` types. **NOT done:** `fetchShopifyProducts()`/`fetchShopInfo()` functions, `ProductMetrics` in `lib/metrics/{types,derive}.ts`, `collect.ts` wiring, fixtures, `tests/products.test.ts`. **⚠️ With this WIP in the tree, `ShopifyOrder.lineItems` is required and breaks `tests/derive.test.ts` → `npm run typecheck`/`npm test` FAIL.** Resolve by finishing (ROADMAP Phase 3b), `git restore lib/shopify/ingest.ts`, or quick-patching (`lineItems: []` in the test helper / make it optional). Paused at the user's request to fully refresh CLAUDE.md + ROADMAP.md (this entry). **Only the docs were committed; the WIP `ingest.ts` was intentionally left uncommitted.**
 - **2026-06-06** — Added a complete **[§ Engineering Handoff](#-engineering-handoff--full-project-state)** section to this file: full architecture, file-by-file map, data flow, DB schema, env vars, commands, verified-vs-not, what's left, and conventions/gotchas — written so any developer or AI agent can take over cold. Also updated the top header (this file now documents both the landing page and the product engine, not "landing page only").
