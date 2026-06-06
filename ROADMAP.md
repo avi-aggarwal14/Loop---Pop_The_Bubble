@@ -13,7 +13,7 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 - **🟢 Build is green** — `npm run typecheck` clean, `npm test` = 25 (now incl. brief-engine tests). The Shopify per-product upgrade (Phase 3b) is **complete**: line items + catalogue/inventory → per-product revenue, top sellers, inventory-vs-sales-velocity, and dead stock, all flowing into the brief.
 - **✅ The brief engine runs LIVE on Anthropic Claude** (`claude-opus-4-8`) — Phase 1 done.
 - **✅ mubit is WIRED + verified LIVE** — `MUBIT_API_KEY` in `.env`, client aligned to the real Control HTTP API, and `npm run generate-brief` shows real cross-week compounding + outcome reinforcement (Phase 2 done).
-- **Next up: Shopify (Phase 3)** — needs a Partners app + dev store. Then Supabase (Phase 0) to persist. The rest is keys-blocked, ordered by dependency.
+- **Next up: Shopify (Phase 3)** — use the direct token path first as an integration smoke test, then wire real user OAuth/persistence. Do **not** spend time manufacturing a fake realistic store; the demo story should come from real/borrowed user data or the existing seeded narrative.
 
 ---
 
@@ -24,7 +24,7 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 | 1 | ✅ **Anthropic API key** (DONE — in `.env`) | console.anthropic.com → API keys (`sk-ant-…`) | `ANTHROPIC_API_KEY` |
 | 2 | **mubit** key + API details | console.mubit.ai → API keys; copy their quickstart `curl` snippet for me | `MUBIT_API_KEY`, `MUBIT_BASE_URL`, `MUBIT_AUTH_SCHEME` |
 | 3 | **Supabase** project | supabase.com → new project → Settings → API | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` |
-| 4 | **Shopify** app + dev store | Shopify Partners → create app + a development store | `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET` |
+| 4 | **Shopify** app + store access | Shopify Partners / merchant store → app credentials or direct Admin token | `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`; optional smoke vars `SHOPIFY_SHOP_DOMAIN`, `SHOPIFY_ACCESS_TOKEN` |
 | 5 | **Google Cloud** OAuth client (GA4) | console.cloud.google.com → APIs & Services → Credentials | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
 | 6 | **Vercel** project (optional, for Vercel Analytics) | vercel.com — needs a **Pro** plan for Drains | *(no global key; per-connection `drain_secret`)* |
 | 7 | **App URL** | your deployed/ngrok URL (localhost for dev) | `APP_URL` |
@@ -68,7 +68,8 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 
 ## Phase 3 — Shopify live data (sales)  ·  ~45 min
 - [x] **[ME]** Added a direct live smoke harness: `npm run shopify:brief` uses `SHOPIFY_SHOP_DOMAIN` + `SHOPIFY_ACCESS_TOKEN` to pull Shopify orders, line items, products/inventory, and best-effort ShopifyQL traffic, then generates a Claude brief and writes the brief memory to mubit. This lets us prove Shopify → AI/mubit before the full Supabase/OAuth dashboard path is complete.
-- [ ] **[YOU]** Shopify Partners: create an app; redirect URL `<APP_URL>/api/auth/shopify/callback`; scopes `read_orders,read_customers,read_products,read_reports`; create a **development store** and add sample products/orders.
+- [ ] **[YOU/ME]** Use the direct token path first to test connector plumbing against any available Shopify store. A dev store is acceptable only as a minimal API/scope smoke test, not as the demo story.
+- [ ] **[YOU]** Shopify Partners / merchant app setup: create an app; redirect URL `<APP_URL>/api/auth/shopify/callback`; scopes `read_orders,read_customers,read_products,read_reports`. Prefer a real/borrowed merchant store for meaningful demo data.
 - [ ] **[ME]** Run OAuth (`/api/auth/shopify` → Shopify → `/callback`) → a `connections` row is written.
 - [ ] **[ME]** Run the pipeline → `metric_snapshots` + a brief from live Shopify orders.
 - [ ] **[ME]** Sanity-check `lib/metrics/derive.ts` numbers against the store admin.
@@ -90,6 +91,7 @@ Product-level intelligence so the "one move" can be product-specific.
 ---
 
 ## Phase 4 — Website scraper (business context)  ·  ~10 min  *(needs only the Anthropic key)*
+- [x] **[ME]** Added sidecar command `npm run website:brief` (`WEBSITE_URL`, optional `WEBSITE_FOUNDER_ID`): crawls same-host public pages, extracts a `BusinessProfile`, generates a Claude Growth Brief from public content, and writes the lesson to mubit. This is **not analytics** and does not replace Shopify/GA4/Vercel; use it for onboarding/business-context enrichment or a fallback "understands your business" demo.
 - [ ] **[YOU]** Nothing but the founder's URL.
 - [ ] **[ME]** Run `fetchSite()` → `extractBusinessProfile()` on a real site; store via `setFounderProfile`; eyeball the profile.
 
@@ -170,7 +172,7 @@ npm run typecheck      # full type check — green
 Anthropic key (✅) ─► Phase 1 (engine, DONE) + Phase 4 (website scraper)
 mubit details ──────► Phase 2 (memory)            ┐
 Supabase project ───► Phases 0/3/5/6/7 (persist)  ├─► Phase 8 (deploy) ─► Phase 9 (demo)
-Shopify dev store ──► Phase 3 / 3b / 3c           │
+Shopify store access ─► Phase 3 / 3b / 3c         │
 Google Cloud OAuth ─► Phase 5 (GA4)               │
 Vercel Pro (opt) ───► Phase 6 (Vercel)            │
 Next.js app (team) ─► Phase 7 (UI) ───────────────┘
