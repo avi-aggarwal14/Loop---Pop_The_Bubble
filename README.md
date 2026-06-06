@@ -59,9 +59,13 @@ For a fast demo video without waiting on a real Shopify store, use:
 ```text
 /demo/shopify
 /api/demo/shopify-pull
+/api/demo/shopify-growth-plan
 demo/shopify-demo-video-brief.md
 ```
 
 `/demo/shopify` is the polished screen-recording page. The API endpoint returns
-synthetic Shopify-like orders, products, inventory, traffic/channel summaries,
-and a ready Growth Brief story. It is fictional demo data, not merchant data.
+synthetic Shopify-like orders, products, inventory, traffic/channel summaries.
+`/api/demo/shopify-growth-plan` runs that synthetic data through the real Claude
+brief engine when `ANTHROPIC_API_KEY` is configured, falling back to the canned
+demo brief if the model is unavailable. It is fictional demo data, not merchant
+data.

@@ -93,6 +93,84 @@ spike has nothing to sell.
 ```text
 https://synapse-acceleration.vercel.app/demo/shopify
 https://synapse-acceleration.vercel.app/api/demo/shopify-pull
+https://synapse-acceleration.vercel.app/api/demo/shopify-growth-plan
 http://localhost:3000/demo/shopify
 http://localhost:3000/api/demo/shopify-pull
+http://localhost:3000/api/demo/shopify-growth-plan
 ```
+
+## Silent Demo Edit
+
+No talking. Use captions, cursor movement, zooms, and music.
+
+Scene 1:
+
+```text
+Your analytics, turned into one decision.
+```
+
+Show the Synapse landing page.
+
+Scene 2:
+
+```text
+Connect Shopify.
+```
+
+Show `/connect`, hover the Shopify card, then cut.
+
+Scene 3:
+
+```text
+Synapse pulls orders, products, inventory, conversion, and channel mix.
+```
+
+Show `/demo/shopify`, top metrics.
+
+Scene 4:
+
+```text
+Revenue up 39%. Orders up 37%. Conversion up from 2.05% to 2.47%.
+```
+
+Zoom into the four top metric cards.
+
+Scene 5:
+
+```text
+The cause: TikTok jumped from 12% to 31% of new customers.
+```
+
+Zoom into channel revenue.
+
+Scene 6:
+
+```text
+The risk: GlowPatch has only 0.5 weeks of stock left.
+```
+
+Zoom into product risks.
+
+Scene 7:
+
+```text
+The cut: Meta spent GBP 520 and returned GBP 440.
+```
+
+Zoom into Meta ads / what to cut.
+
+Scene 8:
+
+```text
+One move: Reorder GlowPatch and move Meta spend into TikTok creator seeding.
+```
+
+Zoom into the one-move card.
+
+Scene 9:
+
+```text
+Synapse remembers the action and makes next week's advice sharper.
+```
+
+Cut to `/brief`.
