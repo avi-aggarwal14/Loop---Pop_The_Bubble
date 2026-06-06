@@ -25,6 +25,7 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 - [ ] **[YOU]** In Shopify Partners, create a **public app** if we want broad external merchant installs/app review, or a **custom-distribution app** only if testing with selected stores. Do not build around an admin-created custom app token for production.
 - [x] **[ME]** Replaced production `founder_id` query dependency with Supabase Auth session lookup in connector start routes. The query param now works only as a local/dev fallback when `ALLOW_QUERY_FOUNDER_ID=true` or non-production env.
 - [x] **[ME]** Added Shopify app lifecycle handling: `POST /api/webhooks/shopify/app-uninstalled` verifies Shopify HMAC and marks matching `shopify` connections `revoked`, clearing stored tokens.
+- [x] **[ME]** Added mandatory Shopify compliance webhook endpoints for app review: `customers/data_request`, `customers/redact`, and `shop/redact` (HMAC verified; `shop/redact` revokes/clears store tokens).
 - [ ] **[ME]** Token encryption/Vault before production.
 
 This is the current working plan for the next push. Keep the focus on real first-party analytics connections; public website scraping is only context enrichment.
