@@ -102,8 +102,8 @@ Synapse reads the product-level Shopify pull.
 Show `/ad/3`. The top ~20% of the screen is a full-width headline section; the
 rest is stats and charts. Pause on the KPI row, then slowly zoom toward the
 prediction card. Click **Revenue by source** to open the source drilldown popup,
-then close it. Click **Conversion path** to open the funnel drilldown popup, then
-close it. Hover over the prediction card so it blurs and reveals "View full
+then close it. Click the thin **Conversion path** pill to open the funnel
+drilldown popup, then close it. Hover over the prediction card so it blurs and reveals "View full
 prediction", then click it. The slide already has autonomous movement: chart
 bars draw in, the velocity line animates, a small signal packet travels along
 the graph, and a scan sheen passes through the chart panel.
