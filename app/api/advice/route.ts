@@ -34,15 +34,29 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ ok: true, live: false, advice: SAMPLE_ADVICE });
   }
 
-  // The connected store from the signed session cookie (set by the OAuth callback).
-  const shopifyConn = readConnections(parseCookieHeader(req.headers.get("cookie"))[CONNECT_COOKIE]).shopify;
+  // The connected sources from the signed session cookie (set by the OAuth callbacks).
+  const conns = readConnections(parseCookieHeader(req.headers.get("cookie"))[CONNECT_COOKIE]);
+  const shopifyConn = conns.shopify;
+  const ga4Conn = conns.ga4;
+  const founderId = shopifyConn?.founderId ?? ga4Conn?.founderId;
+  const hasConnection = Boolean(shopifyConn || ga4Conn);
 
   // Real data + real memory when connected/configured (and not demo); example fallback per-slot.
+  // Shopify gives commerce, GA4 gives traffic — liveStoreDataBlock merges whatever's connected.
   const [liveData, liveMemories] = demo
     ? [null, null]
     : await Promise.all([
-        liveStoreDataBlock(shopifyConn ? { shop: shopifyConn.shop, accessToken: shopifyConn.accessToken } : undefined).catch(() => null),
-        recallForStore(question, shopifyConn?.founderId).catch(() => null),
+        liveStoreDataBlock(
+          hasConnection
+            ? {
+                shopify: shopifyConn ? { shop: shopifyConn.shop, accessToken: shopifyConn.accessToken } : undefined,
+                ga4: ga4Conn
+                  ? { accessToken: ga4Conn.accessToken, refreshToken: ga4Conn.refreshToken, propertyId: ga4Conn.propertyId }
+                  : undefined,
+              }
+            : undefined,
+        ).catch(() => null),
+        recallForStore(question, founderId).catch(() => null),
       ]);
   const dataBlock = liveData ?? EXAMPLE_DATA_BLOCK;
   const recalledMemories = liveMemories && liveMemories.length ? liveMemories : EXAMPLE_MEMORIES;

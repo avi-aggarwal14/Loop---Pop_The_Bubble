@@ -327,10 +327,19 @@ export default function FounderDashboard() {
     : connectedCount > 0
     ? "ready"
     : "empty";
-  // Real mode: a store is actually connected via the signed session cookie.
-  const realConnected = !demo && Boolean(realStatus?.shopify.connected);
+  // Real mode: at least one source is connected via the signed session cookie.
+  const realConnected = !demo && Boolean(realStatus?.shopify.connected || realStatus?.ga4.connected);
   // The Ask is live in the demo (example store) OR once a real store is connected.
   const askEnabled = demo || realConnected;
+  // Human label for what's connected — drives the "reading your ___" copy.
+  const connectedSourceLabel = (() => {
+    const s = realStatus?.shopify.connected;
+    const g = realStatus?.ga4.connected;
+    if (s && g) return "Shopify sales and Google Analytics traffic";
+    if (s) return "real Shopify data";
+    if (g) return "Google Analytics traffic";
+    return "connected data";
+  })();
   const weeksDone = Math.round((progress / 100) * HISTORY_WEEKS);
 
   const loadBrief = useCallback(async () => {
@@ -417,7 +426,7 @@ export default function FounderDashboard() {
       : phase === "syncing"
       ? { h: "Building your store's memory…", p: `Reading ${HISTORY_WEEKS} weeks of history so your first brief already knows your past.` }
       : realConnected
-      ? { h: "You're connected.", p: "Synapse is reading your store. Ask it about any decision below — it answers from your real data and everything it remembers." }
+      ? { h: "You're connected.", p: `Synapse is reading your ${connectedSourceLabel}. Ask it about any decision below — it answers from your real data and everything it remembers.` }
       : { h: "Welcome to Synapse.", p: "Connect your store below and Synapse reads your whole history, then writes a weekly Growth Brief that ends in one clear move — informed by your past, not a blank slate." };
 
   return (
@@ -487,7 +496,7 @@ export default function FounderDashboard() {
               <Eyebrow>Your store is connected</Eyebrow>
               <div style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginTop: 4 }}>Ask Synapse anything about your next move.</div>
               <p style={{ margin: "10px auto 0", maxWidth: 480, fontFamily: F.sans, fontSize: 14.5, color: C.muted, lineHeight: 1.55 }}>
-                Synapse is reading your real Shopify data. Put a decision to it below — pricing, restock, ad spend — and it answers from your numbers and everything it remembers.
+                Synapse is reading your {connectedSourceLabel}. Put a decision to it below — pricing, restock, ad spend — and it answers from your numbers and everything it remembers.
               </p>
             </div>
           )}

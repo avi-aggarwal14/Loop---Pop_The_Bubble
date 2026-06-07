@@ -1,47 +1,119 @@
 import { fetchShopInfo, fetchShopifyProducts, fetchShopifyWeek } from "../shopify/ingest";
 import { deriveMetrics } from "../metrics/derive";
-import { formatWeeklyDataForPrompt, type WeeklyData } from "../metrics/types";
-import { previousFullWeek, priorWeek } from "../util/dates";
+import { fetchGa4Traffic } from "../ga4/ingest";
+import { googleConfigFromEnv, refreshGoogleToken } from "../ga4/oauth";
+import { formatWeeklyDataForPrompt, type DerivedMetrics, type TrafficMetrics, type WeeklyData } from "../metrics/types";
+import { previousFullWeek, priorWeek, type WeekRange } from "../util/dates";
 
 /**
- * Pull the configured store's CURRENT data and format it into the block the Ask
- * reasons over — the real counterpart to EXAMPLE_DATA_BLOCK. Returns null if no
- * store token is configured (route falls back to the example).
+ * Build the live data block the Ask reasons over — the real counterpart to
+ * EXAMPLE_DATA_BLOCK. Pulls whatever the founder has connected and MERGES it:
+ *   - Shopify  → commerce (revenue, orders, products, channel mix)
+ *   - GA4      → traffic  (sessions, sources, conversion, top pages)
+ * Together they let the answer combine "what sold" with "who visited and why",
+ * which is the whole point. Returns null only if neither source yields data
+ * (route then falls back to the example).
  *
- * Configure with SHOPIFY_SHOP_DOMAIN + SHOPIFY_ACCESS_TOKEN (a custom-app Admin
- * token — no OAuth/Supabase needed). Pulls the most recent completed week + the
- * prior week + the catalogue, derives the same metrics the brief engine uses.
+ * Each source runs in its own try/catch, so one failing never blocks the other.
  */
-export async function liveStoreDataBlock(creds?: { shop: string; accessToken: string }): Promise<string | null> {
-  const shop = creds?.shop ?? process.env.SHOPIFY_SHOP_DOMAIN;
-  const accessToken = creds?.accessToken ?? process.env.SHOPIFY_ACCESS_TOKEN;
-  if (!shop || !accessToken) return null;
+export interface LiveCreds {
+  shopify?: { shop: string; accessToken: string };
+  ga4?: { accessToken: string; refreshToken?: string; propertyId?: string | null };
+}
 
-  try {
-    const thisWeek = previousFullWeek();
-    const lastWeek = priorWeek(thisWeek);
+export async function liveStoreDataBlock(creds?: LiveCreds): Promise<string | null> {
+  // Shopify creds: session cookie first, then env (custom-app token smoke test).
+  const shop = creds?.shopify?.shop ?? process.env.SHOPIFY_SHOP_DOMAIN;
+  const accessToken = creds?.shopify?.accessToken ?? process.env.SHOPIFY_ACCESS_TOKEN;
+  const shopifyCreds = shop && accessToken ? { shop, accessToken } : null;
+  const ga4 = creds?.ga4?.accessToken && creds.ga4.propertyId ? creds.ga4 : null;
 
-    const [shopInfo, current, previous, products] = await Promise.all([
-      fetchShopInfo({ shop, accessToken }),
-      fetchShopifyWeek({ shop, accessToken, windowStart: thisWeek.start, windowEnd: thisWeek.end }),
-      fetchShopifyWeek({ shop, accessToken, windowStart: lastWeek.start, windowEnd: lastWeek.end }),
-      fetchShopifyProducts({ shop, accessToken }).catch(() => undefined),
-    ]);
+  if (!shopifyCreds && !ga4) return null;
 
-    const businessContext = shopInfo
-      ? `${shopInfo.name} (Shopify${shopInfo.planName ? `, ${shopInfo.planName} plan` : ""})`
-      : `Shopify store ${shop}`;
+  const thisWeek = previousFullWeek();
+  const lastWeek = priorWeek(thisWeek);
 
-    const commerce = deriveMetrics({ current, previous, businessContext, label: thisWeek.label, products });
+  // Pull both sources in parallel; each is defensive and degrades to null.
+  const [commerce, traffic] = await Promise.all([
+    shopifyCreds ? pullShopifyCommerce(shopifyCreds, thisWeek, lastWeek).catch(() => null) : Promise.resolve(null),
+    ga4 ? pullGa4Traffic(ga4, thisWeek).catch(() => null) : Promise.resolve(null),
+  ]);
 
-    const data: WeeklyData = {
-      windowLabel: thisWeek.label,
-      businessContext,
-      commerce,
-      sources: ["shopify"],
-    };
-    return formatWeeklyDataForPrompt(data);
-  } catch {
-    return null;
+  if (!commerce && !traffic) return null;
+
+  const sources: string[] = [];
+  if (commerce) sources.push("shopify");
+  if (traffic) sources.push("ga4");
+
+  const businessContext =
+    commerce?.businessContext ??
+    (shopifyCreds ? `Shopify store ${shopifyCreds.shop}` : "Store connected via Google Analytics");
+
+  const data: WeeklyData = {
+    windowLabel: thisWeek.label,
+    businessContext,
+    commerce: commerce ?? undefined,
+    traffic: traffic ? [traffic] : undefined,
+    sources,
+  };
+  return formatWeeklyDataForPrompt(data);
+}
+
+/** Shopify orders + catalogue → DerivedMetrics for the current week (WoW vs prior). */
+async function pullShopifyCommerce(
+  creds: { shop: string; accessToken: string },
+  thisWeek: WeekRange,
+  lastWeek: WeekRange,
+): Promise<DerivedMetrics> {
+  const { shop, accessToken } = creds;
+  const [shopInfo, current, previous, products] = await Promise.all([
+    fetchShopInfo({ shop, accessToken }).catch(() => undefined),
+    fetchShopifyWeek({ shop, accessToken, windowStart: thisWeek.start, windowEnd: thisWeek.end }),
+    fetchShopifyWeek({ shop, accessToken, windowStart: lastWeek.start, windowEnd: lastWeek.end }),
+    fetchShopifyProducts({ shop, accessToken }).catch(() => undefined),
+  ]);
+
+  const businessContext = shopInfo
+    ? `${shopInfo.name} (Shopify${shopInfo.planName ? `, ${shopInfo.planName} plan` : ""})`
+    : `Shopify store ${shop}`;
+
+  return deriveMetrics({ current, previous, businessContext, label: thisWeek.label, products });
+}
+
+/**
+ * GA4 traffic for the current week. GA access tokens expire after ~1 hour, so if
+ * the first pull comes back empty and we have a refresh token, refresh once and
+ * retry — keeps a connection made earlier in the day working at demo time.
+ */
+async function pullGa4Traffic(
+  ga4: { accessToken: string; refreshToken?: string; propertyId?: string | null },
+  thisWeek: WeekRange,
+): Promise<TrafficMetrics | null> {
+  const propertyId = ga4.propertyId;
+  if (!propertyId) return null;
+
+  let traffic = await fetchGa4Traffic({
+    accessToken: ga4.accessToken,
+    propertyId,
+    windowStart: thisWeek.start,
+    windowEnd: thisWeek.end,
+  });
+
+  if (!traffic && ga4.refreshToken) {
+    const config = googleConfigFromEnv();
+    if (config) {
+      try {
+        const refreshed = await refreshGoogleToken({ config, refreshToken: ga4.refreshToken });
+        traffic = await fetchGa4Traffic({
+          accessToken: refreshed.accessToken,
+          propertyId,
+          windowStart: thisWeek.start,
+          windowEnd: thisWeek.end,
+        });
+      } catch {
+        // refresh failed — leave traffic null, the block still has Shopify.
+      }
+    }
   }
+  return traffic;
 }
