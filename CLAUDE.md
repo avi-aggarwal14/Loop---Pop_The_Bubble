@@ -195,25 +195,24 @@ A sharp hero beats a complete but mediocre full page every time.
 
 # 🛠 Engineering Handoff — Full Project State
 
-> **Audience:** any developer or AI agent taking over. This section is self-contained: read it and you understand the entire product engine — what it does, how it's built, what's verified, what's left, and every convention/gotcha. Last updated 2026-06-06.
+> **Audience:** any developer or AI agent taking over. This section is self-contained: read it and you understand the entire product engine — what it does, how it's built, what's verified, what's left, and every convention/gotcha. Last updated 2026-06-07.
 
 > ### 🟢 CURRENT STATE — GREEN
-> Build is healthy: `npm run typecheck` clean, `npm run build` clean, `npm test` = **28/28**. **The brief engine now runs LIVE on Anthropic Claude** (`claude-opus-4-8`) — `npm run generate-brief` produces real, schema-valid Growth Briefs, and prompt caching hits across calls. The Shopify **per-product** integration is complete — orders now include **line items**, and `fetchShopifyProducts()` pulls the catalogue + inventory, so `deriveProductMetrics()` produces **per-product revenue/units (WoW), top sellers, inventory-vs-sales-velocity ("weeks of stock left"), and dead stock**. `fetchShopInfo()` enriches business context. **A demo dashboard at `/brief` runs a guided 2-week compounding flow** (week 1 → mark the move done → week 2 visibly references it) and generates each brief live with Claude (`/api/brief/demo`). **mubit is wired + VERIFIED LIVE** — real cross-week compounding via `npm run generate-brief` (+ an `outcome` reinforcement loop). **The current recording-ready ad flow is `/ad/1` → `/ad/6`, a fixed-viewport Red Bull Coconut & Berry story using synthetic Shopify data and mubit-style memory.** Still not run live: Supabase + real source connectors with user accounts (Shopify/GA4/Vercel — keys/projects pending; see §8/§9 + ROADMAP.md).
+> Build is healthy: `npm run typecheck` clean, `npm run build` clean, `npm test` = **32/32**. **The brief engine now runs LIVE on Anthropic Claude** (`claude-opus-4-8`) — `npm run generate-brief` produces real, schema-valid Growth Briefs, and prompt caching hits across calls. The Shopify **per-product** integration is complete — orders now include **line items**, and `fetchShopifyProducts()` pulls the catalogue + inventory, so `deriveProductMetrics()` produces **per-product revenue/units (WoW), top sellers, inventory-vs-sales-velocity ("weeks of stock left"), and dead stock**. `fetchShopInfo()` enriches business context. **A demo dashboard at `/brief` runs a guided 2-week compounding flow** (week 1 → mark the move done → week 2 visibly references it) and generates each brief live with Claude (`/api/brief/demo`). **mubit is wired + VERIFIED LIVE** — real cross-week compounding via `npm run generate-brief` (+ an `outcome` reinforcement loop). **The current recording-ready ad flow is `/ad/1` → `/ad/6`, a fixed-viewport Red Bull Coconut & Berry story using synthetic Shopify data and mubit-style memory.** **A real founder dashboard now exists at `/dashboard`** (blank/onboarding by default; `?demo=1` for the simulated walk-through) with the **Ask Synapse** decision advisor (`/api/advice` + `/api/advice/followup`) running over **session-based connect** (a signed httpOnly cookie — no Supabase needed). **Shopify OAuth is now LIVE in production** (`synapse-acceleration.vercel.app` → real store `synapse-demo-store` completed the install, `shopify.configurable:true`) and **GA4 connect is configured** (`ga4.configurable:true`). Still not run live: Supabase persistence + the weekly cron; connection tokens currently live in the session cookie, not the DB (so no encryption-at-rest yet). See §8/§9 + the Project Log.
 
 ## 1. TL;DR
 Synapse is an **AI growth partner for founders**. A founder connects their data sources; once a week Synapse ingests everything, asks an LLM to write a **Growth Brief** (headline numbers → what's working → what to cut → **exactly one prioritised move**), stores it, and **remembers** the brief + whether the founder acted on it so next week's advice **compounds**.
 
-**The backend engine is code-complete, typechecked, and unit-tested (28 tests, incl. the brief engine via a mocked client). The brief engine has now run live on Anthropic Claude** (real briefs generate via `npm run generate-brief`), and mubit compounding is verified live. Remaining live connector work is blocked on account/access setup: Supabase project/migrations, Shopify store access/app credentials, Google Cloud OAuth, and optionally Vercel Pro drains. A **demo UI exists at `/brief`**; the real authenticated dashboard/connect UI is still to build. The engine is written **framework-agnostic in `lib/`** plus thin **`app/api/*` route handlers**, so it drops into the Next.js app without collisions.
+**The backend engine is code-complete, typechecked, and unit-tested (32 tests, incl. the brief engine via a mocked client). The brief engine runs live on Anthropic Claude** (real briefs generate via `npm run generate-brief`), and mubit compounding is verified live. **A real founder dashboard now ships at `/dashboard`** (blank/onboarding by default, `?demo=1` walk-through) with the **Ask Synapse** decision advisor (`/api/advice` + a follow-up thread `/api/advice/followup`) and a **weekly Growth Brief from the connected store** (`/api/brief`) — all running over **session-based connect** (a signed httpOnly cookie, `lib/connect/session.ts`, no Supabase needed). **Shopify OAuth is LIVE in production** and **GA4 connect is configured**; on connect, `backfillStoreHistory()` distills the store's recent Shopify weeks into mubit so recall is real from the first question. Remaining live work is blocked on account/access setup: Supabase persistence/Auth (connection tokens live in the session cookie, not the DB — so no encryption-at-rest yet), the weekly cron, and optionally Vercel Pro drains. The engine is written **framework-agnostic in `lib/`** plus thin **`app/api/*` route handlers**, so it drops into the Next.js app without collisions.
 
 ## 1a. Current demo/video state
-The current no-talking demo video flow is the six-screen Red Bull Coconut & Berry ad story at `/ad/1` through `/ad/6`, documented in `demo/shopify-demo-video-brief.md`.
+The current no-talking demo video flow is the Red Bull Coconut & Berry ad story — **five recordable screens: `/ad/1` → `/ad/2` → `/ad/3` → `/ad/4` → `/ad/6`** (the old memory-timeline `/ad/5` was removed and now `redirect()`s to `/ad/6`). Documented in `demo/shopify-demo-video-brief.md`, with narration in `demo/synapse-demo-voiceover-script.md`.
 
 - `/ad/1` — founder validates a risky plan to decrease Red Bull Coconut & Berry sales; Synapse says not to.
-- `/ad/2` — clean product hero with the Coconut & Berry can.
+- `/ad/2` — clean product hero with the Coconut & Berry can; **clicking the can zooms it up through a white veil** (`ExpandingCan.tsx`) and routes to `/ad/3`.
 - `/ad/3` — synthetic Shopify product-level pull: KPIs, unit velocity, source revenue, a compact Conversion path pill that opens the full modal, and the hoverable prediction card.
 - `/ad/4` — full stockout prediction backed by current Shopify-style stats and past memory.
-- `/ad/5` — four-step memory timeline: velocity, source, funnel, inventory.
-- `/ad/6` — final verdict: increase the breakout product, reduce other drinks that look good recently but mubit memory predicts will fall off.
+- `/ad/6` — final verdict: increase the breakout product (and the full edition lineup), reduce other drinks that look good recently but mubit memory predicts will fall off.
 
 Assets for this flow are in `public/demo-assets/`: `red-bull-coconut-berry.webp`, `red-bull-memory-alt.avif`, `red-bull-summer-edition.jpg`, and `red-bull-lineup.jpg`. The data is synthetic and must not be described as real Red Bull or real merchant data.
 
@@ -225,7 +224,7 @@ Connect ─► Ingest ─► Collect/Merge ─► Recall ─► Generate ─► 
  paste/     (defensive) traffic +                 Growth      pending    one move     via mubit
  drain                  profile)                  Brief       action     done/skipped
 ```
-Entry points: the **weekly cron** (`/api/cron/generate-briefs`) runs the loop for every founder; the **action route** (`/api/briefs/[id]/action`) records the founder's response and writes it to mubit.
+Entry points: the **weekly cron** (`/api/cron/generate-briefs`) runs the loop for every founder; the **action route** (`/api/briefs/[id]/action`) records the founder's response and writes it to mubit. There are now also **on-demand entry points** that run the same collect→recall→generate pieces against the session-connected store without Supabase: **`/api/brief`** (this week's Growth Brief from the live store, the weekly PUSH made interactive), **`/api/advice`** + **`/api/advice/followup`** (the two-way *Ask Synapse* advisor — the on-demand PULL), and **`/api/connect/backfill`** (loads the store's recent history into mubit on connect, so the very first recall is real).
 
 ## 3. Tech stack & the key decisions (with rationale)
 - **Next.js 14 (App Router) + Supabase (Postgres/Auth/RLS) + TypeScript**, deployed on **Vercel**. One TS codebase shared with the landing page.
@@ -234,6 +233,8 @@ Entry points: the **weekly cron** (`/api/cron/generate-briefs`) runs the loop fo
   - **Synapse's design (the +10-points loop):** keep **one agent per founder** (`synapse-founder-<id>`) for hard tenant isolation — even mubit's run→session→**global** lesson promotion then stays inside that founder's agent, so no cross-founder leakage — and also pass `user_id = founderId`. Per week: (1) **recall** lessons/facts for the founder → feed Claude; (2) after generating, **ingest** the one move as a `lesson` (stable `item_id` = `move-<founderId>-<weekOf>`, `lesson_scope` user/session — NOT global); (3) on the founder's Done/Skipped + note, record an **`outcome`** on that move's id (success/failure + signal + rationale) so mubit *strengthens advice that worked and weakens what didn't*; next week's recall compounds. `run_id = brief-<founderId>-<weekOf>`.
   - The client is **defensive**: any mubit failure logs and returns empty/false — it never blocks a brief. **✅ `lib/mubit/client.ts` is aligned to this API and VERIFIED LIVE (2026-06-06):** `npm run generate-brief` shows week 2 recalling week 1 via real mubit (the +10-points compounding), and the Done/Skipped capture loop records an `outcome` to reinforce the lesson. Client methods: `remember()` (ingest), `recall()`/`queryRaw()` (query), `recordOutcome()`; helpers `founderAgentId()` + `founderRunId()`.
 - **Data sources (4):** Shopify (orders via Admin REST + sessions/conversion via ShopifyQL), Google Analytics GA4 (Data API), Vercel Web Analytics (**push** via Drains — it has *no* pull API), and a **website scraper** (fetch + LLM extract → business profile). `stripe` exists in the provider enum but is **not implemented**.
+- **"Ask Synapse" — the two-way decision advisor** (`lib/advise/*`, the `/ad/1`+`/ad/6` moment made real). The founder asks about a decision in plain English and gets a structured `Advice` verdict (`schema.ts`: `headline`, `stance` do/dont/caution, `summary`, `signals[]`, `memory_used[]`, `recommended_move`) — same Anthropic setup as the brief engine (json_schema + Zod backstop, cached system prefix, adaptive thinking). It reasons over the **live store data** (`store-data.ts` → `liveWeeklyData`/`liveStoreDataBlock`, merging Shopify commerce + GA4 traffic) plus **real mubit recall** (`recall.ts` → `recallForStore`), and the Coconut & Berry **example** (`example.ts`) is a per-slot fallback so it always answers. A **follow-up thread** (`followUpAdvice`) lets the founder interrogate the verdict; Synapse defends it conversationally against the SAME data + memory. Every Ask is written back to mubit (`rememberAsk`) so advice compounds.
+- **Session-based connect (no Supabase).** The Shopify/GA4 OAuth callbacks store the connected store's token in a **signed httpOnly cookie** `syn_connect` (`lib/connect/session.ts`, HMAC'd with `SESSION_SECRET || SHOPIFY_API_SECRET`); `/api/connect/status` reports per-provider `{connected, shop, configurable}`, and `/api/connect/metrics` returns the store's live KPIs. This lets a founder connect and see real data **before** Supabase/Auth exist. When Supabase lands, the same callbacks persist there instead — the flow is unchanged. (Production OAuth start routes can also resolve `founder_id` from a Supabase session via `lib/supabase/auth.ts`; the cookie path is what's live today.)
 - **The brief OUTPUT schema is fixed** (`GrowthBriefSchema`). Adding data sources only enriches the **input** (`WeeklyData`) — the generator and brief shape don't change.
 - **Framework isolation:** all logic lives in `lib/` (pure, testable). The `app/api/*` route files are thin adapters using **web-standard `Request`/`Response` with NO `next` import**, so they neither need Next installed to typecheck nor collide with the teammate's `create-next-app` scaffold.
 
@@ -253,6 +254,33 @@ lib/
                      as a backstop. Adaptive thinking; cache_control on the system prompt.
                      Model = ANTHROPIC_MODEL ?? "claude-opus-4-8"; effort = ANTHROPIC_EFFORT
                      ?? "high" (sent only if != "none").
+    sample.ts        SAMPLE_BRIEF (GrowthBrief) — the CLAUDE.md mock; dependency-free
+                     (type-only import) so it's safe in the client + as the demo fallback.
+  advise/            "Ask Synapse" — the on-demand decision advisor (the /ad/1+/ad/6 moment, real).
+    schema.ts        AdviceSchema (Zod): headline, stance (do|dont|caution), summary,
+                     signals[]{label,detail}, memory_used[], recommended_move. The verdict shape.
+    prompt.ts        ADVISE_SYSTEM_PROMPT + FOLLOWUP_SYSTEM_PROMPT — stable/cache-friendly
+                     (NEVER interpolate per-request data; question/data/memory go in the user turn).
+    generate.ts      askAdvice({question, recalledMemories, dataBlock}, client?) → {advice, usage}
+                     (json_schema + Zod backstop, cached prefix, adaptive thinking). followUpAdvice
+                     ({dataBlock, recalledMemories, messages[]}) → plain text — defends the verdict
+                     conversationally on the SAME data + memory (injected into the first user turn).
+    store-data.ts    liveWeeklyData(creds) / liveStoreDataBlock(creds) — the REAL data block: pulls
+                     Shopify commerce + GA4 traffic (each defensive) and MERGES into WeeklyData; GA4
+                     access token auto-refreshes once if the first pull is empty. null if nothing yields.
+    recall.ts        recallForStore(question, founderId?) → real mubit recall (lessons/facts/
+                     observations) or null; rememberAsk() writes each Ask+verdict back (compounding);
+                     rememberBrief() writes a generated brief back. All defensive — never block.
+    backfill.ts      backfillStoreHistory({shop, accessToken, founderId, weeks}) — distils N recent
+                     completed Shopify weeks into ONE durable mubit `observation` each (item_id
+                     wk-<founderId>-<date>), so recall returns real patterns. The "no cold start" piece.
+    example.ts       Coconut & Berry stand-in: EXAMPLE_QUESTION / EXAMPLE_MEMORIES /
+                     EXAMPLE_DATA_BLOCK / SAMPLE_ADVICE — the per-slot fallbacks (= the demo verdict).
+  connect/
+    session.ts       Session-based connections, NO DB. signConnections()/readConnections() over a
+                     signed (HMAC, SESSION_SECRET||SHOPIFY_API_SECRET) httpOnly cookie syn_connect
+                     holding {shopify?, ga4?} tokens; cookie/nonce helpers. The OAuth callbacks write
+                     here; the Ask/metrics read it back.
   metrics/
     types.ts         DerivedMetrics (commerce) + formatMetricsForPrompt; TrafficMetrics,
                      TrafficSourceShare, TopPage; WeeklyData (commerce + traffic[] +
@@ -271,7 +299,9 @@ lib/
                      newOAuthState, buildAuthorizeUrl, verifyCallbackHmac (constant-time),
                      exchangeCodeForToken.
     ingest.ts        fetchShopifyWeek() → ShopifyWeekRaw (orders + line items, paginated;
-                     productCount). fetchShopifyProducts() → catalogue + variants + inventory.
+                     productCount). Windows orders by **processed_at** (what Shopify Analytics
+                     dates by + the field back-dated/imported orders carry), falling back to
+                     created_at. fetchShopifyProducts() → catalogue + variants + inventory.
                      fetchShopInfo() → name/plan/currency. customerOrdersCount===1 ⇒ new customer.
     analytics.ts     fetchShopifyTraffic() → TrafficMetrics | null. ShopifyQL (GraphQL Admin
                      shopifyqlQuery) for sessions + conversion. BEST-EFFORT: returns null on any
@@ -318,6 +348,13 @@ lib/
   supabase/
     server.ts        createServiceClient() (service role — bypasses RLS, for cron/ingest);
                      createUserClient(accessToken) (RLS-bound to a founder's token).
+    auth.ts          getAuthenticatedFounderId() (Supabase server session via @supabase/ssr →
+                     upserts the founder); resolveFounderIdForOAuth(url) (session first, then the
+                     ?founder_id= query fallback when ALLOW_QUERY_FOUNDER_ID/non-prod).
+  demo/
+    shopify-synthetic.ts  Fictional "Luma & Lane" Shopify pull + a 30-signal analytics_catalog
+                     + a ready Growth Brief — powers /demo/shopify and the synthetic demo APIs.
+                     SYNTHETIC: never represent as real merchant data.
   pipeline/
     collect.ts       collectWeeklyData(deps, founder, connections, thisWeek, lastWeek) → WeeklyData.
                      Runs EVERY connected source in its own try/catch (one failing never blocks
@@ -342,25 +379,61 @@ lib/
 app/api/                     (thin adapters; web-standard Request/Response, runtime="nodejs")
   cron/generate-briefs/route.ts   GET+POST, auth: Bearer CRON_SECRET → runs all founders.
   briefs/[id]/action/route.ts     POST, auth: Bearer <supabase user token> (RLS) → record action.
-  auth/shopify/route.ts           GET start (?shop=&founder_id=), sets nonce cookie, redirects.
-  auth/shopify/callback/route.ts  GET — verify HMAC + nonce, exchange token, persist connection.
-  auth/google/route.ts            GET start (?founder_id=), nonce cookie, redirect to Google.
-  auth/google/callback/route.ts   GET — verify nonce, exchange tokens, auto-pick GA4 property, persist.
-  ingest/vercel/route.ts          POST — Vercel Drain NDJSON in; auth via ?cid=&secret= → store events.
+  auth/shopify/route.ts           GET start (?shop=), derives a stable per-store founder id, sets
+                                  nonce cookie, redirects to Shopify. (Session-based — no founder_id.)
+  auth/shopify/callback/route.ts  GET — verify HMAC + nonce, exchange token, merge into the signed
+                                  syn_connect cookie, redirect to /dashboard?connected=shopify.
+  auth/google/route.ts            GET start, reuses any connected founder id (else mints one), nonce
+                                  cookie, redirect to Google.
+  auth/google/callback/route.ts   GET — verify nonce, exchange tokens, auto-pick GA4 property, merge
+                                  into the syn_connect cookie, redirect to /dashboard?connected=ga4.
+  advice/route.ts                 POST {question, demo?} — Ask Synapse. demo→Coconut & Berry example;
+                                  real→live store data + mubit recall via the syn_connect cookie.
+                                  Honest states: needsConnect / needsData; never bluffs a fake store.
+                                  Remembers the Ask (rememberAsk) for a real store. → {advice, context}.
+  advice/followup/route.ts        POST {messages[], context} — defend the verdict on the SAME
+                                  data+memory (carried in context). → {reply}.
+  brief/route.ts                  POST — this week's Growth Brief from the CONNECTED store (live
+                                  data + recalled memory), then rememberBrief() so next week compounds.
+                                  Honest needsConnect/needsData; SAMPLE_BRIEF only if no key.
   brief/demo/route.ts             POST — DEMO: generates a real brief with Claude from WEEK_TWO +
                                   a recalled-memory stub (so it compounds); falls back to
-                                  SAMPLE_BRIEF if no key/err. Powers the /brief dashboard.
+                                  SAMPLE_BRIEF if no key/err. Powers the /brief demo dashboard.
+  connect/status/route.ts         GET → per-provider {connected, shop, configurable} from the cookie
+                                  + env (so the dashboard shows connected / available / coming-soon).
+  connect/metrics/route.ts        GET → the connected store's live KPIs (liveWeeklyData) for the
+                                  dashboard's "Live from your store" panel.
+  connect/backfill/route.ts       POST {weeks?} — load the store's recent Shopify history into mubit
+                                  (backfillStoreHistory) right after a connect. Graceful if no mubit.
+  ingest/vercel/route.ts          POST — Vercel Drain NDJSON in; auth via ?cid=&secret= → store events.
+  webhooks/shopify/app-uninstalled/route.ts        POST — HMAC-verified; mark store connections revoked.
+  webhooks/shopify/customers-data-request/route.ts POST — Shopify GDPR compliance endpoint (HMAC).
+  webhooks/shopify/customers-redact/route.ts       POST — Shopify GDPR compliance endpoint (HMAC).
+  webhooks/shopify/shop-redact/route.ts            POST — shop/redact: revoke + clear store tokens.
+  demo/shopify-pull/route.ts      GET — returns the synthetic Luma & Lane Shopify payload.
+  demo/shopify-growth-plan/route.ts GET — maps the synthetic pull → WeeklyData → a Claude brief
+                                  (canned synthetic brief fallback). Powers /demo/shopify.
 
 app/                          (founder-facing UI — see also components/)
-  page.tsx                        Landing page (brand-cycling "Landing C"); → components/landing.
-  brief/page.tsx                  DEMO dashboard route → components/brief/BriefDashboard.
+  page.tsx                        Landing page; → components/landing.
+  dashboard/page.tsx              REAL founder dashboard route → components/dashboard/FounderDashboard.
+  brief/page.tsx                  DEMO brief-card route → components/brief/BriefDashboard.
+  connect/page.tsx                First-pass connector setup UI → components/connect/ConnectSources.
+  demo/shopify/page.tsx           Synthetic Shopify demo screen (uses lib/demo + the demo APIs).
+  ad/[step]/page.tsx              The silent Red Bull recording flow (1→2→3→4→6; 5 redirects to 6).
+  ad/[step]/ExpandingCan.tsx      Client: click-to-zoom can transition on /ad/2 → /ad/3.
 components/
   landing/SynapseLanding.tsx      The marketing landing page (@ts-nocheck; canvas constellation).
+  dashboard/FounderDashboard.tsx  THE real product dashboard (client): blank/onboarding by default
+                                  (no fabricated data), real OAuth connect cards driven by
+                                  /api/connect/status, the Ask Synapse box + follow-up thread
+                                  (/api/advice + /followup), a "Live from your store" KPI panel
+                                  (/api/connect/metrics), backfill on connect (/api/connect/backfill),
+                                  and an opt-in ?demo=1 backfill→first-brief walk-through.
+  connect/ConnectSources.tsx      The /connect setup surface (Shopify/GA4/Vercel/website links).
   brief/BriefDashboard.tsx        Growth Brief card UI (Synapse aesthetic): renders a GrowthBrief,
                                   "Generate with Claude" → /api/brief/demo, Done/Skipped + outcome
                                   (local state for now — wire to /api/briefs/[id]/action w/ auth).
-lib/brief/sample.ts             SAMPLE_BRIEF (GrowthBrief) — the CLAUDE.md mock; dependency-free
-                                (type-only import) so it's safe in the client + as the demo fallback.
 
 supabase/migrations/
   0001_init.sql       founders, connections, metric_snapshots, briefs, actions + RLS + indexes.
@@ -371,8 +444,15 @@ supabase/migrations/
 scripts/generate-brief.ts   Local harness. Demo founder, week1 → record action → week2; proves the
                             compounding. Needs ANTHROPIC_API_KEY; mubit optional but currently wired.
                             `npm run generate-brief`.
-tests/                       node:test via tsx (28 tests): dates, derive, shopify-oauth, ga4, vercel,
-                            weekly-data, website. `npm test`.
+scripts/shopify-live-brief.ts  Live Shopify → brief smoke (`npm run shopify:brief`): SHOPIFY_SHOP_DOMAIN
+                            + SHOPIFY_ACCESS_TOKEN → pull orders/products/ShopifyQL → Claude brief → mubit.
+scripts/sync-store.ts       One-shot real-history backfill (`npm run sync:store`): SHOPIFY_* + MUBIT_API_KEY
+                            → backfillStoreHistory → recall smoke test. No OAuth/Supabase needed.
+scripts/create-vercel-drain.ts  Mints a per-connection drain_secret + prints the Drain URL (`npm run vercel:drain`).
+scripts/website-public-brief.ts Sidecar: WEBSITE_URL → scrape → BusinessProfile → Claude brief (`npm run website:brief`).
+scripts/seed-shopify.ts     (untracked) optional Shopify seeding helper (`npm run seed:shopify`).
+tests/                       node:test via tsx (**32 tests**): dates, derive, shopify-oauth, ga4, vercel,
+                            vercel-ingest, weekly-data, website, products, brief. `npm test`.
 ROADMAP.md                  Step-by-step plan to a live demo (owner-tagged [YOU]/[ME]/[TEAM]).
 README.md, .gitignore, package.json, tsconfig.json, .env.example
 ```
@@ -398,23 +478,33 @@ RLS pattern: every table is scoped to the owning founder (`auth.uid()`), directl
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase client. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only; cron + ingestion (bypasses RLS). |
 | `APP_URL` | Base URL for OAuth redirect URIs (falls back to `SHOPIFY_APP_URL`). |
-| `SHOPIFY_API_KEY` / `SHOPIFY_API_SECRET` / `SHOPIFY_SCOPES` / `SHOPIFY_APP_URL` | Shopify app. Scopes incl. `read_reports` for ShopifyQL. |
+| `SHOPIFY_API_KEY` / `SHOPIFY_API_SECRET` / `SHOPIFY_SCOPES` / `SHOPIFY_APP_URL` | Shopify app. Scopes incl. `read_reports` for ShopifyQL. `SHOPIFY_API_VERSION` (default `2026-04`) overrides the Admin API version. |
+| `SESSION_SECRET` | Signs the `syn_connect` session-connection cookie. Falls back to `SHOPIFY_API_SECRET` if unset. |
+| `SHOPIFY_SHOP_DOMAIN` / `SHOPIFY_ACCESS_TOKEN` | Direct-token smoke path: lets `liveWeeklyData`, `npm run shopify:brief`, and `npm run sync:store` pull a store without OAuth. Not the production path. |
+| `ASK_FOUNDER_ID` / `SHOPIFY_FOUNDER_ID` / `BACKFILL_WEEKS` | Pin the founder id (mubit agent) + history depth for the env/smoke Ask + backfill. |
+| `ALLOW_QUERY_FOUNDER_ID` | Dev only — allow `?founder_id=` on OAuth starts (else the Supabase session is required in prod). |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | GA4 OAuth (scope `analytics.readonly`). |
 | `CRON_SECRET` | Protects the cron route (Vercel Cron sends it as a Bearer token). |
-| *(Vercel)* | No global key — per-connection `drain_secret` lives in `connections.config`. |
+| `GOOGLE_SHEETS_WEBHOOK_URL` / `GOOGLE_SHEETS_WEBHOOK_TOKEN` | Waitlist → Google Sheet (Apps Script `/exec`). Route has a hardcoded fallback URL so a missing var can't silently drop signups. |
+| *(Vercel)* | No global key — per-connection `drain_secret` lives in `connections.config`. `VERCEL_DRAIN_BASE_URL` overrides the printed Drain URL base. |
 
 ## 7. Commands
 ```bash
 npm install            # deps
 npm run generate-brief # run the engine on seeded fixtures (needs ANTHROPIC_API_KEY)
-npm test               # 28 unit tests (no keys needed)
+npm run shopify:brief  # live Shopify → brief smoke (needs SHOPIFY_SHOP_DOMAIN + SHOPIFY_ACCESS_TOKEN)
+npm run sync:store     # backfill a real store's history into mubit (needs SHOPIFY_* + MUBIT_API_KEY)
+npm run website:brief  # website scraper → brief (needs WEBSITE_URL + ANTHROPIC_API_KEY)
+npm run vercel:drain   # mint a Vercel drain secret + print the Drain URL
+npm test               # 32 unit tests (no keys needed)
 npm run typecheck      # full TS check (tsc --noEmit)
+npm run build          # production Next.js build
 ```
-Deps: runtime `@anthropic-ai/sdk ^0.101`, `zod ^4`, `@supabase/supabase-js ^2`, `dotenv ^17`, `next ^16`, `react/react-dom ^18`, `lucide-react`. (`openai` was **removed** when the engine switched back to Claude.) Dev: `typescript ^6`, `tsx ^4`, `@types/node ^25`, `tailwindcss`, `postcss`, `autoprefixer`. Module system: **ESM (`"type":"module"`)**, `tsconfig` `moduleResolution: "bundler"` → relative imports are **extensionless** (no `.js`). Tests run via `node --import tsx --test`.
+Deps: runtime `@anthropic-ai/sdk ^0.101`, `zod ^4`, `@supabase/supabase-js ^2`, `@supabase/ssr ^0.10` (server-session auth), `dotenv ^17`, `next ^16`, `react/react-dom ^18`, `lucide-react`. (`openai` was **removed** when the engine switched back to Claude.) Dev: `@shopify/cli ^4.1`, `typescript ^6`, `tsx ^4`, `@types/node ^25`, `tailwindcss`, `postcss`, `autoprefixer`. Module system: **ESM (`"type":"module"`)**, `tsconfig` `moduleResolution: "bundler"` → relative imports are **extensionless** (no `.js`). Tests run via `node --import tsx --test`.
 
 ## 8. Verified vs NOT verified
-- ✅ **Verified:** `npm run typecheck` clean; `npm run build` clean; `npm test` = **28/28** pass (incl. `tests/brief.test.ts`); **a real Anthropic Claude generation** (structured output + Zod parse, prompt caching hits on the 2nd call); **a real mubit ingest→recall→outcome loop** — `npm run generate-brief` shows week 2 recalling week 1's brief + action from live mubit and compounding on them (the +10-points moment). Auth/base/shapes confirmed against `api.mubit.ai`.
-- ❌ **NOT verified (needs live keys, never run end-to-end):** any Supabase query (no project provisioned); Shopify/GA4 OAuth + data pulls; Vercel drain ingestion; ShopifyQL; the website scraper against a real site.
+- ✅ **Verified:** `npm run typecheck` clean; `npm run build` clean; `npm test` = **32/32** pass (incl. `tests/brief.test.ts`); **a real Anthropic Claude generation** (structured output + Zod parse, prompt caching hits on the 2nd call); **a real mubit ingest→recall→outcome loop** — `npm run generate-brief` shows week 2 recalling week 1's brief + action from live mubit and compounding on them (the +10-points moment). Auth/base/shapes confirmed against `api.mubit.ai`. **Shopify OAuth is verified LIVE in production** — the real store `synapse-demo-store.myshopify.com` completed the install round-trip end-to-end (`/api/connect/status` → `shopify.configurable:true` + ● Connected). The Ask + dashboard answer live over the session cookie. **Waitlist → Google Sheet confirmed live in prod.**
+- ❌ **NOT verified (needs live keys / a store with data, never run end-to-end):** any Supabase query (no project provisioned); the **GA4 OAuth round-trip** (credentials configured in prod, `ga4.configurable:true`, but the connect→approve→● Connected click is still pending); a real Shopify **data pull with meaningful orders** (`synapse-demo-store` is empty, so the Ask falls back to the example); Vercel drain ingestion (needs Pro + Supabase); ShopifyQL; the website scraper against a real site; the weekly cron.
 
 ## 9. What's left to build / do (see ROADMAP.md for the full ordered plan)
 0. **✅ DONE — Shopify per-product depth** (ROADMAP Phase 3b): line items + catalogue/inventory → `deriveProductMetrics` (per-product revenue/units WoW, top sellers, inventory-vs-velocity, dead stock), wired through `collect.ts`, rendered in the brief input, fixtures + `tests/products.test.ts` added. Build/test suite green (28 tests total).
@@ -447,7 +537,9 @@ Deps: runtime `@anthropic-ai/sdk ^0.101`, `zod ^4`, `@supabase/supabase-js ^2`, 
 Newest entries at the top. Record meaningful developments here.
 
 - **2026-06-07** — **Demo-readiness audit + punch list written to [`DEMO-READINESS.md`](DEMO-READINESS.md) (READ IT before demo prep).** Full codebase + live-production audit. **Build is healthy** (`tsc` clean, `npm test` 32/32, `npm run build` green). **Key correction:** the real connect→Ask/Brief flow now uses a **signed httpOnly cookie, not Supabase** (`lib/connect/session.ts`) — **Supabase is no longer a demo blocker** (older notes saying otherwise are stale). **#1 risk found:** the canonical prod `synapse-acceleration.vercel.app` **serves canned samples, not live Claude** — `/api/brief/demo` + `/api/advice` return `live:false` in ~0.15s, so `ANTHROPIC_API_KEY` is almost certainly unset there; the whole live-Claude/memory pitch silently doesn't fire. The user's own deploy `looppopthebubble.vercel.app` (welddevelopment Vercel acct) is **stale + has 0 env vars**. Verified the local `ANTHROPIC_API_KEY` works (api.anthropic.com → 200) and mubit host is reachable. **P0:** put `ANTHROPIC_API_KEY`+`MUBIT_API_KEY` in the demoed deploy; pick ONE rehearsed live path (recommended `/dashboard?demo=1`, all Claude-live once the key is set) — there are 5 competing demo surfaces. No code/env/deploy changes made yet — awaiting the team's call on deploy target + primary demo path (see the Open decision in the file).
-
+- **2026-06-07** — **Weekly Growth Brief from the real connected store** (`POST /api/brief`, commit `9f13d07`). The weekly **PUSH** counterpart to Ask Synapse's on-demand **PULL**: reads the connected store's live data via `liveWeeklyData()` (Shopify + GA4, from the session cookie) + recalled mubit memory (`recallForStore(BRIEF_RECALL_QUERY)`), generates a real `GrowthBrief` with Claude, then `rememberBrief()`s it so next week compounds. Honest about state — returns `needsConnect` (no store connected) or `needsData` (connected but <~1–2 weeks of orders/traffic) instead of fabricating a brief about the example store; falls back to `SAMPLE_BRIEF` only when the Anthropic key/call is missing. Wired into `/dashboard` (`FounderDashboard.tsx`); added `rememberBrief()` to `lib/advise/recall.ts`.
+- **2026-06-07** — **Shopify connect — LIVE in production (real OAuth round-trip verified).** Took `Synapse-Shopify-Connect-Setup.pdf` end-to-end. The user created the Shopify app in Shopify's new **Dev Dashboard** ("Start from Dev Dashboard", *not* the CLI/`npm init @shopify/app` path — that scaffolds a separate embedded app we don't want), named it Synapse, and set: App URL `https://synapse-acceleration.vercel.app`, redirect `https://synapse-acceleration.vercel.app/api/auth/shopify/callback`, scopes `read_orders,read_customers,read_products,read_reports`, **unchecked "Embed app in Shopify admin"**, and **checked "Use legacy install flow"** — our hand-rolled authorization-code OAuth (`lib/shopify/oauth.ts`) needs the legacy flow, not Shopify managed install. I automated the Vercel side via CLI: confirmed `synapse-acceleration.vercel.app` is served by the **`synapse` project under the user's OWN Vercel account `avi-aggarwal14s-projects`** (NOT a teammate's, contra earlier handoff wording), `vercel link`'d it, set `SHOPIFY_API_KEY` + `SHOPIFY_API_SECRET` + `APP_URL` as **Production** env vars, and redeployed. Gotchas captured for next time: `vercel env add` **ignores piped stdin in agent/non-interactive mode — must pass `--value <V>`**; Production vars default to **sensitive** so `vercel env pull` returns them blank (verify at runtime, not by pulling). **Verified:** `GET /api/connect/status` flipped `shopify.configurable:false→true`, then the user completed the real install and connected **`synapse-demo-store.myshopify.com`** (● Connected). The store is empty so the Ask falls back to the demo example until it has orders, but the keys + redirect + full OAuth round-trip are proven correct. The connection lives in the signed session cookie (per-browser), not the DB. Secret was shown in screenshots — rotate after the hackathon. No app code changed; this was config + a live verification.
+- **2026-06-07** — **Backfilled the Project Log for the "Ask Synapse" advisor + session-connect + dashboard suite** (commits `5bb68b9`, `c4f8866`, `123b6c2`, `13aa785`, `6db7e86`, `48edd3a`, `95a4200`, `0d211b4`, `7c11723`, `51ae8b6` — all shipped but never recorded here). **Ask Synapse** (`lib/advise/*` + `POST /api/advice`) is the two-way decision advisor (the `/ad/1`+`/ad/6` moment, made real): the founder asks about a decision in plain English and gets a structured `Advice` verdict (`lib/advise/schema.ts` — `headline`, `stance` do/dont/caution, `signals[]`, `memory_used[]`, `recommended_move`), grounded in **live Shopify data** (`store-data.ts` → `liveStoreDataBlock`) + **real mubit recall** (`recall.ts` → `recallForStore`), with the Coconut & Berry example (`example.ts`) as a per-slot fallback so it always answers. **Follow-up thread** (`POST /api/advice/followup` → `followUpAdvice`): the founder interrogates the verdict and Synapse defends it conversationally against the SAME data + memory. **Real memory on connect** (`lib/advise/backfill.ts` → `backfillStoreHistory`): distills N recent completed weeks of real Shopify history into one compact, durable mubit `observation` per week (`wk-<founderId>-<date>`), so recall returns real patterns instead of the example. **Session-based connect — NO Supabase** (`lib/connect/session.ts`): the Shopify/GA4 OAuth callbacks store the token in a signed httpOnly cookie `syn_connect` (HMAC'd with `SESSION_SECRET || SHOPIFY_API_SECRET`); `GET /api/connect/status` returns `{connected, shop, configurable}` per provider so the dashboard shows real connect state ("connected" / "available" / "coming soon"). **Founder dashboard** (`/dashboard` → `components/dashboard/FounderDashboard.tsx`): blank/onboarding by **default** (no fabricated data), connect cards kick off the real OAuth flows, and the simulated backfill→first-brief walk-through is opt-in via **`?demo=1`**; it includes the Ask box, the follow-up thread, a live-KPI "Live from your store" panel, and landing↔dashboard nav. The landing "Decision advice" section was also redesigned into a memory-backed decision card. ⚠️ §1/§4 of this handoff still don't fully enumerate these — treat the Project Log as the source of record until §4 is refreshed.
 - **2026-06-07** — **Google Analytics (GA4) connect — LIVE in production.** Worked `docs/Synapse-Google-Analytics-Connect-Setup.pdf` end-to-end. The user did the human-only Google Cloud Console steps (project `synapse-498703`, enabled **Google Analytics Data API**, configured the new **Google Auth Platform** consent flow — External audience + `analytics.readonly` scope + test user — and created a **Web application OAuth client** named "Synapse" with redirect URI `https://synapse-acceleration.vercel.app/api/auth/google/callback`). I then automated the rest via the linked Vercel project (`avi-aggarwal14s-projects/synapse`, the project that aliases `synapse-acceleration.vercel.app`): set **`GOOGLE_CLIENT_ID`** (`624469613092-nj8245e18v4jppips7hpmabse2kavpbd.apps.googleusercontent.com`) and **`GOOGLE_CLIENT_SECRET`** as Production env vars via `vercel env add`, confirmed `APP_URL` already = `https://synapse-acceleration.vercel.app` (so the redirect URI matches char-for-char), and **redeployed** the latest production deployment (`vercel redeploy … --scope avi-aggarwal14s-projects`, re-aliased to the live domain). **Verified:** `GET /api/connect/status` now returns `ga4.configurable:true` — the dashboard's "Connect Google Analytics" button is live (no longer the "Connection coming soon" fallback). **Not done:** the actual OAuth round-trip test (user clicks Connect on `/dashboard` → approves → card shows ● Connected) is step 7, pending the user. **Note:** keys are Production-only; local `.env` does NOT have them and `localhost:3000/api/auth/google/callback` is NOT a registered redirect URI, so the flow only works on the deployed domain unless that URI is added to the OAuth client. Secret was pasted in chat — rotate after the hackathon. No code changed (engine was already wired for GA4).
 - **2026-06-07** — **Vercel Web Analytics connect guide — automated everything reachable without Supabase/Vercel-Pro.** Worked the `docs/Synapse-Vercel-Analytics-Connect-Setup.pdf` step-by-step. Steps 3–5 are inherently external (the Drain is created in the **Vercel dashboard**, needs a **Vercel Pro** plan, and a live deploy to receive real traffic) and step 1 needs a Supabase row — **Supabase is still unprovisioned** (no `NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` in `.env`). So I built the parts that ARE reachable: **(1) `scripts/create-vercel-drain.ts` + `npm run vercel:drain`** — the "Synapse-side connect flow" the PDF references as a prerequisite: generates a strong per-connection `drain_secret` (`drn_<base64url>`), upserts a founder + creates/updates the `vercel` connection row via `saveProviderConnection` (carrying `config.drain_secret`), and prints the exact ready-to-paste Drain target URL (step 2). Degrades gracefully when Supabase is absent — still prints the secret + URL shape and tells you which env vars to set (verified: ran it, got a usable secret + URL, intentional exit 2). Default base is the deployed domain `https://synapse-acceleration.vercel.app` (not localhost — a Drain can't reach localhost); override via `VERCEL_DRAIN_BASE_URL`. **(2) `tests/vercel-ingest.test.ts`** — proves the receiving side of steps 4–5 with no keys: drives the real `handleVercelDrain` against a fake in-memory Supabase (missing/wrong secret → 401, unknown conn → 404, valid → events parsed + stored → `{ingested:3}`), then rolls the stored rows up via `aggregateVercel` into weekly TrafficMetrics. Wired into `npm test`. **Verified:** `npm run typecheck` clean, `npm test` 28→**32**. **Still blocked on the user:** provision Supabase + run migrations, then `npm run vercel:drain` to mint the real `cid`; create the Drain in Vercel (Pro) → NDJSON → Web Analytics; trigger traffic. Left uncommitted for review.
 - **2026-06-06** — **Ad flow: removed memory-timeline screen #5 + added click-to-expand can transition on #2.** The flow is now five screens (1→2→3→4→6); the numbering keeps `/ad/6` as the final verdict per request. Deleted `MemoryTimelineSlide` and its `timelineSteps` data + `.timeline-*` CSS; `/ad/5` now `redirect()`s to `/ad/6`; PredictionSlide (#4) forward links (the "why" panel relabeled "SEE FINAL VERDICT" + footer button) now point to `/ad/6`, and FinalVerdict's Back now points to `/ad/4`. **New interaction:** the hero can on `/ad/2` is now a client component `app/ad/[step]/ExpandingCan.tsx` — clicking (or Enter/Space) zooms the can up into the screen while a white veil fades in, then routes to `/ad/3`. Transition was smoothed after feedback: single-segment zoom curve (removed the mid-keyframe hitch), `router.prefetch("/ad/3")` on mount, and tightened timing (560ms anim, veil opaque by ~80%, `router.push` at 470ms) so there's no white-hold pause mid-transition. Both `/ad/2` and `/ad/3` share bg `#FFFDFC`, so the swap is hidden under the veil. Verified `npm run typecheck` clean; `/ad/2,3,4,6`=200, `/ad/5`=307→`/ad/6`.

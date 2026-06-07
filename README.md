@@ -5,16 +5,21 @@ analytics sources, starting with Shopify, and Synapse turns the data into a
 plain-English Growth Brief with one prioritized action. Claude writes the brief;
 mubit stores lessons and outcomes so advice compounds over time.
 
-Current build status as of 2026-06-06:
+Current build status as of 2026-06-07:
 
 - Next.js App Router app with landing page, connector/demo pages, and API routes.
 - Backend engine is code-complete for the hackathon demo path.
 - Claude brief generation works.
 - mubit memory/outcome loop is wired and has been verified live.
-- Shopify OAuth/multi-merchant app path is implemented at code level, but real
-  merchant install/testing still needs Shopify app credentials, Supabase, and a
-  real/dev store.
-- Tests are green: `npm test` currently reports 28/28.
+- **Ask Synapse** decision advisor (`/api/advice` + a follow-up thread) and a real
+  founder dashboard (`/dashboard`) shipped, running over **session-based connect**
+  (a signed cookie — no Supabase needed). Dashboard is blank/onboarding by default;
+  `?demo=1` runs the simulated walk-through.
+- Shopify OAuth is **live in production** — app credentials are set on the Vercel
+  project and a real store (`synapse-demo-store`) completed the OAuth install
+  end-to-end; GA4 connect is configured (`ga4.configurable:true`). Persistence
+  (Supabase) and the weekly cron are still pending.
+- Tests are green: `npm test` currently reports 32/32.
 
 For the full architecture and project log, read `CLAUDE.md`. For the step-by-step
 build plan, read `ROADMAP.md`.
@@ -27,7 +32,7 @@ Product and demo surfaces:
 /                 landing page and waitlist
 /connect          first-pass connector setup UI
 /brief            demo Growth Brief dashboard
-/dashboard        app/dashboard shell
+/dashboard        founder dashboard: connect + Ask Synapse (blank by default; ?demo=1 walk-through)
 /demo/shopify     fuller synthetic Shopify demo page
 /ad/1             silent demo video screen 1
 /ad/2             silent demo video screen 2
@@ -44,6 +49,10 @@ Important APIs:
 /api/auth/shopify/callback
 /api/auth/google
 /api/auth/google/callback
+/api/advice
+/api/advice/followup
+/api/connect/status
+/api/brief
 /api/brief/demo
 /api/briefs/[id]/action
 /api/cron/generate-briefs
@@ -165,7 +174,9 @@ The demo/video flow is recording-ready. The real product path still needs:
 
 - Supabase project created and migrations run.
 - Visible Supabase Auth UI and real authenticated dashboard.
-- Real Shopify app credentials added and OAuth tested with a real/dev store.
+- ✅ (Done) Shopify app credentials + live OAuth — verified in production with the
+  `synapse-demo-store` install. Next: persist the connection in Supabase (it's in a
+  session cookie today) and pull real orders for a store with data.
 - Token encryption/Vault before production.
 - GA4 OAuth credentials and first traffic pull.
 - Optional Vercel Web Analytics drain setup.

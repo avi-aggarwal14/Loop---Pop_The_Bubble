@@ -438,6 +438,9 @@ export default function FounderDashboard() {
   const [briefLoading, setBriefLoading] = useState(false);
   const [briefNotice, setBriefNotice] = useState(""); // calm "not enough data" message for the live brief
   const [action, setAction] = useState<"pending" | "done" | "skipped">("pending");
+  // Real-mode capture loop (writes a mubit outcome via /api/brief/outcome).
+  const [realAction, setRealAction] = useState<"pending" | "done" | "skipped">("pending");
+  const [outcomeNote, setOutcomeNote] = useState("");
   const [askInput, setAskInput] = useState("");
   const [asking, setAsking] = useState(false);
   const [advice, setAdvice] = useState<Advice | null>(null);
@@ -579,7 +582,7 @@ export default function FounderDashboard() {
     try {
       const r = await fetch("/api/brief", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
       const j = (await r.json()) as { brief?: GrowthBrief; live?: boolean; needsData?: boolean; needsConnect?: boolean; message?: string };
-      if (j.brief) { setBrief(j.brief); setBriefLive(Boolean(j.live)); }
+      if (j.brief) { setBrief(j.brief); setBriefLive(Boolean(j.live)); setRealAction("pending"); setOutcomeNote(""); }
       else if (j.needsData || j.needsConnect) setBriefNotice(j.message ?? "Not enough data yet — connect a store with some history.");
       else setBriefNotice("Couldn't generate your brief — try again.");
     } catch {
@@ -588,6 +591,21 @@ export default function FounderDashboard() {
       setBriefLoading(false);
     }
   }, [briefLoading]);
+
+  // Mark this week's move Done/Skipped → fire a mubit outcome so advice compounds.
+  const recordOutcome = useCallback(async (status: "done" | "skipped") => {
+    if (!brief) return;
+    setRealAction(status);
+    try {
+      await fetch("/api/brief/outcome", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, move: brief.one_move.action, weekOf: brief.week_of, note: outcomeNote.trim() || undefined }),
+      });
+    } catch {
+      // best-effort — the UI still reflects the choice
+    }
+  }, [brief, outcomeNote]);
 
   const connect = useCallback((id: SourceId, value: string) => {
     // REAL mode → start the actual OAuth flow (no fabricated data).
@@ -794,6 +812,34 @@ export default function FounderDashboard() {
             {brief && !briefLoading ? (
               <>
                 <BriefCard brief={brief} live={briefLive} />
+
+                {/* Capture loop — writes a mubit outcome so next week compounds. */}
+                <div style={{ marginTop: 12, background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px 20px" }}>
+                  {realAction === "pending" ? (
+                    <>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                        <span style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 600, marginRight: 4 }}>Did you make the move?</span>
+                        <button type="button" style={{ ...btnPrimary, background: C.up, color: C.bg }} onClick={() => recordOutcome("done")}>✓ Done</button>
+                        <button type="button" style={btnGhost} onClick={() => recordOutcome("skipped")}>Skip</button>
+                      </div>
+                      <input
+                        value={outcomeNote}
+                        onChange={(e) => setOutcomeNote(e.target.value)}
+                        placeholder="Optional: what happened? (Synapse weighs this next week)"
+                        className="syn-in"
+                        style={{ ...inputStyle, marginTop: 12, height: 38, width: "100%" }}
+                      />
+                    </>
+                  ) : (
+                    <span style={{ fontFamily: F.sans, fontSize: 13.5, color: C.text, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ width: 20, height: 20, borderRadius: "50%", background: realAction === "done" ? C.up : C.faint, color: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>
+                        {realAction === "done" ? "✓" : "–"}
+                      </span>
+                      {realAction === "done" ? "Logged to memory. Synapse will weigh this in next week's brief." : "Skipped — Synapse will re-prioritise next week."}
+                    </span>
+                  )}
+                </div>
+
                 <button type="button" onClick={generateLiveBrief} style={{ marginTop: 12, fontFamily: F.mono, fontSize: 11, letterSpacing: "0.04em", color: C.muted, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 100, padding: "6px 13px", cursor: "pointer" }}>
                   ↺ Regenerate
                 </button>
