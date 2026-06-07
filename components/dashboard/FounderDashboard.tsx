@@ -658,10 +658,10 @@ export default function FounderDashboard() {
       <div style={{ width: "100%", maxWidth: 920 }}>
         {/* Header */}
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28, gap: 12, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "inherit" }}>
             <SynMark />
             <span style={{ fontFamily: F.serif, fontWeight: 700, fontSize: 20, letterSpacing: "-0.01em" }}>Synapse</span>
-          </div>
+          </a>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             {demo && phase !== "empty" && (
               <button type="button" onClick={reset} style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: "0.06em", color: C.faint, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 100, padding: "5px 11px", cursor: "pointer" }}>
