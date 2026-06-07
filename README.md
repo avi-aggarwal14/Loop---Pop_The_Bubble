@@ -38,8 +38,7 @@ Product and demo surfaces:
 /ad/2             silent demo video screen 2
 /ad/3             silent demo video screen 3
 /ad/4             silent demo video screen 4
-/ad/5             silent demo video screen 5
-/ad/6             silent demo video screen 6
+/ad/6             silent demo video final verdict   (/ad/5 redirects here — screen removed)
 ```
 
 Important APIs:
@@ -52,6 +51,8 @@ Important APIs:
 /api/advice
 /api/advice/followup
 /api/connect/status
+/api/connect/metrics
+/api/connect/backfill
 /api/brief
 /api/brief/demo
 /api/briefs/[id]/action
@@ -66,26 +67,27 @@ Important APIs:
 ## Demo Video Flow
 
 The current recording-ready silent ad flow is the Red Bull Coconut & Berry story
-in `app/ad/[step]/page.tsx`, documented in `demo/shopify-demo-video-brief.md`.
+in `app/ad/[step]/page.tsx`, documented in `demo/shopify-demo-video-brief.md`
+(with optional narration in `demo/synapse-demo-voiceover-script.md`).
 
-Record these URLs in order:
+Record these URLs in order — five screens (`/ad/5` was removed and now redirects
+to `/ad/6`):
 
 ```text
 http://localhost:3000/ad/1
 http://localhost:3000/ad/2
 http://localhost:3000/ad/3
 http://localhost:3000/ad/4
-http://localhost:3000/ad/5
 http://localhost:3000/ad/6
 ```
 
 The story:
 
 - `/ad/1`: founder validates a risky plan to decrease Coconut & Berry sales.
-- `/ad/2`: product hero with the Red Bull Coconut & Berry can.
+- `/ad/2`: product hero with the Red Bull Coconut & Berry can (click the can to
+  zoom into `/ad/3`).
 - `/ad/3`: synthetic Shopify product-level analytics pull.
 - `/ad/4`: full prediction that the product will likely stock out.
-- `/ad/5`: four-step memory timeline explaining the causal chain.
 - `/ad/6`: final verdict: increase the breakout product and reduce drinks mubit
   predicts will fall off.
 
