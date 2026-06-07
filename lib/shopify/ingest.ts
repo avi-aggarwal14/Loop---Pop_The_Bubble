@@ -84,6 +84,9 @@ interface RawLineItem {
 interface RawShopifyOrder {
   id: number;
   created_at: string;
+  /** When the order was processed — what Shopify Analytics dates by, and the field
+   *  imported/back-dated orders carry (created_at is always the API write time). */
+  processed_at: string | null;
   total_price: string;
   currency: string;
   source_name: string | null;
@@ -135,11 +138,14 @@ export async function fetchShopifyWeek(opts: {
       params.set("page_info", pageInfo);
     } else {
       params.set("status", "any");
-      params.set("created_at_min", opts.windowStart.toISOString());
-      params.set("created_at_max", opts.windowEnd.toISOString());
+      // Window by processed_at, not created_at: it's the date Shopify Analytics uses
+      // and the one back-dated/imported orders carry (created_at is the API write
+      // time, so a back-dated order would otherwise fall in the wrong week).
+      params.set("processed_at_min", opts.windowStart.toISOString());
+      params.set("processed_at_max", opts.windowEnd.toISOString());
       params.set(
         "fields",
-        "id,created_at,total_price,currency,source_name,referring_site,customer,line_items",
+        "id,created_at,processed_at,total_price,currency,source_name,referring_site,customer,line_items",
       );
     }
 
@@ -153,7 +159,7 @@ export async function fetchShopifyWeek(opts: {
       if (o.currency) shopCurrency = o.currency;
       orders.push({
         id: String(o.id),
-        createdAt: o.created_at,
+        createdAt: o.processed_at ?? o.created_at,
         totalPrice: Number.parseFloat(o.total_price) || 0,
         currency: o.currency,
         sourceName: o.source_name,
