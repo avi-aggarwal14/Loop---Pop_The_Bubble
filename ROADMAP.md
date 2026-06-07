@@ -11,10 +11,10 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 
 - **✅ Ask Synapse + session connect + live Shopify (NEW):** the two-way decision advisor (`POST /api/advice` + a follow-up thread, `lib/advise/*`) — plain-English question → structured `Advice` verdict grounded in live Shopify data + real mubit recall; a real founder dashboard (`/dashboard`, blank by default / `?demo=1` walk-through); and **session-based connect** (signed httpOnly cookie via `lib/connect/session.ts`, **no Supabase needed**). On connect, `backfillStoreHistory()` distills recent Shopify weeks into mubit so recall is real. **Shopify OAuth is LIVE in production** — credentials set on the Vercel `synapse` project, real store `synapse-demo-store` installed (`shopify.configurable:true`); GA4 connect configured (`ga4.configurable:true`).
 - **Built, typechecked:** the brief engine (**Anthropic Claude**), the memory layer (mubit), **four data connectors** (Shopify orders **+ per-product/inventory**, GA4, Vercel drains, website scraper), the multi-source pipeline, all API routes, two SQL migrations, and the demo/ad surfaces.
-- **🟢 Build is green** — `npm run typecheck` clean, `npm run build` clean, `npm test` = **28/28**. The Shopify per-product upgrade (Phase 3b) is **complete**: line items + catalogue/inventory → per-product revenue, top sellers, inventory-vs-sales-velocity, and dead stock, all flowing into the brief.
+- **🟢 Build is green** — `npm run typecheck` clean, `npm run build` clean, `npm test` = **32/32**. The Shopify per-product upgrade (Phase 3b) is **complete**: line items + catalogue/inventory → per-product revenue, top sellers, inventory-vs-sales-velocity, and dead stock, all flowing into the brief. Shopify order pulls now window by **`processed_at`** (Shopify Analytics' date; back-dated/imported orders carry it) rather than `created_at`.
 - **✅ The brief engine runs LIVE on Anthropic Claude** (`claude-opus-4-8`) — Phase 1 done.
 - **✅ mubit is WIRED + verified LIVE** — `MUBIT_API_KEY` in `.env`, client aligned to the real Control HTTP API, and `npm run generate-brief` shows real cross-week compounding + outcome reinforcement (Phase 2 done).
-- **Demo/video path is recording-ready** — the current silent story is `/ad/1` → `/ad/6` using synthetic Red Bull Coconut & Berry Shopify-style data and mubit-style memory. See `demo/shopify-demo-video-brief.md`.
+- **Demo/video path is recording-ready** — the current silent story is **five screens, `/ad/1` → `/ad/2` → `/ad/3` → `/ad/4` → `/ad/6`** (`/ad/5` was removed and now redirects to `/ad/6`), using synthetic Red Bull Coconut & Berry Shopify-style data and mubit-style memory. See `demo/shopify-demo-video-brief.md` + `demo/synapse-demo-voiceover-script.md`.
 - **Next up after recording: real product setup** — use the direct Shopify token path first as an integration smoke test, then wire real user OAuth/persistence. Do **not** build production around one store token; the real product must support many merchant installs.
 
 ---
@@ -52,8 +52,8 @@ This is the current working plan for the next push. Keep the focus on real first
 - [x] **[ME/YOU]** Ran the install flow — **session-based** now (`/api/auth/shopify?shop=…`, no `founder_id` param): the user connected `synapse-demo-store.myshopify.com`; token stored in the signed session cookie. Verified `/api/connect/status` → `shopify.configurable:true` + a real ● Connected. **Remaining:** persist the connection in Supabase (cookie-only today) and pull orders from a store with real data.
 
 ### Milestone 4 — Expand analytics coverage
-- [ ] **[YOU]** Create Google Cloud OAuth credentials for GA4 when ready.
-- [ ] **[ME]** Run the GA4 OAuth flow and verify sessions/users/conversion/channel mix/top pages enter `WeeklyData`.
+- [x] **[YOU]** Created Google Cloud OAuth credentials for GA4 (project `synapse-498703`, Analytics Data API enabled, Web OAuth client) and **set `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` as Production env vars** → `/api/connect/status` reports `ga4.configurable:true`.
+- [ ] **[ME/YOU]** Complete the GA4 OAuth connect round-trip on `/dashboard` and verify sessions/users/conversion/channel mix/top pages enter `WeeklyData` (and the Ask's merged data block).
 - [ ] **[YOU]** Decide whether Vercel drains are available/needed.
 - [ ] **[ME]** If available, create a `vercel` connection row with `drain_secret` and verify events aggregate into traffic metrics.
 
@@ -86,7 +86,7 @@ This is the current working plan for the next push. Keep the focus on real first
 - [ ] **[YOU]** `cp .env.example .env`; paste in whatever keys you have so far.
 - [ ] **[YOU]** Create the Supabase project. In its **SQL Editor**, run **both** migrations in order: `supabase/migrations/0001_init.sql` then `0002_connectors.sql`.
 - [ ] **[ME]** Verify the 6 tables + RLS exist: founders, connections, metric_snapshots, briefs, actions, analytics_events.
-- [ ] **[ME]** Confirm the build is green again first (resolve the per-product change — see ⚠️ above), then `npm run typecheck` + `npm test`.
+- [ ] **[ME]** Confirm the build is green first: `npm run typecheck` + `npm test` (32/32).
 
 **Done when:** `.env` is filled, the DB tables exist, and the build is green.
 
@@ -107,7 +107,7 @@ This is the current working plan for the next push. Keep the focus on real first
 - [x] **[YOU]** Created the API key at console.mubit.ai (`mbt_synapse-…`) → in `.env` as `MUBIT_API_KEY`. (Admin key to follow; not needed for the core loop — agents auto-register on first ingest.)
 - [x] **[ME]** Aligned `lib/mubit/client.ts` to the real Control HTTP API: `remember()`=POST `/v2/control/ingest` (`items:[]`); `recall()`/`queryRaw()`=POST `/v2/control/query` (**`run_id` required** → `final_answer`+`evidence[]`); `recordOutcome()`=POST `/v2/control/outcome`. Added `founderRunId()`.
 - [x] **[ME]** Threaded `user_id`/`run_id` through `weekly-brief.ts`, `record-action.ts` (ingests the response as a lesson + best-effort `recordOutcome()`), `scripts/generate-brief.ts`; updated `lib/mubit/memory.ts` (valid `lesson` intents, `moveItemId`, `actionOutcome`).
-- [x] **[ME]** Re-ran the harness: week 2 recalled 2 memories from live mubit and built on them ("posted 3 Reels as advised..."). typecheck was green at the time; current suite is **28/28**.
+- [x] **[ME]** Re-ran the harness: week 2 recalled 2 memories from live mubit and built on them ("posted 3 Reels as advised..."). typecheck was green at the time; current suite is **32/32**.
 - [ ] *(optional, skipped for stage reliability)* Wire real recall into `/api/brief/demo` — the `/brief` UI keeps simulated memory so the demo never depends on network; the engine pipeline already uses live mubit.
 
 **Done:** the week-2 brief visibly compounds on week-1 via *real* mubit recall + outcome reinforcement — the demo that wins judges. ✅
@@ -128,7 +128,7 @@ This is the current working plan for the next push. Keep the focus on real first
 Product-level intelligence so the "one move" can be product-specific.
 - [x] **[ME]** `fetchShopifyProducts()` (products + variants + `inventory_quantity`) and `fetchShopInfo()` (name/plan/currency) in `lib/shopify/ingest.ts`; order line-items added.
 - [x] **[ME]** `ProductMetrics` type + `deriveProductMetrics()` in `lib/metrics/{types,derive}.ts`: units + revenue **per product** WoW, top sellers, **inventory-vs-velocity** ("weeks of stock left"), zero-sales products.
-- [x] **[ME]** Wired into `lib/pipeline/collect.ts` (Shopify branch) + rendered in the prompt; fixtures updated; `tests/products.test.ts` added. Test coverage later expanded; current suite is **28/28**.
+- [x] **[ME]** Wired into `lib/pipeline/collect.ts` (Shopify branch) + rendered in the prompt; fixtures updated; `tests/products.test.ts` added. Test coverage later expanded; current suite is **32/32**.
 - [ ] **[ME/YOU]** Verify against a real dev store during Phase 3 (needs `read_products`, already in scopes).
 
 **Done when:** a brief can say things like *"Product X is 40% of revenue but ~1 week from stockout — reorder now."* (Code path is ready; just needs live data.)
@@ -147,12 +147,12 @@ Product-level intelligence so the "one move" can be product-specific.
 
 ---
 
-## Phase 5 — Google Analytics (GA4)  ·  ~30 min
-- [ ] **[YOU]** Google Cloud project → enable the **Google Analytics Data API** → create an **OAuth client** (Web) with redirect `<APP_URL>/api/auth/google/callback` → configure the consent screen (add yourself as a test user) → put `GOOGLE_CLIENT_ID/SECRET` in `.env`.
-- [ ] **[ME]** Run OAuth (`/api/auth/google` → consent → `/callback`) → connection stores `refresh_token` + auto-picked `property_id`.
-- [ ] **[ME]** Verify `fetchGa4Traffic` returns sessions/users/conversion/channel mix/top pages.
+## Phase 5 — Google Analytics (GA4)  ·  ✅ configured in prod; round-trip pending
+- [x] **[YOU]** Google Cloud project (`synapse-498703`) → enabled the **Google Analytics Data API** → created a **Web OAuth client** with redirect `<APP_URL>/api/auth/google/callback` → configured the consent screen (test user) → `GOOGLE_CLIENT_ID/SECRET` set as **Production** env vars (`ga4.configurable:true`). *(Prod-only; localhost isn't a registered redirect.)*
+- [ ] **[ME/YOU]** Run OAuth on the deployed `/dashboard` (`/api/auth/google` → consent → `/callback`) → the GA4 token + auto-picked `property_id` land in the `syn_connect` session cookie (DB persistence comes with Supabase).
+- [ ] **[ME]** Verify `fetchGa4Traffic` returns sessions/users/conversion/channel mix/top pages and that the Ask's merged data block + the brief pick it up.
 
-**Done when:** GA4 traffic appears in the brief input.
+**Done when:** GA4 traffic appears in the brief / Ask input.
 
 ---
 
@@ -194,7 +194,7 @@ Product-level intelligence so the "one move" can be product-specific.
 - [x] **[ME]** Added the missing product-flow wrapper screens without redesigning the middle screens: `/ad/1` is now a validation chat where the founder proposes decreasing Coconut & Berry sales and Synapse replies not to; the prior product/stat/prediction/memory screens now sit at `/ad/2` -> `/ad/5`; `/ad/6` is the final verdict telling the founder to increase the breakout product and decrease other drinks that look good recently but mubit memory predicts will fall off.
 - [x] **[ME]** Fixed fixed-viewport crop issues in the Red Bull ad flow. `/ad/3` now has a tighter stats grid, compact Revenue by source card, and a thin cylindrical Conversion path pill that opens the full modal; later screens had headline/card sizing reduced where needed so the recording flow stays no-scroll.
 - [x] **[ME]** Final recording polish: added the two extra supplied Red Bull images to `public/demo-assets`, used them with the original Coconut & Berry image in `/ad/4` memory cards and `/ad/6` forecast cards, and tightened those bottom-heavy screens so the last cards/text are visible in the fixed viewport.
-- [x] **[ME]** Recording guide updated in `demo/shopify-demo-video-brief.md` with the exact six-screen flow and timing notes.
+- [x] **[ME]** Recording guide updated in `demo/shopify-demo-video-brief.md` with the exact five-screen flow (`/ad/1→2→3→4→6`; `/ad/5` redirects to `/ad/6`) and timing notes; narration in `demo/synapse-demo-voiceover-script.md`.
 - [ ] **[YOU/TEAM]** Record the final no-talking demo video from the local `/ad/1` → `/ad/6` flow or deploy first and record from production.
 - [ ] **[TEAM]** Optional mobile/cropped 9:16 pass for Instagram/Reels if needed.
 - [ ] **[ME/YOU]** After the video, return to real product setup: Supabase, Shopify app credentials, OAuth smoke, and authenticated dashboard.
@@ -221,7 +221,7 @@ Product-level intelligence so the "one move" can be product-specific.
 ```bash
 npm install            # deps
 npm run generate-brief # run the engine on seeded data (needs ANTHROPIC_API_KEY)
-npm test               # 28 unit tests (no keys needed) — green
+npm test               # 32 unit tests (no keys needed) — green
 npm run typecheck      # full type check — green
 npm run build          # production build — green
 ```
