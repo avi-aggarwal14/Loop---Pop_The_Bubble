@@ -17,6 +17,9 @@ import { SAMPLE_BRIEF, SAMPLE_BRIEF_WEEK2 } from "@/lib/brief/sample";
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// A live Opus brief takes ~9–15s; without this the default serverless timeout can
+// abort the call and silently fall back to the sample even when the key IS set.
+export const maxDuration = 60;
 
 const DEFAULT_WEEK2_MEMORY = [
   'Brief for Week of 2 June. The one move I recommended: "Post 3 product demo Reels this week." Why: Instagram was the only channel with positive ROAS.',

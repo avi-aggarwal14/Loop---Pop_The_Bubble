@@ -23,5 +23,11 @@ export async function GET(req: Request): Promise<Response> {
       connected: Boolean(conns.ga4),
       configurable: Boolean(googleConfigFromEnv()),
     },
+    // The synthetic demo store — always available (no keys needed), so the real
+    // product flow can be shown end-to-end without a real merchant connection.
+    demo: {
+      connected: Boolean(conns.demo),
+      store: conns.demo ? conns.demo.store : null,
+    },
   });
 }

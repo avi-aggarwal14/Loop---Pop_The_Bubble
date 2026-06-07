@@ -4,6 +4,7 @@ import { BRIEF_RECALL_QUERY } from "@/lib/mubit/memory";
 import { recallForStore, rememberBrief } from "@/lib/advise/recall";
 import { liveWeeklyData } from "@/lib/advise/store-data";
 import { CONNECT_COOKIE, parseCookieHeader, readConnections } from "@/lib/connect/session";
+import { syntheticRecall } from "@/lib/demo/synthetic-weekly";
 
 // "This week's Growth Brief" — the weekly PUSH (the Ask is the on-demand PULL).
 // Generates a real GrowthBrief from the connected store's live data + recalled
@@ -17,9 +18,10 @@ export async function POST(req: Request): Promise<Response> {
   const conns = readConnections(parseCookieHeader(req.headers.get("cookie"))[CONNECT_COOKIE]);
   const shopifyConn = conns.shopify;
   const ga4Conn = conns.ga4;
-  const founderId = shopifyConn?.founderId ?? ga4Conn?.founderId;
+  const demoConn = conns.demo;
+  const founderId = shopifyConn?.founderId ?? ga4Conn?.founderId ?? demoConn?.founderId;
 
-  if (!shopifyConn && !ga4Conn) {
+  if (!shopifyConn && !ga4Conn && !demoConn) {
     return Response.json({ ok: true, needsConnect: true, message: "Connect your store first — then I'll write your weekly brief from your real data." });
   }
 
@@ -27,6 +29,7 @@ export async function POST(req: Request): Promise<Response> {
     liveWeeklyData({
       shopify: shopifyConn ? { shop: shopifyConn.shop, accessToken: shopifyConn.accessToken } : undefined,
       ga4: ga4Conn ? { accessToken: ga4Conn.accessToken, refreshToken: ga4Conn.refreshToken, propertyId: ga4Conn.propertyId } : undefined,
+      demo: Boolean(demoConn),
     }).catch(() => null),
     recallForStore(BRIEF_RECALL_QUERY, founderId).catch(() => null),
   ]);
@@ -39,7 +42,9 @@ export async function POST(req: Request): Promise<Response> {
     });
   }
 
-  const recalledMemories = liveMemories ?? [];
+  let recalledMemories = liveMemories ?? [];
+  // Demo store: fall back to its own synthetic history if mubit hasn't indexed yet.
+  if (demoConn && recalledMemories.length === 0) recalledMemories = syntheticRecall(BRIEF_RECALL_QUERY);
 
   // No API key → sample brief so it never hard-fails (clearly marked "sample").
   if (!process.env.ANTHROPIC_API_KEY) {

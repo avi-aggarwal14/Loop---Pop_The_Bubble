@@ -4,6 +4,7 @@ import { fetchGa4Traffic } from "../ga4/ingest";
 import { googleConfigFromEnv, refreshGoogleToken } from "../ga4/oauth";
 import { formatWeeklyDataForPrompt, type DerivedMetrics, type TrafficMetrics, type WeeklyData } from "../metrics/types";
 import { previousFullWeek, priorWeek, type WeekRange } from "../util/dates";
+import { syntheticWeeklyData } from "../demo/synthetic-weekly";
 
 /**
  * Build the live data block the Ask reasons over — the real counterpart to
@@ -19,6 +20,9 @@ import { previousFullWeek, priorWeek, type WeekRange } from "../util/dates";
 export interface LiveCreds {
   shopify?: { shop: string; accessToken: string };
   ga4?: { accessToken: string; refreshToken?: string; propertyId?: string | null };
+  /** When set, serve the synthetic "Luma & Lane" demo store instead of a real pull.
+   *  Everything downstream (Claude, mubit) treats it exactly like a real connection. */
+  demo?: boolean;
 }
 
 export async function liveStoreDataBlock(creds?: LiveCreds): Promise<string | null> {
@@ -32,6 +36,11 @@ export async function liveStoreDataBlock(creds?: LiveCreds): Promise<string | nu
  * (not just feed the prompt). Returns null when nothing is connected/yields data.
  */
 export async function liveWeeklyData(creds?: LiveCreds): Promise<WeeklyData | null> {
+  // Demo store → the synthetic pull, in the identical WeeklyData shape a real Shopify
+  // store would yield. The Ask/brief generators and the dashboard never know the
+  // difference; only the data origin is synthetic.
+  if (creds?.demo) return syntheticWeeklyData();
+
   // Shopify creds: session cookie first, then env (custom-app token smoke test).
   const shop = creds?.shopify?.shop ?? process.env.SHOPIFY_SHOP_DOMAIN;
   const accessToken = creds?.shopify?.accessToken ?? process.env.SHOPIFY_ACCESS_TOKEN;

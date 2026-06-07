@@ -16,7 +16,8 @@ export async function GET(req: Request): Promise<Response> {
   const conns = readConnections(parseCookieHeader(req.headers.get("cookie"))[CONNECT_COOKIE]);
   const shopify = conns.shopify;
   const ga4 = conns.ga4;
-  if (!shopify && !ga4) {
+  const demo = Boolean(conns.demo);
+  if (!shopify && !ga4 && !demo) {
     return Response.json({ ok: false, error: "no source connected" }, { status: 400 });
   }
 
@@ -24,6 +25,7 @@ export async function GET(req: Request): Promise<Response> {
     const data = await liveWeeklyData({
       shopify: shopify ? { shop: shopify.shop, accessToken: shopify.accessToken } : undefined,
       ga4: ga4 ? { accessToken: ga4.accessToken, refreshToken: ga4.refreshToken, propertyId: ga4.propertyId } : undefined,
+      demo,
     });
     if (!data) return Response.json({ ok: true, data: null, empty: true });
     return Response.json({ ok: true, data });

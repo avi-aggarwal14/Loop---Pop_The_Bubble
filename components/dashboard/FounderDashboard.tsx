@@ -381,8 +381,17 @@ export default function FounderDashboard() {
   type ConnStatus = {
     shopify: { connected: boolean; shop: string | null; configurable: boolean };
     ga4: { connected: boolean; configurable: boolean };
+    demo?: { connected: boolean; store: string | null };
   };
   const [realStatus, setRealStatus] = useState<ConnStatus | null>(null);
+  const refreshStatus = useCallback(async () => {
+    try {
+      const j = (await fetch("/api/connect/status").then((r) => r.json())) as ConnStatus;
+      setRealStatus(j);
+    } catch {
+      // leave prior status
+    }
+  }, []);
   useEffect(() => {
     if (demo) return;
     let off = false;
@@ -393,13 +402,46 @@ export default function FounderDashboard() {
     return () => { off = true; };
   }, [demo]);
 
+  // Connect / disconnect the synthetic demo store — the real engine on synthetic data.
+  const [connectingDemo, setConnectingDemo] = useState(false);
+  const connectDemoStore = useCallback(async () => {
+    if (connectingDemo) return;
+    setConnectingDemo(true);
+    try {
+      await fetch("/api/connect/demo", { method: "POST" });
+      backfillStarted.current = false;
+      metricsStarted.current = false;
+      await refreshStatus();
+    } catch {
+      // ignore — the status simply won't flip
+    } finally {
+      setConnectingDemo(false);
+    }
+  }, [connectingDemo, refreshStatus]);
+  const disconnectDemoStore = useCallback(async () => {
+    try {
+      await fetch("/api/connect/demo", { method: "DELETE" });
+      backfillStarted.current = false;
+      metricsStarted.current = false;
+      setMemory({ state: "idle", weeks: 0 });
+      setMetrics(null);
+      setMetricsState("idle");
+      setBrief(null);
+      setAdvice(null);
+      await refreshStatus();
+    } catch {
+      // ignore
+    }
+  }, [refreshStatus]);
+
   // On Shopify connect, backfill the store's history into mubit so the Ask recalls
   // THEIR real past from the first question (the "no cold start" differentiator).
   type MemoryState = "idle" | "building" | "ready" | "unconfigured" | "error";
   const [memory, setMemory] = useState<{ state: MemoryState; weeks: number }>({ state: "idle", weeks: 0 });
   const backfillStarted = useRef(false);
   useEffect(() => {
-    if (demo || !realStatus?.shopify.connected || backfillStarted.current) return;
+    const storeConnected = realStatus?.shopify.connected || realStatus?.demo?.connected;
+    if (demo || !storeConnected || backfillStarted.current) return;
     backfillStarted.current = true;
     setMemory({ state: "building", weeks: 0 });
     fetch("/api/connect/backfill", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
@@ -410,14 +452,14 @@ export default function FounderDashboard() {
         else setMemory({ state: "error", weeks: 0 });
       })
       .catch(() => setMemory({ state: "error", weeks: 0 }));
-  }, [demo, realStatus?.shopify.connected]);
+  }, [demo, realStatus?.shopify.connected, realStatus?.demo?.connected]);
 
   // Pull the connected store's real KPIs so they show the instant you connect.
   const [metrics, setMetrics] = useState<WeeklyData | null>(null);
   const [metricsState, setMetricsState] = useState<MetricsState>("idle");
   const metricsStarted = useRef(false);
   useEffect(() => {
-    if (demo || !(realStatus?.shopify.connected || realStatus?.ga4.connected) || metricsStarted.current) return;
+    if (demo || !(realStatus?.shopify.connected || realStatus?.ga4.connected || realStatus?.demo?.connected) || metricsStarted.current) return;
     metricsStarted.current = true;
     setMetricsState("loading");
     fetch("/api/connect/metrics")
@@ -428,7 +470,7 @@ export default function FounderDashboard() {
         else setMetricsState("error");
       })
       .catch(() => setMetricsState("error"));
-  }, [demo, realStatus?.shopify.connected, realStatus?.ga4.connected]);
+  }, [demo, realStatus?.shopify.connected, realStatus?.ga4.connected, realStatus?.demo?.connected]);
 
   const [connected, setConnected] = useState<Partial<Record<SourceId, boolean>>>({});
   const [syncSource, setSyncSource] = useState<SourceId | null>(null);
@@ -546,13 +588,15 @@ export default function FounderDashboard() {
     ? "ready"
     : "empty";
   // Real mode: at least one source is connected via the signed session cookie.
-  const realConnected = !demo && Boolean(realStatus?.shopify.connected || realStatus?.ga4.connected);
+  const demoStoreConnected = !demo && Boolean(realStatus?.demo?.connected);
+  const realConnected = !demo && Boolean(realStatus?.shopify.connected || realStatus?.ga4.connected || realStatus?.demo?.connected);
   // The Ask is live in the demo (example store) OR once a real store is connected.
   const askEnabled = demo || realConnected;
   // Human label for what's connected — drives the "reading your ___" copy.
   const connectedSourceLabel = (() => {
     const s = realStatus?.shopify.connected;
     const g = realStatus?.ga4.connected;
+    if (demoStoreConnected) return "the Luma & Lane demo store (synthetic data, real analysis)";
     if (s && g) return "Shopify sales and Google Analytics traffic";
     if (s) return "real Shopify data";
     if (g) return "Google Analytics traffic";
@@ -669,7 +713,11 @@ export default function FounderDashboard() {
   const shopLabelOf = (id: SourceId): string | null =>
     !demo && id === "shopify" ? realStatus?.shopify.shop ?? null : null;
 
-  const business = demo && phase === "ready" ? "Aveline Threads" : realConnected ? (realStatus?.shopify.shop ?? null) : null;
+  const business = demo && phase === "ready"
+    ? "Aveline Threads"
+    : realConnected
+    ? (realStatus?.shopify.shop ?? (demoStoreConnected ? "Luma & Lane" : null))
+    : null;
 
   const greeting =
     phase === "ready"
@@ -730,6 +778,31 @@ export default function FounderDashboard() {
               <ConnectCard key={s.id} source={s} status={statusOf(s.id)} progress={progress} weeksDone={weeksDone} onConnect={connect} configurable={configurableOf(s.id)} shopLabel={shopLabelOf(s.id)} />
             ))}
           </div>
+
+          {/* Demo store — try the real product (live Claude + real memory) without a store. */}
+          {!demo && (
+            demoStoreConnected ? (
+              <div style={{ marginTop: 12, background: C.card, border: `1px solid ${C.up}44`, borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: C.up, border: `1px solid ${C.up}55`, borderRadius: 100, padding: "3px 9px" }}>● Demo store connected</span>
+                <span style={{ fontFamily: F.sans, fontSize: 13, color: C.muted, flex: 1, minWidth: 180 }}>
+                  Luma & Lane — synthetic Shopify data. Every answer below is generated live by Claude from real memory.
+                </span>
+                <button type="button" onClick={disconnectDemoStore} style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: "0.04em", color: C.faint, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 100, padding: "5px 11px", cursor: "pointer" }}>Disconnect</button>
+              </div>
+            ) : !realConnected ? (
+              <div style={{ marginTop: 12, background: `linear-gradient(180deg, ${C.accent}14, ${C.accent}06)`, border: `1px solid ${C.accent}44`, borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <div style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 14, color: C.text }}>No store handy? Try it on a live demo store.</div>
+                  <div style={{ fontFamily: F.sans, fontSize: 12.5, color: C.muted, lineHeight: 1.45, marginTop: 3 }}>
+                    Connect the Luma & Lane demo store and Synapse runs for real — live Claude briefs, real recalled memory, the full Ask — on synthetic Shopify data.
+                  </div>
+                </div>
+                <button type="button" onClick={connectDemoStore} disabled={connectingDemo} style={{ ...btnPrimary, opacity: connectingDemo ? 0.6 : 1, cursor: connectingDemo ? "default" : "pointer" }}>
+                  {connectingDemo ? "Connecting…" : "Connect demo store →"}
+                </button>
+              </div>
+            ) : null
+          )}
         </section>
 
         {/* This week's brief — state-driven */}
@@ -874,7 +947,7 @@ export default function FounderDashboard() {
               <input
                 value={askInput}
                 onChange={(e) => setAskInput(e.target.value)}
-                placeholder={demo ? "e.g. Should I decrease Coconut & Berry next week?" : "e.g. Should I discount the Linen Shirt this week?"}
+                placeholder={demo ? "e.g. Should I decrease Coconut & Berry next week?" : demoStoreConnected ? "e.g. Should I reorder GlowPatch or discount it?" : "e.g. Should I discount the Linen Shirt this week?"}
                 className="syn-in"
                 style={{ ...inputStyle, flex: 1, minWidth: 240, height: 44, opacity: askEnabled ? 1 : 0.7 }}
                 disabled={!askEnabled || asking}
@@ -883,9 +956,12 @@ export default function FounderDashboard() {
                 {asking ? "Thinking…" : "Ask →"}
               </button>
             </form>
-            {demo ? (
+            {demo || demoStoreConnected ? (
               <div style={{ marginTop: 10, display: "flex", gap: 7, flexWrap: "wrap" }}>
-                {["Should I decrease Coconut & Berry next week?", "Is it time to reorder?", "Where should I put £500 of ad spend?"].map((q) => (
+                {(demo
+                  ? ["Should I decrease Coconut & Berry next week?", "Is it time to reorder?", "Where should I put £500 of ad spend?"]
+                  : ["Should I reorder GlowPatch now?", "Where should I move my Meta ad budget?", "Should I discount the Weekend Reset Kit?"]
+                ).map((q) => (
                   <button key={q} type="button" onClick={() => setAskInput(q)} disabled={asking} style={{ fontFamily: F.sans, fontSize: 11.5, color: C.muted, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 100, padding: "5px 11px", cursor: "pointer" }}>{q}</button>
                 ))}
               </div>

@@ -6,8 +6,9 @@ import {
 } from "../shopify/ingest";
 import { deriveMetrics } from "../metrics/derive";
 import type { DerivedMetrics } from "../metrics/types";
-import { recentCompletedWeeks, toISODateString, type WeekRange } from "../util/dates";
+import { previousFullWeek, recentCompletedWeeks, toISODateString, type WeekRange } from "../util/dates";
 import { MubitClient, mubitConfigFromEnv, founderAgentId, founderRunId } from "../mubit/client";
+import { DEMO_LESSONS, DEMO_WEEKLY_HISTORY, demoBusinessContext } from "../demo/synthetic-weekly";
 
 /**
  * Load a store's recent history into mubit so the Ask can RECALL real patterns.
@@ -109,4 +110,63 @@ export async function backfillStoreHistory(opts: {
   }
 
   return { founderId: opts.founderId, weeksIngested: ingested, businessContext };
+}
+
+/**
+ * Backfill the synthetic demo store's history into mubit. Same shape and intent as the
+ * real Shopify backfill above — one durable `observation` per recent week plus durable
+ * `lesson`s — so `recallForStore()` returns genuine, question-relevant memories for the
+ * demo store, and advice compounds. This is what makes the "no cold start" claim true in
+ * the demo: the very first Ask is already informed by the store's past.
+ */
+export async function backfillSyntheticHistory(opts: {
+  founderId: string;
+  onProgress?: (done: number, total: number, label: string) => void;
+}): Promise<BackfillResult> {
+  const cfg = mubitConfigFromEnv();
+  if (!cfg) throw new Error("mubit is not configured (MUBIT_API_KEY missing).");
+  const client = new MubitClient(cfg);
+  const agentId = founderAgentId(opts.founderId);
+  const scope = { userId: opts.founderId, runId: founderRunId(opts.founderId) };
+
+  // Map each weekly beat onto a real recent week date so occurrence_time is sensible.
+  const maxWeeksAgo = Math.max(...DEMO_WEEKLY_HISTORY.map((m) => m.weeksAgo ?? 1));
+  const weeks = recentCompletedWeeks(maxWeeksAgo); // oldest → newest
+  const total = DEMO_WEEKLY_HISTORY.length + DEMO_LESSONS.length;
+  let ingested = 0;
+
+  for (const mem of DEMO_WEEKLY_HISTORY) {
+    const weeksAgo = mem.weeksAgo ?? 1;
+    const wk = weeks[weeks.length - weeksAgo] ?? previousFullWeek();
+    await client.remember(
+      agentId,
+      {
+        text: `${wk.label}: ${mem.text}`,
+        intent: "observation",
+        itemId: `wk-${opts.founderId}-${toISODateString(wk.start)}`,
+        occurrenceTime: wk.start.toISOString(),
+        metadata: { week_of: toISODateString(wk.start), source: "demo-store-backfill" },
+      },
+      scope,
+    );
+    ingested += 1;
+    opts.onProgress?.(ingested, total, wk.label);
+  }
+
+  for (let i = 0; i < DEMO_LESSONS.length; i++) {
+    await client.remember(
+      agentId,
+      {
+        text: DEMO_LESSONS[i].text,
+        intent: "lesson",
+        itemId: `lesson-${opts.founderId}-${i}`,
+        metadata: { source: "demo-store-backfill" },
+      },
+      scope,
+    );
+    ingested += 1;
+    opts.onProgress?.(ingested, total, "lessons");
+  }
+
+  return { founderId: opts.founderId, weeksIngested: DEMO_WEEKLY_HISTORY.length, businessContext: demoBusinessContext() };
 }

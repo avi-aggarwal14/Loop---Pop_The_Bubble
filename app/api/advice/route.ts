@@ -3,6 +3,7 @@ import { EXAMPLE_DATA_BLOCK, EXAMPLE_MEMORIES, SAMPLE_ADVICE } from "@/lib/advis
 import { recallForStore, rememberAsk } from "@/lib/advise/recall";
 import { liveStoreDataBlock } from "@/lib/advise/store-data";
 import { CONNECT_COOKIE, parseCookieHeader, readConnections } from "@/lib/connect/session";
+import { syntheticRecall } from "@/lib/demo/synthetic-weekly";
 
 // "Ask Synapse" — POST { question } → a memory-backed verdict.
 // Uses REAL data + REAL memory when a store is configured:
@@ -38,8 +39,9 @@ export async function POST(req: Request): Promise<Response> {
   const conns = readConnections(parseCookieHeader(req.headers.get("cookie"))[CONNECT_COOKIE]);
   const shopifyConn = conns.shopify;
   const ga4Conn = conns.ga4;
-  const founderId = shopifyConn?.founderId ?? ga4Conn?.founderId;
-  const hasConnection = Boolean(shopifyConn || ga4Conn);
+  const demoConn = conns.demo;
+  const founderId = shopifyConn?.founderId ?? ga4Conn?.founderId ?? demoConn?.founderId;
+  const hasConnection = Boolean(shopifyConn || ga4Conn || demoConn);
 
   // ── Resolve the evidence HONESTLY (no bluffing about a fake store) ──
   // demo            → the Coconut & Berry example (intended, recordable).
@@ -64,6 +66,7 @@ export async function POST(req: Request): Promise<Response> {
       liveStoreDataBlock({
         shopify: shopifyConn ? { shop: shopifyConn.shop, accessToken: shopifyConn.accessToken } : undefined,
         ga4: ga4Conn ? { accessToken: ga4Conn.accessToken, refreshToken: ga4Conn.refreshToken, propertyId: ga4Conn.propertyId } : undefined,
+        demo: Boolean(demoConn),
       }).catch(() => null),
       recallForStore(question, founderId).catch(() => null),
     ]);
@@ -77,9 +80,15 @@ export async function POST(req: Request): Promise<Response> {
     dataBlock = liveData;
     // A real store NEVER borrows the example's memories — thin memory is honest;
     // fabricated past launches are not. The prompt handles an empty list.
+    // The demo store is the exception: its synthetic history is its real history, so
+    // if live mubit recall hasn't indexed the just-ingested backfill yet, fall back to
+    // the demo store's own memories (keeps the "remembered" panel populated reliably).
     recalledMemories = liveMemories ?? [];
+    if (demoConn && recalledMemories.length === 0) recalledMemories = syntheticRecall(question);
     realStore = true;
-    sources = [...(shopifyConn ? ["Shopify"] : []), ...(ga4Conn ? ["Google Analytics"] : [])];
+    sources = demoConn
+      ? ["Demo store (Shopify-shaped data)"]
+      : [...(shopifyConn ? ["Shopify"] : []), ...(ga4Conn ? ["Google Analytics"] : [])];
   }
 
   // No API key → sample fallback so the demo never hard-fails (clearly marked "sample").

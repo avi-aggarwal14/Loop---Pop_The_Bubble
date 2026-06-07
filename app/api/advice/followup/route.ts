@@ -3,6 +3,9 @@ import { EXAMPLE_DATA_BLOCK, EXAMPLE_MEMORIES } from "@/lib/advise/example";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// A live Claude follow-up takes ~8–15s; match /api/advice so the default serverless
+// timeout can't abort the conversational defence mid-demo.
+export const maxDuration = 60;
 
 /**
  * Follow-up turn for "Ask Synapse" — the founder interrogates the verdict and

@@ -22,9 +22,20 @@ export interface Ga4Conn {
   propertyId?: string | null;
   founderId: string;
 }
+/**
+ * The demo store connection. No real OAuth/token — it marks the session as connected
+ * to the synthetic "Luma & Lane" store, which the live engine (Claude + mubit) then
+ * reasons over exactly as it would a real Shopify store. `founderId` is per-browser so
+ * mubit memory is isolated and compounds across the session.
+ */
+export interface DemoConn {
+  store: string;
+  founderId: string;
+}
 export interface Connections {
   shopify?: ShopifyConn;
   ga4?: Ga4Conn;
+  demo?: DemoConn;
 }
 
 function secret(): string {

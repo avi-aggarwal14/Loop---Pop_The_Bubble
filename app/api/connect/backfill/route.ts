@@ -1,4 +1,4 @@
-import { backfillStoreHistory } from "@/lib/advise/backfill";
+import { backfillStoreHistory, backfillSyntheticHistory } from "@/lib/advise/backfill";
 import { CONNECT_COOKIE, parseCookieHeader, readConnections } from "@/lib/connect/session";
 import { mubitConfigFromEnv } from "@/lib/mubit/client";
 
@@ -17,12 +17,30 @@ export const maxDuration = 60;
 export async function POST(req: Request): Promise<Response> {
   const conns = readConnections(parseCookieHeader(req.headers.get("cookie"))[CONNECT_COOKIE]);
   const shopify = conns.shopify;
-  if (!shopify) {
+  const demo = conns.demo;
+  if (!shopify && !demo) {
     return Response.json({ ok: false, error: "no Shopify store connected" }, { status: 400 });
   }
   // No memory layer configured → tell the dashboard so it can stay graceful (no error UI).
   if (!mubitConfigFromEnv()) {
     return Response.json({ ok: false, configured: false, error: "memory layer not configured" });
+  }
+
+  // Demo store → ingest its synthetic history so recall returns real, question-relevant
+  // memories (the "no cold start" differentiator, exercised against live mubit).
+  if (demo) {
+    try {
+      const result = await backfillSyntheticHistory({ founderId: demo.founderId });
+      return Response.json({ ok: true, weeksIngested: result.weeksIngested, business: result.businessContext });
+    } catch (err) {
+      console.error("[backfill:demo] failed:", err);
+      return Response.json({ ok: false, error: "backfill failed" }, { status: 500 });
+    }
+  }
+
+  // Past the demo branch, only a real Shopify connection remains.
+  if (!shopify) {
+    return Response.json({ ok: false, error: "no Shopify store connected" }, { status: 400 });
   }
 
   let weeks = 8;
