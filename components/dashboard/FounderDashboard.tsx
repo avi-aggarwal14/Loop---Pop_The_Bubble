@@ -61,9 +61,9 @@ const SOURCES: Source[] = [
 
 // Demo-only sample history (shown only in ?demo=1).
 const DEMO_HISTORY = [
-  { week_of: "Week of 26 May", move: "Double down on Instagram Reels — your only positive-ROAS channel.", status: "done" as const },
-  { week_of: "Week of 19 May", move: "Pause the Facebook prospecting set; reallocate to email.", status: "done" as const },
-  { week_of: "Week of 12 May", move: "Reorder the Linen Shirt — 1.5 weeks of stock at current pace.", status: "skipped" as const },
+  { week_of: "Week of 25 May", move: "Pause Meta ads — ROAS fell below 1.0; move budget to creator seeding.", status: "done" as const },
+  { week_of: "Week of 18 May", move: "Protect GlowPatch stock before amplifying — TikTok is accelerating.", status: "done" as const },
+  { week_of: "Week of 11 May", move: "Reposition the Weekend Reset Kit bundle — it's fading toward dead stock.", status: "skipped" as const },
 ];
 
 function SynMark({ size = 22 }: { size?: number }) {
@@ -607,9 +607,9 @@ export default function FounderDashboard() {
   const loadBrief = useCallback(async () => {
     setBriefLoading(true);
     try {
-      const r = await fetch("/api/brief/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ week: 1 }) });
+      const r = await fetch("/api/brief/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sample: true }) });
       const j = (await r.json()) as { brief?: GrowthBrief; live?: boolean };
-      if (j.brief) { setBrief(j.brief); setBriefLive(Boolean(j.live)); }
+      if (j.brief) { setBrief(j.brief); setBriefLive(Boolean(j.live)); setAction("pending"); }
       else { setBrief(SAMPLE_BRIEF); setBriefLive(false); }
     } catch {
       setBrief(SAMPLE_BRIEF); setBriefLive(false);
@@ -650,6 +650,21 @@ export default function FounderDashboard() {
       // best-effort — the UI still reflects the choice
     }
   }, [brief, outcomeNote]);
+
+  // Demo capture → real mubit outcome under the sample-store founder id.
+  const captureDemo = useCallback(async (status: "done" | "skipped") => {
+    setAction(status);
+    if (!brief) return;
+    try {
+      await fetch("/api/brief/outcome", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ demo: true, status, move: brief.one_move.action, weekOf: brief.week_of }),
+      });
+    } catch {
+      // best-effort
+    }
+  }, [brief]);
 
   const connect = useCallback((id: SourceId, value: string) => {
     // REAL mode → start the actual OAuth flow (no fabricated data).
@@ -864,8 +879,8 @@ export default function FounderDashboard() {
             {action === "pending" ? (
               <>
                 <span style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 600, marginRight: 4 }}>Did you make the move?</span>
-                <button type="button" style={{ ...btnPrimary, background: C.up, color: C.bg }} onClick={() => setAction("done")}>✓ Done</button>
-                <button type="button" style={btnGhost} onClick={() => setAction("skipped")}>Skip</button>
+                <button type="button" style={{ ...btnPrimary, background: C.up, color: C.bg }} onClick={() => captureDemo("done")}>✓ Done</button>
+                <button type="button" style={btnGhost} onClick={() => captureDemo("skipped")}>Skip</button>
               </>
             ) : (
               <span style={{ fontFamily: F.sans, fontSize: 13.5, color: C.text, display: "flex", alignItems: "center", gap: 8 }}>
