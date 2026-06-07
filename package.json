@@ -10,6 +10,7 @@
     "start": "next start",
     "generate-brief": "tsx scripts/generate-brief.ts",
     "shopify:brief": "tsx scripts/shopify-live-brief.ts",
+    "sync:store": "tsx scripts/sync-store.ts",
     "shopify": "shopify",
     "shopify:version": "shopify version",
     "shopify:config:link": "shopify app config link",

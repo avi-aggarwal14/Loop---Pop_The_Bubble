@@ -54,3 +54,14 @@ export function priorWeek(range: WeekRange): WeekRange {
   start.setUTCDate(start.getUTCDate() - 7);
   return rangeFromStart(start);
 }
+
+/** The `n` most recent completed weeks, oldest → newest. Used to backfill history. */
+export function recentCompletedWeeks(n: number, now = new Date()): WeekRange[] {
+  const weeks: WeekRange[] = [];
+  let w = previousFullWeek(now);
+  for (let i = 0; i < n; i++) {
+    weeks.unshift(w);
+    w = priorWeek(w);
+  }
+  return weeks;
+}
