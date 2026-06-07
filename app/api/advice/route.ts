@@ -74,7 +74,16 @@ export async function POST(req: Request): Promise<Response> {
         founderId,
       }).catch(() => {});
     }
-    return Response.json({ ok: true, live: true, realStore, recalledFromMubit: Boolean(liveMemories), advice });
+    // Hand back the exact evidence used, so the dashboard can ground follow-up
+    // questions on the same data + memory the verdict was based on.
+    return Response.json({
+      ok: true,
+      live: true,
+      realStore,
+      recalledFromMubit: Boolean(liveMemories),
+      advice,
+      context: { dataBlock, memories: recalledMemories },
+    });
   } catch (err) {
     console.error("[advice] failed:", err);
     return Response.json({ ok: true, live: false, advice: SAMPLE_ADVICE });

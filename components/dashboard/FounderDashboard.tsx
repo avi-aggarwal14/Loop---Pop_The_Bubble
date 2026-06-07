@@ -39,6 +39,10 @@ const HISTORY_WEEKS = 62; // ~14 months — only used in the ?demo=1 walk-throug
 const dirColor = (d: TrendDirection) => (d === "up" ? C.up : d === "down" ? C.down : C.muted);
 const dirArrow = (d: TrendDirection) => (d === "up" ? "↑" : d === "down" ? "↓" : "→");
 
+// Render the structured verdict back into text so follow-up turns know what was said.
+const verdictAsText = (a: Advice): string =>
+  `${a.headline}\n\n${a.summary}\n\nMy recommended move: ${a.recommended_move}`;
+
 type SourceId = "shopify" | "ga4" | "website";
 type SourceStatus = "not_connected" | "syncing" | "connected";
 
@@ -438,6 +442,13 @@ export default function FounderDashboard() {
   const [advice, setAdvice] = useState<Advice | null>(null);
   const [adviceLive, setAdviceLive] = useState(false);
   const [askErr, setAskErr] = useState("");
+  // Follow-up thread: interrogate the verdict, grounded in the same evidence.
+  const [askedQuestion, setAskedQuestion] = useState("");
+  const [askContext, setAskContext] = useState<{ dataBlock: string; memories: string[] } | null>(null);
+  const [followups, setFollowups] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const [followInput, setFollowInput] = useState("");
+  const [following, setFollowing] = useState(false);
+  const [followErr, setFollowErr] = useState("");
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const submitAsk = useCallback(
@@ -447,11 +458,18 @@ export default function FounderDashboard() {
       if (!q || asking) return;
       setAsking(true);
       setAskErr("");
+      // A new top-level question starts a fresh thread.
+      setFollowups([]);
+      setFollowErr("");
       try {
         const r = await fetch("/api/advice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q, demo }) });
-        const j = (await r.json()) as { advice?: Advice; live?: boolean };
-        if (j.advice) { setAdvice(j.advice); setAdviceLive(Boolean(j.live)); }
-        else setAskErr("Couldn't get an answer — try again.");
+        const j = (await r.json()) as { advice?: Advice; live?: boolean; context?: { dataBlock: string; memories: string[] } };
+        if (j.advice) {
+          setAdvice(j.advice);
+          setAdviceLive(Boolean(j.live));
+          setAskedQuestion(q);
+          setAskContext(j.context ?? null);
+        } else setAskErr("Couldn't get an answer — try again.");
       } catch {
         setAskErr("Network error — try again.");
       } finally {
@@ -459,6 +477,40 @@ export default function FounderDashboard() {
       }
     },
     [askInput, asking, demo],
+  );
+
+  const submitFollowup = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      const q = followInput.trim();
+      if (!q || following || !advice) return;
+      setFollowing(true);
+      setFollowErr("");
+      const priorTurns = followups;
+      const messages = [
+        { role: "user" as const, content: askedQuestion },
+        { role: "assistant" as const, content: verdictAsText(advice) },
+        ...priorTurns,
+        { role: "user" as const, content: q },
+      ];
+      setFollowups([...priorTurns, { role: "user", content: q }]); // optimistic
+      setFollowInput("");
+      try {
+        const r = await fetch("/api/advice/followup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages, context: askContext, demo }),
+        });
+        const j = (await r.json()) as { ok?: boolean; reply?: string };
+        if (j.ok && j.reply) setFollowups((f) => [...f, { role: "assistant", content: j.reply as string }]);
+        else setFollowErr("Couldn't answer that — try again.");
+      } catch {
+        setFollowErr("Network error — try again.");
+      } finally {
+        setFollowing(false);
+      }
+    },
+    [followInput, following, advice, askedQuestion, followups, askContext, demo],
   );
 
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
@@ -735,6 +787,56 @@ export default function FounderDashboard() {
             {askErr && <div style={{ marginTop: 12, fontFamily: F.sans, fontSize: 13, color: C.down }}>{askErr}</div>}
           </div>
           {advice && <AdviceCard advice={advice} live={adviceLive} />}
+
+          {/* Follow-up thread — interrogate the verdict; Synapse defends it. */}
+          {advice && (
+            <div style={{ marginTop: 16 }}>
+              {followups.length > 0 && (
+                <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
+                  {followups.map((m, i) =>
+                    m.role === "user" ? (
+                      <div key={i} style={{ justifySelf: "end", maxWidth: "85%", background: `${C.accent}1c`, border: `1px solid ${C.accent}44`, borderRadius: "14px 14px 4px 14px", padding: "10px 14px", fontFamily: F.sans, fontSize: 14, color: C.text, lineHeight: 1.45 }}>
+                        {m.content}
+                      </div>
+                    ) : (
+                      <div key={i} style={{ justifySelf: "start", maxWidth: "94%", background: C.card, border: `1px solid ${C.border}`, borderRadius: "14px 14px 14px 4px", padding: "13px 16px", fontFamily: F.sans, fontSize: 14.5, color: C.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                        {m.content}
+                      </div>
+                    ),
+                  )}
+                  {following && (
+                    <div style={{ justifySelf: "start", display: "inline-flex", alignItems: "center", gap: 8, fontFamily: F.mono, fontSize: 12, color: C.muted, padding: "4px 2px" }}>
+                      <span className="syn-pulse" style={{ width: 7, height: 7, borderRadius: 7, background: C.accent }} />
+                      Synapse is thinking…
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <form onSubmit={submitFollowup} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <input
+                  value={followInput}
+                  onChange={(e) => setFollowInput(e.target.value)}
+                  placeholder="Ask a follow-up — “why?”, “what’s the risk?”, “what if I’m wrong?”"
+                  className="syn-in"
+                  style={{ ...inputStyle, flex: 1, minWidth: 240, height: 42 }}
+                  disabled={following}
+                />
+                <button type="submit" style={{ ...btnGhost, opacity: following || !followInput.trim() ? 0.5 : 1, cursor: following || !followInput.trim() ? "default" : "pointer" }} disabled={following || !followInput.trim()}>
+                  {following ? "…" : "Send"}
+                </button>
+              </form>
+
+              {followups.length === 0 && (
+                <div style={{ marginTop: 9, display: "flex", gap: 7, flexWrap: "wrap" }}>
+                  {["Why?", "What's the biggest risk?", "What if I'm wrong?", "What would change your mind?"].map((q) => (
+                    <button key={q} type="button" onClick={() => setFollowInput(q)} disabled={following} style={{ fontFamily: F.sans, fontSize: 11.5, color: C.muted, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 100, padding: "5px 11px", cursor: "pointer" }}>{q}</button>
+                  ))}
+                </div>
+              )}
+              {followErr && <div style={{ marginTop: 10, fontFamily: F.sans, fontSize: 13, color: C.down }}>{followErr}</div>}
+            </div>
+          )}
         </section>
 
         {/* Brief history */}
