@@ -1,11 +1,8 @@
-import type { Metadata } from "next";
-import ConnectSources from "@/components/connect/ConnectSources";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Synapse — Connect Sources",
-  description: "Connect Shopify, Google Analytics, Vercel, and website context to Synapse.",
-};
-
+// The session-based /dashboard is the real connect surface now (Shopify/Google via
+// OAuth, no manual IDs). The old /connect dev UI is retired — send anyone who lands
+// here straight to the app so they never hit the confusing founder_id input.
 export default function Page() {
-  return <ConnectSources />;
+  redirect("/dashboard");
 }
