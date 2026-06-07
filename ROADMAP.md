@@ -7,8 +7,9 @@ Owner tags: **[YOU]** = needs your account/key, **[ME]** = AI/dev does it in cod
 
 ---
 
-## Current state (2026-06-06)
+## Current state (2026-06-07)
 
+- **✅ Ask Synapse + session connect + live Shopify (NEW):** the two-way decision advisor (`POST /api/advice` + a follow-up thread, `lib/advise/*`) — plain-English question → structured `Advice` verdict grounded in live Shopify data + real mubit recall; a real founder dashboard (`/dashboard`, blank by default / `?demo=1` walk-through); and **session-based connect** (signed httpOnly cookie via `lib/connect/session.ts`, **no Supabase needed**). On connect, `backfillStoreHistory()` distills recent Shopify weeks into mubit so recall is real. **Shopify OAuth is LIVE in production** — credentials set on the Vercel `synapse` project, real store `synapse-demo-store` installed (`shopify.configurable:true`); GA4 connect configured (`ga4.configurable:true`).
 - **Built, typechecked:** the brief engine (**Anthropic Claude**), the memory layer (mubit), **four data connectors** (Shopify orders **+ per-product/inventory**, GA4, Vercel drains, website scraper), the multi-source pipeline, all API routes, two SQL migrations, and the demo/ad surfaces.
 - **🟢 Build is green** — `npm run typecheck` clean, `npm run build` clean, `npm test` = **28/28**. The Shopify per-product upgrade (Phase 3b) is **complete**: line items + catalogue/inventory → per-product revenue, top sellers, inventory-vs-sales-velocity, and dead stock, all flowing into the brief.
 - **✅ The brief engine runs LIVE on Anthropic Claude** (`claude-opus-4-8`) — Phase 1 done.
@@ -44,11 +45,11 @@ This is the current working plan for the next push. Keep the focus on real first
 - [ ] **[ME]** Verify tables/RLS exist and create a simple founder row for testing if needed.
 - [ ] **[ME]** Run a pipeline smoke test that writes a Shopify connection, metric snapshot, brief, and pending action.
 
-### Milestone 3 — Wire Shopify OAuth for real users
-- [ ] **[YOU]** Create/configure the Shopify app with redirect URL `<APP_URL>/api/auth/shopify/callback` and scopes `read_orders,read_customers,read_products,read_reports`.
-- [ ] **[YOU/ME]** Provide a public HTTPS `APP_URL` via Vercel deploy or a local tunnel.
-- [ ] **[ME]** Add `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, `SHOPIFY_SCOPES`, `SHOPIFY_APP_URL`, and `APP_URL` to `.env`.
-- [ ] **[ME]** Run `/api/auth/shopify?shop=<store>.myshopify.com&founder_id=<uuid>` through the install flow and confirm the `connections` row is stored.
+### Milestone 3 — Wire Shopify OAuth for real users  ·  ✅ LIVE (2026-06-07)
+- [x] **[YOU]** Created/configured the Shopify app (Dev Dashboard) with redirect `<APP_URL>/api/auth/shopify/callback` + scopes `read_orders,read_customers,read_products,read_reports`; **unchecked** "Embed app in Shopify admin", **checked** "Use legacy install flow" (our authorization-code OAuth needs the legacy flow).
+- [x] **[YOU/ME]** Public HTTPS `APP_URL` = `https://synapse-acceleration.vercel.app` (the `synapse` Vercel project — on the user's OWN account `avi-aggarwal14s-projects`, not a teammate's).
+- [x] **[ME]** Set `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, `APP_URL` as **Production env vars on Vercel** via CLI (`vercel env add --value` — piped stdin is ignored for agents) + redeploy. Local `.env` also has them.
+- [x] **[ME/YOU]** Ran the install flow — **session-based** now (`/api/auth/shopify?shop=…`, no `founder_id` param): the user connected `synapse-demo-store.myshopify.com`; token stored in the signed session cookie. Verified `/api/connect/status` → `shopify.configurable:true` + a real ● Connected. **Remaining:** persist the connection in Supabase (cookie-only today) and pull orders from a store with real data.
 
 ### Milestone 4 — Expand analytics coverage
 - [ ] **[YOU]** Create Google Cloud OAuth credentials for GA4 when ready.
@@ -58,7 +59,7 @@ This is the current working plan for the next push. Keep the focus on real first
 
 ### Milestone 5 — Product UI
 - [x] **[ME]** Added a first-pass `/connect` page for the current connector routes: Shopify OAuth URL builder, GA4 OAuth URL builder, Vercel drain instructions, and website sidecar command. It still uses the temporary `founder_id` field until Supabase Auth is wired.
-- [ ] **[ME]** Build the real authenticated Connect page and real dashboard path once Supabase Auth/session wiring is available.
+- [~] **[ME]** Real dashboard path shipped **without** Supabase: `/dashboard` (`components/dashboard/FounderDashboard.tsx`) + **Ask Synapse** (`/api/advice` + follow-up thread) run over session-based connect (signed cookie). Still TODO: Supabase **Auth** (visible login UI) + persisting connections/briefs in the DB instead of the cookie.
 - [ ] **[ME]** Replace `founder_id` query params with the authenticated server session.
 - [ ] **[ME]** Wire Done/Skipped/outcome in the UI to `POST /api/briefs/[id]/action`, so mubit outcome learning is used in the real app.
 
@@ -168,7 +169,7 @@ Product-level intelligence so the "one move" can be product-specific.
 - [x] **[ME]** Supabase server-session lookup via `@supabase/ssr` for connector starts; production no longer depends on `founder_id` query params.
 - [ ] **[ME]** Build the visible Supabase Auth UI (email magic-link/login) and the per-user dashboard RLS client.
 - [ ] **[ME]** Replace the `founder_id` query param on the connect links with the server session (see the `NOTE` in `handleShopifyStart`/`handleGoogleStart`).
-- [~] **[ME]** **Dashboard page:** ✅ a DEMO is built — `/brief` (`components/brief/BriefDashboard.tsx`) renders the brief card in the Synapse aesthetic + "Generate with Claude" (`/api/brief/demo`) + Done/Skipped + outcome (local). **Remaining:** list real briefs (`getLatestBriefs`) and wire Done/Skipped → `POST /api/briefs/[id]/action` once auth + Supabase are in.
+- [~] **[ME]** **Dashboard page:** ✅ TWO exist now — (1) `/brief` (`components/brief/BriefDashboard.tsx`) the brief-card demo + "Generate with Claude" (`/api/brief/demo`); (2) **`/dashboard`** (`components/dashboard/FounderDashboard.tsx`) the real founder dashboard — blank/onboarding by default, real OAuth connect cards, **Ask Synapse** (`/api/advice`) + follow-up thread, live-KPI panel, `?demo=1` walk-through. **Remaining:** list real briefs (`getLatestBriefs`) and wire Done/Skipped → `POST /api/briefs/[id]/action` once Supabase persistence is in (connections are session-cookie today).
 - [ ] **[ME]** **Connect page:** buttons for Shopify / GA4 / Vercel / paste-website; onboarding captures `business_context` and triggers the scraper.
 
 **Done when:** a founder can log in, connect sources, and see + respond to their brief in the browser.

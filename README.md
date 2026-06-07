@@ -52,6 +52,7 @@ Important APIs:
 /api/advice
 /api/advice/followup
 /api/connect/status
+/api/brief
 /api/brief/demo
 /api/briefs/[id]/action
 /api/cron/generate-briefs
