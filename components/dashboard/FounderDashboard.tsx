@@ -436,6 +436,7 @@ export default function FounderDashboard() {
   const [brief, setBrief] = useState<GrowthBrief | null>(null);
   const [briefLive, setBriefLive] = useState(false);
   const [briefLoading, setBriefLoading] = useState(false);
+  const [briefNotice, setBriefNotice] = useState(""); // calm "not enough data" message for the live brief
   const [action, setAction] = useState<"pending" | "done" | "skipped">("pending");
   const [askInput, setAskInput] = useState("");
   const [asking, setAsking] = useState(false);
@@ -569,6 +570,24 @@ export default function FounderDashboard() {
       setBriefLoading(false);
     }
   }, []);
+
+  // Generate this week's brief from the REAL connected store (the weekly push).
+  const generateLiveBrief = useCallback(async () => {
+    if (briefLoading) return;
+    setBriefLoading(true);
+    setBriefNotice("");
+    try {
+      const r = await fetch("/api/brief", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const j = (await r.json()) as { brief?: GrowthBrief; live?: boolean; needsData?: boolean; needsConnect?: boolean; message?: string };
+      if (j.brief) { setBrief(j.brief); setBriefLive(Boolean(j.live)); }
+      else if (j.needsData || j.needsConnect) setBriefNotice(j.message ?? "Not enough data yet — connect a store with some history.");
+      else setBriefNotice("Couldn't generate your brief — try again.");
+    } catch {
+      setBriefNotice("Network error — try again.");
+    } finally {
+      setBriefLoading(false);
+    }
+  }, [briefLoading]);
 
   const connect = useCallback((id: SourceId, value: string) => {
     // REAL mode → start the actual OAuth flow (no fabricated data).
@@ -766,6 +785,34 @@ export default function FounderDashboard() {
               </span>
             )}
           </div>
+        )}
+
+        {/* This week's brief — the weekly PUSH, generated from the real connected store */}
+        {realConnected && (
+          <section style={{ marginBottom: 30 }}>
+            <Eyebrow>This week&apos;s brief</Eyebrow>
+            {brief && !briefLoading ? (
+              <>
+                <BriefCard brief={brief} live={briefLive} />
+                <button type="button" onClick={generateLiveBrief} style={{ marginTop: 12, fontFamily: F.mono, fontSize: 11, letterSpacing: "0.04em", color: C.muted, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 100, padding: "6px 13px", cursor: "pointer" }}>
+                  ↺ Regenerate
+                </button>
+              </>
+            ) : briefLoading ? (
+              <div className="syn-shimmer" style={{ border: `1px solid ${C.border}`, borderRadius: 18, padding: 34, fontFamily: F.mono, fontSize: 13, color: C.muted }}>
+                Writing this week&apos;s brief with Claude — reading your data and everything it remembers…
+              </div>
+            ) : (
+              <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 18, padding: "28px 26px" }}>
+                <div style={{ fontFamily: F.serif, fontSize: 21, fontWeight: 700, color: C.text }}>Get your weekly Growth Brief.</div>
+                <p style={{ margin: "9px 0 16px", maxWidth: 520, fontFamily: F.sans, fontSize: 14.5, color: C.muted, lineHeight: 1.55 }}>
+                  One read of your week — what&apos;s working, what to cut, and the single move to make — written from your live data and weighed against everything Synapse remembers.
+                </p>
+                <button type="button" onClick={generateLiveBrief} style={{ ...btnPrimary }}>Generate this week&apos;s brief →</button>
+                {briefNotice && <div style={{ marginTop: 12, fontFamily: F.sans, fontSize: 13.5, color: C.muted, lineHeight: 1.5 }}>{briefNotice}</div>}
+              </div>
+            )}
+          </section>
         )}
 
         {/* Ask Synapse — functional in demo mode (example store), preview otherwise */}

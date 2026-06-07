@@ -1,4 +1,6 @@
 import { MubitClient, mubitConfigFromEnv, founderAgentId, founderRunId } from "../mubit/client";
+import { briefMemory } from "../mubit/memory";
+import type { GrowthBrief } from "../brief/schema";
 
 /**
  * Real mubit recall for the Ask. Returns the memories relevant to the question
@@ -55,5 +57,22 @@ export async function rememberAsk(opts: {
     );
   } catch {
     // never blocks the answer
+  }
+}
+
+/**
+ * Write a generated Growth Brief to the store's memory, so next week's brief (and
+ * any Ask) can recall what was recommended and build on it. Defensive — never
+ * blocks the brief.
+ */
+export async function rememberBrief(brief: GrowthBrief, founderId?: string): Promise<void> {
+  const id = founderId ?? process.env.ASK_FOUNDER_ID ?? process.env.SHOPIFY_FOUNDER_ID;
+  const cfg = mubitConfigFromEnv();
+  if (!cfg || !id) return;
+  try {
+    const client = new MubitClient(cfg);
+    await client.remember(founderAgentId(id), briefMemory(brief, id), { userId: id, runId: founderRunId(id) });
+  } catch {
+    // never blocks the brief
   }
 }
