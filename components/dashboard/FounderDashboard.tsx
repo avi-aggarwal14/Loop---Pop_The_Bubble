@@ -94,18 +94,21 @@ const btnGhost: React.CSSProperties = {
 
 // ── Connect card ─────────────────────────────────────────────────────────────
 function ConnectCard({
-  source, status, progress, weeksDone, onConnect,
+  source, status, progress, weeksDone, onConnect, configurable = true, shopLabel,
 }: {
   source: Source;
   status: SourceStatus;
   progress: number;
   weeksDone: number;
   onConnect: (id: SourceId, value: string) => void;
+  configurable?: boolean;
+  shopLabel?: string | null;
 }) {
   const [val, setVal] = useState("");
   const connected = status === "connected";
   const syncing = status === "syncing";
   const borderColor = connected ? C.up + "55" : syncing ? C.accent + "66" : C.border;
+  const showInputs = !connected && !syncing && configurable;
 
   return (
     <div style={{ background: C.card, border: `1px solid ${borderColor}`, borderRadius: 14, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
@@ -136,19 +139,28 @@ function ConnectCard({
         </div>
       )}
 
-      {!connected && !syncing && source.kind === "shopify" && (
+      {connected && shopLabel && (
+        <div style={{ fontFamily: F.mono, fontSize: 11, color: C.muted, letterSpacing: "0.02em" }}>{shopLabel}</div>
+      )}
+      {showInputs && source.kind === "shopify" && (
         <div style={{ display: "flex", gap: 8 }}>
           <input value={val} onChange={(e) => setVal(e.target.value)} placeholder="your-store.myshopify.com" className="syn-in" style={inputStyle} />
           <button type="button" style={btnPrimary} onClick={() => onConnect(source.id, val)}>Connect</button>
         </div>
       )}
-      {!connected && !syncing && source.kind === "google" && (
+      {showInputs && source.kind === "google" && (
         <button type="button" style={{ ...btnPrimary, alignSelf: "flex-start" }} onClick={() => onConnect(source.id, "")}>Connect Google Analytics</button>
       )}
-      {!connected && !syncing && source.kind === "website" && (
+      {showInputs && source.kind === "website" && (
         <div style={{ display: "flex", gap: 8 }}>
           <input value={val} onChange={(e) => setVal(e.target.value)} placeholder="https://yourstore.com" className="syn-in" style={inputStyle} />
           <button type="button" style={btnGhost} onClick={() => onConnect(source.id, val)}>Add</button>
+        </div>
+      )}
+      {!connected && !syncing && !configurable && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.06em", textTransform: "uppercase", color: C.faint }}>
+          <span style={{ width: 6, height: 6, borderRadius: 6, background: C.faint, flex: "0 0 auto" }} />
+          Connection coming soon
         </div>
       )}
     </div>
@@ -251,6 +263,22 @@ export default function FounderDashboard() {
     setDemo(new URLSearchParams(window.location.search).get("demo") === "1");
   }, []);
 
+  // Real connection state (signed session cookie set by the OAuth callbacks).
+  type ConnStatus = {
+    shopify: { connected: boolean; shop: string | null; configurable: boolean };
+    ga4: { connected: boolean; configurable: boolean };
+  };
+  const [realStatus, setRealStatus] = useState<ConnStatus | null>(null);
+  useEffect(() => {
+    if (demo) return;
+    let off = false;
+    fetch("/api/connect/status")
+      .then((r) => r.json())
+      .then((j) => { if (!off) setRealStatus(j as ConnStatus); })
+      .catch(() => {});
+    return () => { off = true; };
+  }, [demo]);
+
   const [connected, setConnected] = useState<Partial<Record<SourceId, boolean>>>({});
   const [syncSource, setSyncSource] = useState<SourceId | null>(null);
   const [progress, setProgress] = useState(0);
@@ -299,6 +327,10 @@ export default function FounderDashboard() {
     : connectedCount > 0
     ? "ready"
     : "empty";
+  // Real mode: a store is actually connected via the signed session cookie.
+  const realConnected = !demo && Boolean(realStatus?.shopify.connected);
+  // The Ask is live in the demo (example store) OR once a real store is connected.
+  const askEnabled = demo || realConnected;
   const weeksDone = Math.round((progress / 100) * HISTORY_WEEKS);
 
   const loadBrief = useCallback(async () => {
@@ -360,16 +392,32 @@ export default function FounderDashboard() {
     setAction("pending");
   }, []);
 
-  const statusOf = (id: SourceId): SourceStatus =>
-    connected[id] ? "connected" : syncSource === id ? "syncing" : "not_connected";
+  const statusOf = (id: SourceId): SourceStatus => {
+    if (demo) return connected[id] ? "connected" : syncSource === id ? "syncing" : "not_connected";
+    if (id === "shopify" && realStatus?.shopify.connected) return "connected";
+    if (id === "ga4" && realStatus?.ga4.connected) return "connected";
+    return "not_connected";
+  };
+  // Whether each source's connector is actually wired (app keys present). When not,
+  // the card shows a graceful "coming soon" instead of routing into a 503.
+  const configurableOf = (id: SourceId): boolean => {
+    if (demo) return true;
+    if (id === "shopify") return realStatus?.shopify.configurable ?? true;
+    if (id === "ga4") return realStatus?.ga4.configurable ?? true;
+    return true;
+  };
+  const shopLabelOf = (id: SourceId): string | null =>
+    !demo && id === "shopify" ? realStatus?.shopify.shop ?? null : null;
 
-  const business = demo && phase === "ready" ? "Aveline Threads" : null;
+  const business = demo && phase === "ready" ? "Aveline Threads" : realConnected ? (realStatus?.shopify.shop ?? null) : null;
 
   const greeting =
     phase === "ready"
       ? { h: `Good morning, ${business}.`, p: `${connectedCount} source${connectedCount === 1 ? "" : "s"} connected · your next move is ready below.` }
       : phase === "syncing"
       ? { h: "Building your store's memory…", p: `Reading ${HISTORY_WEEKS} weeks of history so your first brief already knows your past.` }
+      : realConnected
+      ? { h: "You're connected.", p: "Synapse is reading your store. Ask it about any decision below — it answers from your real data and everything it remembers." }
       : { h: "Welcome to Synapse.", p: "Connect your store below and Synapse reads your whole history, then writes a weekly Growth Brief that ends in one clear move — informed by your past, not a blank slate." };
 
   return (
@@ -414,22 +462,32 @@ export default function FounderDashboard() {
 
         {/* Connect your data */}
         <section style={{ marginBottom: 30 }}>
-          <Eyebrow>{phase === "empty" ? "Step 1 — Connect your data" : "Connect your data"}</Eyebrow>
+          <Eyebrow>{phase === "empty" && !realConnected ? "Step 1 — Connect your data" : "Connect your data"}</Eyebrow>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 12 }}>
             {SOURCES.map((s) => (
-              <ConnectCard key={s.id} source={s} status={statusOf(s.id)} progress={progress} weeksDone={weeksDone} onConnect={connect} />
+              <ConnectCard key={s.id} source={s} status={statusOf(s.id)} progress={progress} weeksDone={weeksDone} onConnect={connect} configurable={configurableOf(s.id)} shopLabel={shopLabelOf(s.id)} />
             ))}
           </div>
         </section>
 
         {/* This week's brief — state-driven */}
         <section style={{ marginBottom: 16 }}>
-          {phase === "empty" && (
+          {phase === "empty" && !realConnected && (
             <div style={{ background: C.card, border: `1px dashed ${C.border2}`, borderRadius: 18, padding: "40px 30px", textAlign: "center" }}>
               <Eyebrow>Step 2 — Your first brief</Eyebrow>
               <div style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginTop: 4 }}>It appears here the moment you connect.</div>
               <p style={{ margin: "10px auto 0", maxWidth: 460, fontFamily: F.sans, fontSize: 14.5, color: C.muted, lineHeight: 1.55 }}>
                 As soon as a source is connected, Synapse reads your full history and writes a Growth Brief — what&apos;s working, what to cut, and the one move to make this week.
+              </p>
+            </div>
+          )}
+
+          {realConnected && (
+            <div style={{ background: C.card, border: `1px solid ${C.up}44`, borderRadius: 18, padding: "30px", textAlign: "center" }}>
+              <Eyebrow>Your store is connected</Eyebrow>
+              <div style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginTop: 4 }}>Ask Synapse anything about your next move.</div>
+              <p style={{ margin: "10px auto 0", maxWidth: 480, fontFamily: F.sans, fontSize: 14.5, color: C.muted, lineHeight: 1.55 }}>
+                Synapse is reading your real Shopify data. Put a decision to it below — pricing, restock, ad spend — and it answers from your numbers and everything it remembers.
               </p>
             </div>
           )}
@@ -478,7 +536,7 @@ export default function FounderDashboard() {
           <Eyebrow>Ask Synapse</Eyebrow>
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "18px 20px" }}>
             <p style={{ margin: "0 0 14px", fontFamily: F.sans, fontSize: 14, color: C.muted, lineHeight: 1.55 }}>
-              {demo
+              {askEnabled
                 ? "Ask about any decision in plain English — Synapse answers from this store's data and everything it remembers."
                 : "Once your data is connected, ask Synapse about any decision in plain English and it answers from your store's memory."}
             </p>
@@ -488,10 +546,10 @@ export default function FounderDashboard() {
                 onChange={(e) => setAskInput(e.target.value)}
                 placeholder={demo ? "e.g. Should I decrease Coconut & Berry next week?" : "e.g. Should I discount the Linen Shirt this week?"}
                 className="syn-in"
-                style={{ ...inputStyle, flex: 1, minWidth: 240, height: 44, opacity: demo ? 1 : 0.7 }}
-                disabled={!demo || asking}
+                style={{ ...inputStyle, flex: 1, minWidth: 240, height: 44, opacity: askEnabled ? 1 : 0.7 }}
+                disabled={!askEnabled || asking}
               />
-              <button type="submit" style={{ ...btnPrimary, opacity: !demo || asking ? 0.5 : 1, cursor: !demo || asking ? "default" : "pointer" }} disabled={!demo || asking}>
+              <button type="submit" style={{ ...btnPrimary, opacity: !askEnabled || asking ? 0.5 : 1, cursor: !askEnabled || asking ? "default" : "pointer" }} disabled={!askEnabled || asking}>
                 {asking ? "Thinking…" : "Ask →"}
               </button>
             </form>
@@ -501,9 +559,9 @@ export default function FounderDashboard() {
                   <button key={q} type="button" onClick={() => setAskInput(q)} disabled={asking} style={{ fontFamily: F.sans, fontSize: 11.5, color: C.muted, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 100, padding: "5px 11px", cursor: "pointer" }}>{q}</button>
                 ))}
               </div>
-            ) : (
+            ) : !askEnabled ? (
               <div style={{ marginTop: 10, fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.06em", color: C.faint, textTransform: "uppercase" }}>● Available once your data is connected</div>
-            )}
+            ) : null}
             {askErr && <div style={{ marginTop: 12, fontFamily: F.sans, fontSize: 13, color: C.down }}>{askErr}</div>}
           </div>
           {advice && <AdviceCard advice={advice} live={adviceLive} />}

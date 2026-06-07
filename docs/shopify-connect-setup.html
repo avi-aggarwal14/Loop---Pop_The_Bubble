@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Synapse — Connect a Shopify Store (Setup Guide)</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: #14161a;
+    font-size: 11.2pt;
+    line-height: 1.5;
+    margin: 0;
+  }
+  .mark {
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 2px solid #FA5400; padding-bottom: 12px; margin-bottom: 6px;
+  }
+  .dot { width: 16px; height: 16px; border-radius: 50%; background: #FA5400; flex: 0 0 auto; }
+  .brand { font-size: 20pt; font-weight: 700; letter-spacing: -0.01em; }
+  .sub { color: #6b7280; font-size: 10pt; margin: 2px 0 18px; }
+  h1 { font-size: 16pt; margin: 22px 0 4px; }
+  h2 { font-size: 12.5pt; margin: 22px 0 6px; color: #0b0c0e; border-left: 3px solid #FA5400; padding-left: 9px; }
+  p { margin: 7px 0; }
+  ul, ol { margin: 7px 0 7px 4px; padding-left: 20px; }
+  li { margin: 4px 0; }
+  code { font-family: "Consolas", "Courier New", monospace; background: #f1f2f4; padding: 1px 5px; border-radius: 4px; font-size: 10pt; }
+  .callout { background: #fff6f0; border: 1px solid #fcd2bb; border-radius: 8px; padding: 11px 14px; margin: 12px 0; }
+  .callout.gate { background: #fff7e6; border-color: #f6dca0; }
+  .callout.good { background: #eefaf0; border-color: #b7e6c2; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 10.4pt; }
+  th, td { border: 1px solid #d9dce1; padding: 7px 9px; text-align: left; vertical-align: top; }
+  th { background: #f5f6f8; }
+  .muted { color: #6b7280; }
+  .step-num { color: #FA5400; font-weight: 700; }
+  hr { border: none; border-top: 1px solid #e3e6ea; margin: 20px 0; }
+  .foot { margin-top: 26px; color: #9aa0a8; font-size: 9pt; border-top: 1px solid #e3e6ea; padding-top: 10px; }
+</style>
+</head>
+<body>
+
+<div class="mark">
+  <span class="dot"></span>
+  <span class="brand">Synapse</span>
+</div>
+<div class="sub">Connect a Shopify store — end-to-end setup &amp; test guide</div>
+
+<div class="callout good">
+  <strong>What this is for.</strong> The store you create here is a <strong>test fixture</strong>, not part of the product.
+  Its only job is to let you click through the real connect flow once and confirm every link works. In production,
+  each real founder connects <em>their own</em> store and the app reads <em>their</em> data — nothing about your store is
+  hardcoded anywhere. The dashboard always reads whichever store the current visitor connected (via a signed session cookie).
+</div>
+
+<h1>Does it work on a completely empty store?</h1>
+<p>
+  <strong>Connecting:</strong> yes — OAuth doesn't care whether the store has data. The connection succeeds either way.<br />
+  <strong>Getting a customized answer:</strong> needs a little data. With zero orders the data pull comes back empty and the
+  engine falls back to the built-in demo example, so you'd see a generic answer instead of <em>your</em> store. Real founders
+  never hit this — their stores already have months of orders. For <em>your</em> test store, add ~5 fake orders (see the last
+  section) so the real path actually fires.
+</p>
+
+<hr />
+
+<h2><span class="step-num">1.</span> Create the store</h2>
+<p>
+  A Shopify <strong>development store</strong> via Shopify Partners is ideal — free, no billing. If you created it through
+  <code>partners.shopify.com</code> you already have the Partners account needed for step 3.
+</p>
+
+<h2><span class="step-num">2.</span> Shopify Partners account</h2>
+<p>
+  <code>partners.shopify.com</code> — free. Your dev store lives under it.
+</p>
+
+<h2><span class="step-num">3.</span> Create the app &amp; get the keys</h2>
+<p>In the <strong>Partners dashboard</strong>:</p>
+<ul>
+  <li><strong>Apps → Create app → Create app manually</strong> → name it "Synapse".</li>
+  <li>Open the app → <strong>Client credentials</strong> (a.k.a. API keys). Copy:
+    <ul>
+      <li><strong>Client ID</strong> → this is <code>SHOPIFY_API_KEY</code></li>
+      <li><strong>Client secret</strong> → this is <code>SHOPIFY_API_SECRET</code></li>
+    </ul>
+  </li>
+</ul>
+
+<h2><span class="step-num">4.</span> Set the App URL + redirect (must match exactly)</h2>
+<p>In the app → <strong>Configuration</strong>:</p>
+<ul>
+  <li><strong>App URL:</strong> <code>https://synapse-acceleration.vercel.app</code></li>
+  <li><strong>Allowed redirection URL(s):</strong> <code>https://synapse-acceleration.vercel.app/api/auth/shopify/callback</code></li>
+</ul>
+<p class="muted">
+  The redirect string must be character-for-character exact, or Shopify rejects the callback.
+</p>
+
+<h2><span class="step-num">5.</span> Add env vars to Vercel — then redeploy</h2>
+<div class="callout gate">
+  <strong>This is the one part only you can do.</strong> These go on the Vercel project that serves
+  <code>synapse-acceleration.vercel.app</code> (your teammate's project), not just your local machine.
+</div>
+<p>In that project's <strong>Settings → Environment Variables</strong>, add:</p>
+<table>
+  <tr><th>Name</th><th>Value</th></tr>
+  <tr><td><code>SHOPIFY_API_KEY</code></td><td>the Client ID from step 3</td></tr>
+  <tr><td><code>SHOPIFY_API_SECRET</code></td><td>the Client secret from step 3</td></tr>
+  <tr><td><code>APP_URL</code></td><td><code>https://synapse-acceleration.vercel.app</code></td></tr>
+</table>
+<p>
+  Scopes default to <code>read_orders,read_customers,read_products,read_reports</code> already — you don't need to set
+  <code>SHOPIFY_SCOPES</code> unless you want to change them. Then <strong>Redeploy</strong> (env vars only take effect on a new deploy).
+</p>
+
+<h2><span class="step-num">6.</span> Test the flow</h2>
+<ol>
+  <li>Go to <code>https://synapse-acceleration.vercel.app/dashboard</code></li>
+  <li>In the Shopify card, type <code>your-store.myshopify.com</code> → <strong>Connect</strong></li>
+  <li>Shopify shows an approve screen (proves keys + redirect are right) → approve</li>
+  <li>You land back on <code>/dashboard?connected=shopify</code>; the card shows <strong>● Connected</strong> with your shop name</li>
+  <li><strong>Ask Synapse</strong> is now live against your real store data</li>
+</ol>
+<p class="muted">
+  Until those env vars are set + deployed, the Shopify card shows <strong>"Connection coming soon"</strong> instead of the
+  connect box — that's the graceful fallback, not a bug.
+</p>
+
+<hr />
+
+<h2>To actually see real numbers — add a little data</h2>
+<p>Quickest way on a dev store:</p>
+<ol>
+  <li>Add <strong>2–3 products</strong> (Products → Add product).</li>
+  <li>Place a <strong>few test orders</strong> with the <strong>Bogus Gateway</strong>: Settings → Payments → add
+    "(for testing) Bogus Gateway", then order through your storefront using card number <code>1</code>
+    (<code>2</code>/<code>3</code> simulate failures).</li>
+</ol>
+<p>
+  Even ~5 orders across the last week or two is enough for the Ask to reason about <em>your</em> store
+  (revenue, top product, channel mix) instead of falling back to the demo example.
+</p>
+
+<div class="callout">
+  <strong>The mental model.</strong><br />
+  <strong>Production reality:</strong> a user connects their store → their data → their answer. Already built.<br />
+  <strong>Your test store:</strong> the one store you can legitimately connect to confirm that reality works before the
+  event — and it needs a sprinkle of data only because it starts empty.
+</div>
+
+<div class="foot">
+  Synapse — Pop the Bubble Hackathon 2026 · Shopify connect setup guide
+</div>
+
+</body>
+</html>

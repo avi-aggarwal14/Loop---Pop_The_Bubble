@@ -8,15 +8,15 @@ import { MubitClient, mubitConfigFromEnv, founderAgentId, founderRunId } from ".
  * This is the slot the demo's EXAMPLE_MEMORIES stands in for. mubit holds the
  * store's whole history; recall returns only what's relevant to THIS question.
  */
-export async function recallForStore(question: string): Promise<string[] | null> {
-  const founderId = process.env.ASK_FOUNDER_ID ?? process.env.SHOPIFY_FOUNDER_ID;
+export async function recallForStore(question: string, founderId?: string): Promise<string[] | null> {
+  const id = founderId ?? process.env.ASK_FOUNDER_ID ?? process.env.SHOPIFY_FOUNDER_ID;
   const cfg = mubitConfigFromEnv();
-  if (!cfg || !founderId) return null;
+  if (!cfg || !id) return null;
   try {
     const client = new MubitClient(cfg);
-    const memories = await client.recall(founderAgentId(founderId), question, {
-      userId: founderId,
-      runId: founderRunId(founderId),
+    const memories = await client.recall(founderAgentId(id), question, {
+      userId: id,
+      runId: founderRunId(id),
       limit: 6,
       entryTypes: ["lesson", "fact", "observation"],
     });

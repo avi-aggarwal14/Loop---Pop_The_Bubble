@@ -12,9 +12,9 @@ import { previousFullWeek, priorWeek } from "../util/dates";
  * token — no OAuth/Supabase needed). Pulls the most recent completed week + the
  * prior week + the catalogue, derives the same metrics the brief engine uses.
  */
-export async function liveStoreDataBlock(): Promise<string | null> {
-  const shop = process.env.SHOPIFY_SHOP_DOMAIN;
-  const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+export async function liveStoreDataBlock(creds?: { shop: string; accessToken: string }): Promise<string | null> {
+  const shop = creds?.shop ?? process.env.SHOPIFY_SHOP_DOMAIN;
+  const accessToken = creds?.accessToken ?? process.env.SHOPIFY_ACCESS_TOKEN;
   if (!shop || !accessToken) return null;
 
   try {

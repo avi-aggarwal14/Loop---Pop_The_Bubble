@@ -2,6 +2,7 @@ import { askAdvice } from "@/lib/advise/generate";
 import { EXAMPLE_DATA_BLOCK, EXAMPLE_MEMORIES, SAMPLE_ADVICE } from "@/lib/advise/example";
 import { recallForStore } from "@/lib/advise/recall";
 import { liveStoreDataBlock } from "@/lib/advise/store-data";
+import { CONNECT_COOKIE, parseCookieHeader, readConnections } from "@/lib/connect/session";
 
 // "Ask Synapse" — POST { question } → a memory-backed verdict.
 // Uses REAL data + REAL memory when a store is configured:
@@ -33,10 +34,16 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ ok: true, live: false, advice: SAMPLE_ADVICE });
   }
 
-  // Real data + real memory when configured (and not demo); example fallback per-slot.
+  // The connected store from the signed session cookie (set by the OAuth callback).
+  const shopifyConn = readConnections(parseCookieHeader(req.headers.get("cookie"))[CONNECT_COOKIE]).shopify;
+
+  // Real data + real memory when connected/configured (and not demo); example fallback per-slot.
   const [liveData, liveMemories] = demo
     ? [null, null]
-    : await Promise.all([liveStoreDataBlock().catch(() => null), recallForStore(question).catch(() => null)]);
+    : await Promise.all([
+        liveStoreDataBlock(shopifyConn ? { shop: shopifyConn.shop, accessToken: shopifyConn.accessToken } : undefined).catch(() => null),
+        recallForStore(question, shopifyConn?.founderId).catch(() => null),
+      ]);
   const dataBlock = liveData ?? EXAMPLE_DATA_BLOCK;
   const recalledMemories = liveMemories && liveMemories.length ? liveMemories : EXAMPLE_MEMORIES;
   const realStore = Boolean(liveData);
