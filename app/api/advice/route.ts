@@ -1,6 +1,6 @@
 import { askAdvice } from "@/lib/advise/generate";
 import { EXAMPLE_DATA_BLOCK, EXAMPLE_MEMORIES, SAMPLE_ADVICE } from "@/lib/advise/example";
-import { recallForStore } from "@/lib/advise/recall";
+import { recallForStore, rememberAsk } from "@/lib/advise/recall";
 import { liveStoreDataBlock } from "@/lib/advise/store-data";
 import { CONNECT_COOKIE, parseCookieHeader, readConnections } from "@/lib/connect/session";
 
@@ -64,6 +64,16 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     const { advice } = await askAdvice({ question, recalledMemories, dataBlock });
+    // Compound: remember this Ask + verdict for a real connected store, so the
+    // next question can recall it. Awaited but defensive — never breaks the answer.
+    if (realStore && founderId) {
+      await rememberAsk({
+        question,
+        stance: advice.stance,
+        recommendedMove: advice.recommended_move,
+        founderId,
+      }).catch(() => {});
+    }
     return Response.json({ ok: true, live: true, realStore, recalledFromMubit: Boolean(liveMemories), advice });
   } catch (err) {
     console.error("[advice] failed:", err);

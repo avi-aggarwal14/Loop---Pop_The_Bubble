@@ -279,6 +279,25 @@ export default function FounderDashboard() {
     return () => { off = true; };
   }, [demo]);
 
+  // On Shopify connect, backfill the store's history into mubit so the Ask recalls
+  // THEIR real past from the first question (the "no cold start" differentiator).
+  type MemoryState = "idle" | "building" | "ready" | "unconfigured" | "error";
+  const [memory, setMemory] = useState<{ state: MemoryState; weeks: number }>({ state: "idle", weeks: 0 });
+  const backfillStarted = useRef(false);
+  useEffect(() => {
+    if (demo || !realStatus?.shopify.connected || backfillStarted.current) return;
+    backfillStarted.current = true;
+    setMemory({ state: "building", weeks: 0 });
+    fetch("/api/connect/backfill", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+      .then((r) => r.json())
+      .then((j: { ok?: boolean; configured?: boolean; weeksIngested?: number }) => {
+        if (j.ok) setMemory({ state: "ready", weeks: j.weeksIngested ?? 0 });
+        else if (j.configured === false) setMemory({ state: "unconfigured", weeks: 0 });
+        else setMemory({ state: "error", weeks: 0 });
+      })
+      .catch(() => setMemory({ state: "error", weeks: 0 }));
+  }, [demo, realStatus?.shopify.connected]);
+
   const [connected, setConnected] = useState<Partial<Record<SourceId, boolean>>>({});
   const [syncSource, setSyncSource] = useState<SourceId | null>(null);
   const [progress, setProgress] = useState(0);
@@ -434,7 +453,9 @@ export default function FounderDashboard() {
       <style>{`
         @keyframes synGlow { 0%,100% { box-shadow: 0 0 0 1px ${C.accent}55, 0 0 22px -6px ${C.accent}66; } 50% { box-shadow: 0 0 0 1px ${C.accent}aa, 0 0 34px -4px ${C.accent}99; } }
         @keyframes synShimmer { 0% { background-position: -360px 0; } 100% { background-position: 360px 0; } }
+        @keyframes synPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.7); } }
         .syn-move { animation: synGlow 3.6s ease-in-out infinite; }
+        .syn-pulse { animation: synPulse 1s ease-in-out infinite; }
         .syn-in::placeholder { color: ${C.faint}; }
         .syn-shimmer { background: linear-gradient(90deg, ${C.card} 0%, rgba(255,255,255,0.05) 50%, ${C.card} 100%); background-size: 360px 100%; animation: synShimmer 1.4s linear infinite; }
       `}</style>
@@ -498,6 +519,15 @@ export default function FounderDashboard() {
               <p style={{ margin: "10px auto 0", maxWidth: 480, fontFamily: F.sans, fontSize: 14.5, color: C.muted, lineHeight: 1.55 }}>
                 Synapse is reading your {connectedSourceLabel}. Put a decision to it below — pricing, restock, ad spend — and it answers from your numbers and everything it remembers.
               </p>
+              {memory.state !== "idle" && (
+                <div style={{ marginTop: 16, display: "inline-flex", alignItems: "center", gap: 9, fontFamily: F.mono, fontSize: 11.5, letterSpacing: "0.02em", color: memory.state === "ready" ? C.up : memory.state === "error" ? C.down : C.accent, border: `1px solid ${(memory.state === "ready" ? C.up : memory.state === "error" ? C.down : C.accent) + "55"}`, borderRadius: 100, padding: "6px 14px", background: C.card2 }}>
+                  <span className={memory.state === "building" ? "syn-pulse" : undefined} style={{ width: 7, height: 7, borderRadius: 7, background: memory.state === "ready" ? C.up : memory.state === "error" ? C.down : C.accent, flex: "0 0 auto" }} />
+                  {memory.state === "building" && "Reading your history into memory…"}
+                  {memory.state === "ready" && `Memory ready — ${memory.weeks} week${memory.weeks === 1 ? "" : "s"} of your history loaded`}
+                  {memory.state === "unconfigured" && "Memory layer connects soon"}
+                  {memory.state === "error" && "Couldn't load history — the Ask still works"}
+                </div>
+              )}
             </div>
           )}
 
