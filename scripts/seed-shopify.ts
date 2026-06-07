@@ -34,7 +34,7 @@ const TOKEN = required("SHOPIFY_ACCESS_TOKEN");
 const API_VERSION = process.env.SHOPIFY_API_VERSION ?? "2026-04";
 const WEEKS = clampInt(process.env.SEED_WEEKS, 8, 1, 16);
 const SCALE = clampFloat(process.env.SEED_SCALE, 0.7, 0.2, 2);
-const DELAY_MS = clampInt(process.env.SEED_DELAY_MS, 220, 0, 5000);
+const DELAY_MS = clampInt(process.env.SEED_DELAY_MS, 350, 0, 5000);
 const BASE = `https://${SHOP}/admin/api/${API_VERSION}`;
 
 function required(name: string): string {
