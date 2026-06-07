@@ -595,58 +595,105 @@ function LFooter({ theme }) {
   );
 }
 
-// Quarter-by-quarter performance heatmap with legend + hover tooltips.
-function AdviceChart({ theme, rows = ["Coats", "Knits", "Dresses", "Trousers", "Bags", "Shirts"], advised = { r: 2, c: 7 } }) {
-  const g = theme.g;
-  const quarters = [["Q1", "'24"], ["Q2", "'24"], ["Q3", "'24"], ["Q4", "'24"], ["Q1", "'25"], ["Q2", "'25"], ["Q3", "'25"], ["Q4", "'25"]];
-  const cols = quarters.length;
-  const ref = useRef(null);
-  const [hov, setHov] = useState(null);
-  const val = (r, c) => Math.abs((Math.sin(r * 12.9898 + c * 78.233) * 43758.5453) % 1);
-  // Round to 3 dp so any last-ULP Math.sin difference between the SSR (Node) and
-  // browser V8 can't produce a different rgba() string → no hydration mismatch.
-  const shade = (r, c) => (0.06 + val(r, c) * 0.55).toFixed(3);
-  const metric = (r, c) => Math.round(28 + val(r, c) * 66);
-  const move = (r, c) => (e) => { const rect = ref.current.getBoundingClientRect(); setHov({ r, c, x: e.clientX - rect.left, y: e.clientY - rect.top }); };
+// The decision behind the advice, per brand: the cooling product vs the rising
+// one, the memory that justifies the call, and the recommended move. Mirrors the
+// real product's "Ask" verdict — so the marketing shows the actual product.
+const DECISIONS = {
+  nike: {
+    q: "Should I restock Free Ride for Q4 ’25?",
+    verdict: "Not in full — it’s cooling, not converting.",
+    cooling: { name: "Free Ride", tag: "cooling", delta: "−14%", spark: [40, 46, 52, 49, 43, 37, 32, 28] },
+    rising: { name: "Phantom 6 Elite", tag: "your breakout", delta: "+41%", spark: [16, 21, 26, 32, 40, 51, 64, 77] },
+    memory: "Free Ride cooled exactly like this before its ’23 dip — the full restock sat unsold for two seasons.",
+    move: "Restock 30% · move the rest behind Phantom 6 Elite",
+  },
+  honi: {
+    q: "Should I scale Ahi Tuna prep this quarter?",
+    verdict: "Hold back — it’s slipping against alternatives.",
+    cooling: { name: "Ahi Tuna", tag: "slipping", delta: "−12%", spark: [38, 44, 50, 47, 42, 36, 31, 27] },
+    rising: { name: "Spicy Prawn", tag: "top seller", delta: "+38%", spark: [20, 24, 29, 35, 43, 53, 64, 75] },
+    memory: "Ahi Tuna slid the same way last autumn — the prep you scaled ended up wasted across stores.",
+    move: "Prep 30% · push Spicy Prawn across every store",
+  },
+  redbull: {
+    q: "Should I run the full Summer Edition batch?",
+    verdict: "Skip the full run — it’s fading, not building.",
+    cooling: { name: "Summer Edition", tag: "fading", delta: "−16%", spark: [42, 48, 53, 50, 44, 38, 32, 27] },
+    rising: { name: "Coconut Berry", tag: "top edition", delta: "+44%", spark: [15, 20, 25, 32, 41, 53, 67, 80] },
+    memory: "Summer faded just like the Yellow Edition did — the over-run never cleared and discounts ate the margin.",
+    move: "Run 30% · shift the spend to Coconut Berry",
+  },
+};
+
+// Tiny inline sparkline. Coordinates rounded to 1dp so SSR/CSR never diverge.
+function Spark({ points, color, w = 132, h = 40 }) {
+  const max = Math.max(...points), min = Math.min(...points);
+  const span = max - min || 1;
+  const xy = points.map((v, i) => {
+    const x = (i / (points.length - 1)) * w;
+    const y = h - ((v - min) / span) * (h - 4) - 2;
+    return [Number(x.toFixed(1)), Number(y.toFixed(1))];
+  });
+  const path = xy.map((p) => p.join(",")).join(" ");
+  const last = xy[xy.length - 1];
   return (
-    <div ref={ref} style={{ position: "relative" }} onMouseLeave={() => setHov(null)}>
-      <div style={{ display: "grid", gridTemplateColumns: `82px repeat(${cols}, 1fr)`, gap: 6, alignItems: "center" }}>
-        {rows.map((rn, r) => (
-          <React.Fragment key={r}>
-            <div style={{ fontFamily: SYN.mono, fontSize: 11, color: theme.muted, textAlign: "right", paddingRight: 8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{rn}</div>
-            {quarters.map((q, c) => {
-              const isHot = r === advised.r && c === advised.c;
-              const on = hov && hov.r === r && hov.c === c;
-              return <div key={c} onMouseMove={move(r, c)} style={{ aspectRatio: "1/1", borderRadius: 5, cursor: "pointer",
-                background: isHot ? theme.accent : `rgba(${g.big},${shade(r, c)})`,
-                boxShadow: isHot ? `0 0 0 2px ${theme.bg}, 0 0 0 3px ${theme.accent}, 0 0 16px ${theme.accent}aa` : (on ? `0 0 0 2px ${theme.accent}` : "none"),
-                transition: "box-shadow .12s ease" }} />;
-            })}
-          </React.Fragment>
-        ))}
-        <div></div>
-        {quarters.map((q, c) => (
-          <div key={c} style={{ textAlign: "center", fontFamily: SYN.mono, fontSize: 9.5, color: theme.faint, marginTop: 5, lineHeight: 1.25 }}>{q[0]}<br />{q[1]}</div>
-        ))}
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: "block", overflow: "visible" }}>
+      <polyline points={path} fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={last[0]} cy={last[1]} r={3.4} fill={color} />
+    </svg>
+  );
+}
+
+// The redesigned "Decision advice" visual — a memory-backed decision card.
+function AdviceChart({ theme, co }) {
+  const d = (DECISIONS[co?.id]) || DECISIONS.nike;
+  const downColor = theme.faint;
+
+  const Row = ({ p, color, up }) => (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 14, alignItems: "center", padding: "13px 16px", borderRadius: 12, background: theme.field, border: `1px solid ${theme.hair}` }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontFamily: SYN.sans, fontWeight: 600, fontSize: 15, color: theme.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+        <div style={{ fontFamily: SYN.mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: up ? theme.accent : theme.faint, marginTop: 3 }}>{p.tag}</div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <Spark points={p.spark} color={color} />
+        <span style={{ fontFamily: SYN.mono, fontSize: 16, fontWeight: 600, color, minWidth: 52, textAlign: "right" }}>{up ? "↑" : "↓"} {p.delta.replace("−", "").replace("+", "")}</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ position: "relative", width: "100%", background: theme.cardBg, border: `1px solid ${theme.hair2}`, borderRadius: 18,
+      padding: "22px 22px 20px", boxShadow: theme.dark ? "0 30px 80px rgba(0,0,0,0.5)" : "0 26px 70px rgba(33,28,23,0.14)" }}>
+      {/* header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <span style={{ fontFamily: SYN.mono, fontSize: 10.5, letterSpacing: "0.18em", textTransform: "uppercase", color: theme.accent }}>Decision</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: SYN.mono, fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: theme.muted, border: `1px solid ${theme.hair2}`, borderRadius: 100, padding: "4px 10px" }}>
+          <span style={{ width: 6, height: 6, borderRadius: 6, background: theme.accent }} /> memory-backed
+        </span>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 22, paddingLeft: 88, gap: 16 }}>
-        <span style={{ fontFamily: SYN.mono, fontSize: 10.5, color: theme.faint, whiteSpace: "nowrap" }}>each column = one quarter</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <span style={{ fontFamily: SYN.mono, fontSize: 10.5, color: theme.muted }}>less</span>
-          <div style={{ width: 110, height: 8, borderRadius: 5, background: `linear-gradient(90deg, rgba(${g.big},0.1), rgba(${g.big},0.7))` }} />
-          <span style={{ fontFamily: SYN.mono, fontSize: 10.5, color: theme.muted }}>more sold</span>
-        </div>
+      {/* the question + the verdict */}
+      <div style={{ marginTop: 14, fontFamily: SYN.serif, fontStyle: "italic", fontWeight: 700, fontSize: 21, lineHeight: 1.25, color: theme.text }}>{d.q}</div>
+      <div style={{ marginTop: 8, fontFamily: SYN.sans, fontSize: 14.5, lineHeight: 1.5, color: theme.muted }}>{d.verdict}</div>
+
+      {/* the two products that drive the call */}
+      <div style={{ marginTop: 18, display: "grid", gap: 9 }}>
+        <Row p={d.cooling} color={downColor} up={false} />
+        <Row p={d.rising} color={theme.accent} up />
       </div>
 
-      {hov && (
-        <div style={{ position: "absolute", left: hov.x, top: hov.y - 54, transform: "translateX(-50%)", pointerEvents: "none", zIndex: 20,
-          background: theme.cardBg, border: `1px solid ${theme.accent}66`, borderRadius: 9, padding: "7px 11px", whiteSpace: "nowrap",
-          boxShadow: theme.dark ? "0 14px 34px rgba(0,0,0,0.6)" : "0 12px 30px rgba(33,28,23,0.18)" }}>
-          <div style={{ fontFamily: SYN.mono, fontSize: 10, color: theme.accent, letterSpacing: "0.08em" }}>{quarters[hov.c][0]} {quarters[hov.c][1].replace("'", "20")}</div>
-          <div style={{ fontFamily: SYN.sans, fontSize: 13, fontWeight: 600, color: theme.text, marginTop: 2 }}>{rows[hov.r]} · {metric(hov.r, hov.c)}% sell-through</div>
-        </div>
-      )}
+      {/* the memory that justifies it */}
+      <div style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "flex-start", padding: "13px 15px", borderRadius: 12, background: `${theme.accent}12`, border: `1px solid ${theme.accent}33` }}>
+        <span style={{ fontSize: 15, lineHeight: 1.3 }}>🧠</span>
+        <span style={{ fontFamily: SYN.sans, fontSize: 13.5, lineHeight: 1.5, color: theme.text }}>{d.memory}</span>
+      </div>
+
+      {/* the move */}
+      <div style={{ marginTop: 14, borderRadius: 12, background: theme.accent, color: theme.onAccent || "#fff", padding: "14px 16px" }}>
+        <div style={{ fontFamily: SYN.mono, fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", opacity: 0.8 }}>Recommended move</div>
+        <div style={{ fontFamily: SYN.sans, fontWeight: 600, fontSize: 15.5, lineHeight: 1.35, marginTop: 5 }}>{d.move}</div>
+      </div>
     </div>
   );
 }
@@ -875,10 +922,10 @@ export default function SynapseLanding() {
               <p style={{ margin: "22px 0 0", maxWidth: 410, fontSize: 16, lineHeight: 1.62, color: t.muted }}>{ADVICE[co.id]}</p>
               <div style={{ marginTop: 24, display: "inline-flex", alignItems: "center", gap: 10, padding: "10px 16px", borderRadius: 100, background: `${t.accent}1a`, border: `1px solid ${t.accent}55` }}>
                 <span style={{ width: 7, height: 7, borderRadius: 5, background: t.accent }} />
-                <span style={{ fontFamily: SYN.mono, fontSize: 12, color: t.accent, letterSpacing: "0.03em" }}>Recommended: 30% restock + reallocate</span>
+                <span style={{ fontFamily: SYN.mono, fontSize: 12, color: t.accent, letterSpacing: "0.03em" }}>Backed by every quarter it remembers</span>
               </div>
             </div>
-            <AdviceChart theme={t} rows={BENCH_ROWS} />
+            <AdviceChart theme={t} co={co} />
           </div>
         </Wrap>
       </section>
