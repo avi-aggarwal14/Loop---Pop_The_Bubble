@@ -183,21 +183,33 @@ export function deriveMetrics(input: DeriveInput): DerivedMetrics {
   const newNow = newCustomerOrders(current);
   const newPrev = newCustomerOrders(previous);
 
+  // Without Shopify Protected Customer Data access, orders come back with
+  // customer === null (customerOrdersCount null), so new-vs-returning is unknowable.
+  // Detect that and degrade gracefully rather than reporting a misleading 0.
+  const haveCustomerData =
+    current.orders.some((o) => o.customerOrdersCount !== null) ||
+    previous.orders.some((o) => o.customerOrdersCount !== null);
+  const haveNewCustomers = newNow.length > 0;
+
   const headline: HeadlineMetric[] = [
     money("Revenue", revNow, revPrev, code),
     { label: "Orders", current: ordersNow, previous: ordersPrev, format: "number" },
     money("Avg order value", aovNow, aovPrev, code),
-    {
+  ];
+  if (haveCustomerData) {
+    headline.push({
       label: "New customers",
       current: newNow.length,
       previous: newPrev.length,
       format: "number",
-    },
-  ];
+    });
+  }
 
-  // New-customer channel mix, current vs previous.
-  const sharesNow = channelShares(newNow);
-  const sharesPrev = channelShares(newPrev);
+  // Channel mix: prefer the new-customer mix; if there's no new-customer signal,
+  // fall back to all orders so the "what's working" channel story still surfaces.
+  const useNew = haveNewCustomers;
+  const sharesNow = channelShares(useNew ? newNow : current.orders);
+  const sharesPrev = channelShares(useNew ? newPrev : previous.orders);
   const channels: ChannelStat[] = [...sharesNow.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([name, share]) => ({
@@ -208,6 +220,15 @@ export function deriveMetrics(input: DeriveInput): DerivedMetrics {
 
   // Biggest mover, for the notes.
   const notes: string[] = [];
+  if (!haveCustomerData) {
+    notes.push(
+      "New-vs-returning customer data isn't available from this connection (needs " +
+        "Shopify Protected Customer Data access); the channel mix below is across all " +
+        "orders, not new customers only.",
+    );
+  } else if (!haveNewCustomers && ordersNow > 0) {
+    notes.push("No new-customer orders this week — channel mix is across all orders.");
+  }
   let topMover: { name: string; delta: number } | null = null;
   for (const c of channels) {
     if (c.previousShare === undefined) continue;
