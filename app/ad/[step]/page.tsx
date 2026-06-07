@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import ExpandingCan from "./ExpandingCan";
 
 export const metadata = {
   title: "Synapse - Red Bull Demo",
@@ -90,53 +91,6 @@ const memoryCards = [
     when: "Current week",
     image: CAN_IMAGE,
     text: "The same pattern is forming again: TikTok concentration, weekend acceleration, higher conversion, and only 1,180 cans left.",
-  },
-];
-
-const timelineSteps = [
-  {
-    id: "velocity",
-    label: "Velocity",
-    title: "Weekend demand broke away from the baseline.",
-    metric: "1,456 units Fri-Sun",
-    text:
-      "Coconut & Berry sold 970 units from Monday to Thursday, then 1,456 units from Friday to Sunday. Synapse reads that as a demand inflection, because the product moved 60% of its weekly volume in the final 43% of the week.",
-    memory:
-      "Tropical Edition showed the same shape in April: once weekend volume passed 58% of weekly units, the store stocked out before the following reorder window closed.",
-    memoryMetric: "April memory: 4-day stockout after weekend share crossed 58%",
-  },
-  {
-    id: "source",
-    label: "Source",
-    title: "The breakout source is concentrated, not scattered.",
-    metric: "TikTok: GBP 1,715",
-    text:
-      "TikTok is now the largest revenue source for the product at 34% of attributed revenue. That matters because creator-led demand tends to compound over the next few days instead of flattening immediately.",
-    memory:
-      "Peach Edition had a similar creator-led spike in May. When TikTok moved above 30% of product revenue, a repost doubled the next two days of unit velocity.",
-    memoryMetric: "May memory: TikTok >30% preceded 2-day acceleration",
-  },
-  {
-    id: "funnel",
-    label: "Funnel",
-    title: "The traffic is converting like real intent.",
-    metric: "3.98% conversion",
-    text:
-      "The product is not just getting attention. Sessions are expanding, product views are holding, add-to-cart activity is strong, and 742 orders closed this week while conversion rose by 0.7 points.",
-    memory:
-      "Prior limited-edition drops that converted above 3.7% while traffic was still rising became inventory problems, not marketing problems. The buyer quality stayed high until stock ran out.",
-    memoryMetric: "Memory band: >3.7% conversion during rising sessions",
-  },
-  {
-    id: "inventory",
-    label: "Inventory",
-    title: "Inventory runway is shorter than the order cycle.",
-    metric: "1,180 cans left",
-    text:
-      "At the full-week average, Synapse estimates 3.4 days of stock left. At the current weekend pace, that compresses to roughly 2.4 days, which lands inside the next replenishment window.",
-    memory:
-      "The last two limited-edition launches both stocked out when inventory fell below 1.5k units while weekend acceleration was still active. Coconut & Berry is already below that threshold.",
-    memoryMetric: "Memory threshold: <1.5k units + active weekend acceleration",
   },
 ];
 
@@ -249,6 +203,10 @@ function StageStyles() {
       @keyframes packetMove { 0% { offset-distance: 0%; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
       .hero-can { animation: heroIn 680ms cubic-bezier(.2,.7,.2,1) both, canBreathe 5.6s ease-in-out 780ms infinite; }
       .hero-can-main { animation: heroIn 680ms cubic-bezier(.2,.7,.2,1) both, canBreatheStrong 4.3s ease-in-out 620ms infinite; }
+      @keyframes canZoomIn { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(8); opacity: 0; } }
+      @keyframes expandVeilIn { 0%, 20% { opacity: 0; } 80%, 100% { opacity: 1; } }
+      .hero-can-zoom { animation: canZoomIn 560ms cubic-bezier(.5,.04,.78,.18) forwards; transform-origin: center center; will-change: transform, opacity; }
+      .expand-veil { position: fixed; inset: 0; z-index: 60; background: #FFFDFC; pointer-events: none; animation: expandVeilIn 560ms ease-in forwards; }
       .rail { animation: railMove 9s ease-in-out infinite alternate; }
       .page { animation: pageIn 520ms cubic-bezier(.2,.7,.2,1) both; }
       .card-in { animation: cardIn 520ms cubic-bezier(.2,.7,.2,1) both; }
@@ -269,22 +227,6 @@ function StageStyles() {
       .why-link { display: block; height: 100%; color: inherit; text-decoration: none; cursor: pointer; }
       .why-link section { height: 100%; transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease; }
       .why-link:hover section { transform: translateY(-2px); border-color: rgba(250,84,0,.36); box-shadow: 0 22px 60px rgba(33,28,23,.13); }
-      .timeline-detail { display: none; }
-      #timeline-velocity { display: grid; }
-      body:has(#timeline-source:target) #timeline-velocity,
-      body:has(#timeline-funnel:target) #timeline-velocity,
-      body:has(#timeline-inventory:target) #timeline-velocity { display: none; }
-      .timeline-detail:target { display: grid; }
-      .timeline-step { color: inherit; text-decoration: none; background: rgba(255,255,255,.78); transition: transform .2s ease, border-color .2s ease, background .2s ease; }
-      .timeline-step:hover { transform: translateY(-2px); border-color: rgba(250,84,0,.34) !important; }
-      .timeline-step.velocity { background: rgba(250,84,0,.95); color: #fff; border-color: rgba(250,84,0,.95) !important; }
-      body:has(#timeline-source:target) .timeline-step.velocity,
-      body:has(#timeline-funnel:target) .timeline-step.velocity,
-      body:has(#timeline-inventory:target) .timeline-step.velocity { background: rgba(255,255,255,.78); color: inherit; border-color: rgba(17,17,17,.1) !important; }
-      body:has(#timeline-source:target) .timeline-step.source,
-      body:has(#timeline-funnel:target) .timeline-step.funnel,
-      body:has(#timeline-inventory:target) .timeline-step.inventory { background: rgba(250,84,0,.95); color: #fff; border-color: rgba(250,84,0,.95) !important; }
-      .timeline-step[style] div { color: inherit; }
       .modal { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 32px; opacity: 0; pointer-events: none; transition: opacity .2s ease; }
       .modal:target { opacity: 1; pointer-events: auto; }
       .modal-backdrop { position: absolute; inset: 0; background: rgba(255,253,252,.72); backdrop-filter: blur(10px); }
@@ -468,20 +410,7 @@ function ProductHero() {
         }}
       />
 
-      <img
-        className="hero-can-main"
-        src={CAN_IMAGE}
-        alt="Red Bull Coconut & Berry can"
-        style={{
-          position: "relative",
-          zIndex: 2,
-          height: "min(80vh, 830px)",
-          width: "auto",
-          maxWidth: "74vw",
-          objectFit: "contain",
-          filter: "drop-shadow(0 34px 70px rgba(33,28,23,0.22))",
-        }}
-      />
+      <ExpandingCan src={CAN_IMAGE} alt="Red Bull Coconut & Berry can" to="/ad/3" />
 
       <div
         style={{
@@ -1095,11 +1024,11 @@ function PredictionSlide() {
                 <EvidenceCard key={item.label} {...item} index={index} />
               ))}
             </div>
-            <Link href="/ad/5" className="why-link" aria-label="Open memory timeline">
+            <Link href="/ad/6" className="why-link" aria-label="Open final verdict">
               <Frame className="scan" style={{ padding: 22, minHeight: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
                   <Eyebrow>Why Synapse believes this</Eyebrow>
-                  <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>OPEN MEMORY TIMELINE</span>
+                  <span style={{ fontFamily: F.mono, fontSize: 10, color: C.faint }}>SEE FINAL VERDICT</span>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "0.34fr 0.66fr", gap: 24, alignItems: "center", marginTop: 22 }}>
                   <img
@@ -1159,174 +1088,6 @@ function PredictionSlide() {
             Back
           </Link>
           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.faint }}>Prediction backed by product stats and past memory</div>
-          <Link
-            href="/ad/1"
-            style={{
-              color: "#fff",
-              background: C.accent,
-              textDecoration: "none",
-              fontFamily: F.sans,
-              fontSize: 14,
-              fontWeight: 700,
-              borderRadius: 10,
-              padding: "10px 18px",
-            }}
-          >
-            Restart
-          </Link>
-        </footer>
-      </div>
-    </main>
-  );
-}
-
-function MemoryTimelineSlide() {
-  return (
-    <main
-      style={{
-        height: "100vh",
-        background: C.bg,
-        color: C.text,
-        fontFamily: F.sans,
-        padding: "22px clamp(24px, 4vw, 64px)",
-        overflow: "hidden",
-      }}
-    >
-      <StageStyles />
-
-      <div className="page" style={{ maxWidth: 1780, height: "100%", margin: "0 auto", display: "grid", gridTemplateRows: "52px minmax(96px, 13vh) minmax(0, 1fr) 34px", gap: 12 }}>
-        <header style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
-          <Brand />
-          <SegmentedNav active="AI READ" />
-        </header>
-
-        <section
-          style={{
-            borderTop: `1px solid ${C.hair}`,
-            borderBottom: `1px solid ${C.hair}`,
-            display: "grid",
-            gridTemplateColumns: "0.44fr 0.56fr",
-            gap: 26,
-            alignItems: "center",
-            minHeight: 0,
-          }}
-        >
-          <div>
-            <Eyebrow>Memory-backed reasoning</Eyebrow>
-            <h1 style={{ margin: "7px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(30px, 3.4vw, 58px)", lineHeight: 0.92 }}>
-              Four signals point to the same move.
-            </h1>
-          </div>
-          <p style={{ margin: 0, color: C.muted, fontSize: 15, lineHeight: 1.38 }}>
-            Synapse compares the live Shopify pull with remembered launch outcomes, then shows the causal chain behind the stockout prediction.
-          </p>
-        </section>
-
-        <section style={{ display: "grid", gridTemplateRows: "88px minmax(0, 1fr)", gap: 12, minHeight: 0 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
-            {timelineSteps.map((step, index) => (
-              <a
-                key={step.id}
-                href={`#timeline-${step.id}`}
-                className={`timeline-step ${step.id} card-in`}
-                style={{
-                  border: `1px solid ${C.hair}`,
-                  borderRadius: 16,
-                  padding: 13,
-                  boxShadow: "0 16px 42px rgba(33,28,23,0.07)",
-                  animationDelay: `${index * 55}ms`,
-                } as React.CSSProperties}
-              >
-                <div style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", opacity: 0.64 }}>
-                  0{index + 1} / {step.label}
-                </div>
-                <div style={{ marginTop: 8, fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 24, lineHeight: 0.95 }}>{step.metric}</div>
-              </a>
-            ))}
-          </div>
-
-          <div style={{ position: "relative", minHeight: 0 }}>
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.55, pointerEvents: "none" }}>
-              <polyline className="path-draw" points="3,20 18,35 31,28 46,48 61,34 79,52 97,40" fill="none" stroke="rgba(250,84,0,0.16)" strokeWidth="0.18" />
-              <polyline className="path-draw" points="6,84 21,68 38,76 54,58 70,64 87,44 96,51" fill="none" stroke="rgba(23,124,194,0.13)" strokeWidth="0.18" />
-            </svg>
-
-            {timelineSteps.map((step, index) => (
-              <div
-                key={step.id}
-                id={`timeline-${step.id}`}
-                className="timeline-detail"
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  gridTemplateColumns: "minmax(0, 0.62fr) minmax(330px, 0.38fr)",
-                  gap: 16,
-                  minHeight: 0,
-                }}
-              >
-                <Frame style={{ padding: 24, display: "grid", gridTemplateRows: "auto minmax(0, 1fr) auto", gap: 16, borderColor: index === 3 ? "rgba(250,84,0,0.28)" : C.hair }}>
-                  <div>
-                    <Eyebrow>{step.label} signal</Eyebrow>
-                    <h2 style={{ margin: "10px 0 0", fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: "clamp(34px, 3.8vw, 62px)", lineHeight: 0.94 }}>
-                      {step.title}
-                    </h2>
-                  </div>
-                  <p style={{ margin: 0, alignSelf: "center", color: C.muted, fontSize: 19, lineHeight: 1.36, maxWidth: 860 }}>{step.text}</p>
-                  <div style={{ borderTop: `1px solid ${C.hair}`, paddingTop: 14, display: "flex", justifyContent: "space-between", gap: 18, alignItems: "baseline" }}>
-                    <Eyebrow>Resulting move</Eyebrow>
-                    <div style={{ fontFamily: F.serif, fontStyle: "italic", fontWeight: 700, fontSize: 31, lineHeight: 1, textAlign: "right" }}>Replenish before amplifying demand.</div>
-                  </div>
-                </Frame>
-
-                <div style={{ display: "grid", gridTemplateRows: "1fr auto", gap: 14, minHeight: 0 }}>
-                  <Frame style={{ padding: 22, display: "grid", placeItems: "center", background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,251,254,0.9))" }}>
-                    <img
-                      className="hero-can"
-                      src={CAN_IMAGE}
-                      alt=""
-                      style={{
-                        maxHeight: "min(42vh, 370px)",
-                        width: "auto",
-                        maxWidth: "86%",
-                        objectFit: "contain",
-                        filter: "drop-shadow(0 30px 68px rgba(33,28,23,0.18))",
-                      }}
-                    />
-                  </Frame>
-
-                  <Frame style={{ padding: 22, borderColor: "rgba(250,84,0,0.28)", background: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,249,245,0.94))" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
-                      <Eyebrow>Past memory</Eyebrow>
-                      <span style={{ fontFamily: F.mono, fontSize: 10, color: C.green, letterSpacing: "0.08em" }}>RECALLED</span>
-                    </div>
-                    <p style={{ margin: "13px 0 0", color: C.muted, fontSize: 16, lineHeight: 1.48 }}>{step.memory}</p>
-                    <div
-                      style={{
-                        marginTop: 18,
-                        border: `1px solid ${C.hair}`,
-                        borderRadius: 12,
-                        padding: "12px 14px",
-                        fontFamily: F.mono,
-                        fontSize: 11,
-                        lineHeight: 1.5,
-                        color: C.text,
-                        background: "rgba(255,255,255,0.72)",
-                      }}
-                    >
-                      {step.memoryMetric}
-                    </div>
-                  </Frame>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <footer style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Link href="/ad/4" style={{ color: C.muted, textDecoration: "none", fontFamily: F.mono, fontSize: 12 }}>
-            Back
-          </Link>
-          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.faint }}>Click each signal to reveal the remembered evidence</div>
           <Link
             href="/ad/6"
             style={{
@@ -1485,7 +1246,7 @@ function FinalVerdictSlide() {
         </section>
 
         <footer style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Link href="/ad/5" style={{ color: C.muted, textDecoration: "none", fontFamily: F.mono, fontSize: 12 }}>
+          <Link href="/ad/4" style={{ color: C.muted, textDecoration: "none", fontFamily: F.mono, fontSize: 12 }}>
             Back
           </Link>
           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.faint }}>Final answer: increase the breakout, reduce the predicted fall-offs</div>
@@ -1518,6 +1279,6 @@ export default async function AdStepPage({ params }: { params: Promise<{ step: s
   if (stepNumber === 2) return <ProductHero />;
   if (stepNumber === 3) return <StatsSlide />;
   if (stepNumber === 4) return <PredictionSlide />;
-  if (stepNumber === 5) return <MemoryTimelineSlide />;
+  if (stepNumber === 5) redirect("/ad/6");
   return <FinalVerdictSlide />;
 }
