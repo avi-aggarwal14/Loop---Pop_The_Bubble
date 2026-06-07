@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GrowthBrief, TrendDirection } from "@/lib/brief/schema";
 import type { Advice } from "@/lib/advise/schema";
+import type { HeadlineMetric, WeeklyData } from "@/lib/metrics/types";
 import { SAMPLE_BRIEF } from "@/lib/brief/sample";
 
 const F = {
@@ -255,6 +256,115 @@ function AdviceCard({ advice, live }: { advice: Advice; live: boolean }) {
   );
 }
 
+// ── Live metrics panel (real connected store) ────────────────────────────────
+function fmtMetricValue(m: HeadlineMetric): string {
+  const sym = m.currency ?? "";
+  if (m.format === "currency") return `${sym}${Math.round(m.current).toLocaleString()}`;
+  if (m.format === "percent") return `${(m.current * 100).toFixed(1)}%`;
+  return Math.round(m.current).toLocaleString();
+}
+function metricDelta(m: HeadlineMetric): { text: string; dir: TrendDirection } | null {
+  if (m.previous == null || m.previous === 0) return null;
+  const ch = (m.current - m.previous) / m.previous;
+  const dir: TrendDirection = ch > 0.005 ? "up" : ch < -0.005 ? "down" : "flat";
+  return { text: `${Math.abs(ch * 100).toFixed(0)}% WoW`, dir };
+}
+
+type MetricsState = "idle" | "loading" | "ready" | "empty" | "error";
+
+function LiveMetricsPanel({ state, data }: { state: MetricsState; data: WeeklyData | null }) {
+  if (state === "idle") return null;
+  const traffic = data?.traffic?.[0];
+  const products = data?.commerce?.products?.topByRevenue ?? [];
+
+  return (
+    <div style={{ marginTop: 18 }}>
+      <Eyebrow>Live from your store{data?.windowLabel ? ` · ${data.windowLabel}` : ""}</Eyebrow>
+
+      {state === "loading" && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="syn-shimmer" style={{ height: 64, border: `1px solid ${C.border}`, borderRadius: 12 }} />
+          ))}
+        </div>
+      )}
+
+      {state === "empty" && (
+        <div style={{ background: C.card, border: `1px dashed ${C.border2}`, borderRadius: 14, padding: "18px 20px", fontFamily: F.sans, fontSize: 13.5, color: C.muted, lineHeight: 1.5 }}>
+          No activity in the last completed week yet. Once there are orders (or live traffic), your real KPIs show here — and the Ask answers from them.
+        </div>
+      )}
+
+      {state === "error" && (
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px 20px", fontFamily: F.sans, fontSize: 13.5, color: C.muted }}>
+          Couldn&apos;t load your metrics just now — the Ask still works. Refresh to retry.
+        </div>
+      )}
+
+      {state === "ready" && data && (
+        <div style={{ display: "grid", gap: 12 }}>
+          {data.commerce?.headline?.length ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
+              {data.commerce.headline.map((h, i) => {
+                const d = metricDelta(h);
+                return (
+                  <div key={i} style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px", background: C.card2 }}>
+                    <div style={{ fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.06em", color: C.faint, textTransform: "uppercase" }}>{h.label}</div>
+                    <div style={{ fontFamily: F.mono, fontSize: 18, marginTop: 6, color: C.text, fontWeight: 500 }}>{fmtMetricValue(h)}</div>
+                    {d && (
+                      <div style={{ fontFamily: F.mono, fontSize: 11, marginTop: 3, color: dirColor(d.dir) }}>{dirArrow(d.dir)} {d.text}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {traffic && (
+            <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", background: C.card2 }}>
+              <div style={{ fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.06em", color: C.faint, textTransform: "uppercase", marginBottom: 9 }}>Website traffic{traffic.source ? ` · ${traffic.source}` : ""}</div>
+              <div style={{ display: "flex", gap: 22, flexWrap: "wrap", alignItems: "baseline" }}>
+                {traffic.sessions !== undefined && (
+                  <span style={{ fontFamily: F.mono, fontSize: 14, color: C.text }}>{traffic.sessions.toLocaleString()} <span style={{ color: C.faint, fontSize: 11 }}>sessions</span></span>
+                )}
+                {traffic.users !== undefined && (
+                  <span style={{ fontFamily: F.mono, fontSize: 14, color: C.text }}>{traffic.users.toLocaleString()} <span style={{ color: C.faint, fontSize: 11 }}>users</span></span>
+                )}
+                {traffic.conversionRate !== undefined && (
+                  <span style={{ fontFamily: F.mono, fontSize: 14, color: C.text }}>{(traffic.conversionRate * 100).toFixed(1)}% <span style={{ color: C.faint, fontSize: 11 }}>conversion</span></span>
+                )}
+              </div>
+              {traffic.sourceMix?.length ? (
+                <div style={{ marginTop: 11, display: "flex", gap: 7, flexWrap: "wrap" }}>
+                  {traffic.sourceMix.slice(0, 5).map((s, i) => (
+                    <span key={i} style={{ fontFamily: F.sans, fontSize: 11.5, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 100, padding: "4px 10px" }}>
+                      {s.name} {Math.round(s.share * 100)}%
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          {products.length > 0 && (
+            <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", background: C.card2 }}>
+              <div style={{ fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.06em", color: C.faint, textTransform: "uppercase", marginBottom: 10 }}>Top products this week</div>
+              <div style={{ display: "grid", gap: 7 }}>
+                {products.slice(0, 4).map((p, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+                    <span style={{ fontFamily: F.sans, fontSize: 13.5, color: C.text }}>{p.title}</span>
+                    <span style={{ fontFamily: F.mono, fontSize: 12.5, color: C.muted, whiteSpace: "nowrap" }}>{p.unitsSold.toLocaleString()} units</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function FounderDashboard() {
   // Default = real/blank. ?demo=1 turns on the simulated walk-through (recording).
@@ -297,6 +407,24 @@ export default function FounderDashboard() {
       })
       .catch(() => setMemory({ state: "error", weeks: 0 }));
   }, [demo, realStatus?.shopify.connected]);
+
+  // Pull the connected store's real KPIs so they show the instant you connect.
+  const [metrics, setMetrics] = useState<WeeklyData | null>(null);
+  const [metricsState, setMetricsState] = useState<MetricsState>("idle");
+  const metricsStarted = useRef(false);
+  useEffect(() => {
+    if (demo || !(realStatus?.shopify.connected || realStatus?.ga4.connected) || metricsStarted.current) return;
+    metricsStarted.current = true;
+    setMetricsState("loading");
+    fetch("/api/connect/metrics")
+      .then((r) => r.json())
+      .then((j: { ok?: boolean; data?: WeeklyData | null }) => {
+        if (j.ok && j.data) { setMetrics(j.data); setMetricsState("ready"); }
+        else if (j.ok) setMetricsState("empty");
+        else setMetricsState("error");
+      })
+      .catch(() => setMetricsState("error"));
+  }, [demo, realStatus?.shopify.connected, realStatus?.ga4.connected]);
 
   const [connected, setConnected] = useState<Partial<Record<SourceId, boolean>>>({});
   const [syncSource, setSyncSource] = useState<SourceId | null>(null);
@@ -528,6 +656,9 @@ export default function FounderDashboard() {
                   {memory.state === "error" && "Couldn't load history — the Ask still works"}
                 </div>
               )}
+              <div style={{ textAlign: "left" }}>
+                <LiveMetricsPanel state={metricsState} data={metrics} />
+              </div>
             </div>
           )}
 

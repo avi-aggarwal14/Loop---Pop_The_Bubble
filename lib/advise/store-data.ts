@@ -22,6 +22,16 @@ export interface LiveCreds {
 }
 
 export async function liveStoreDataBlock(creds?: LiveCreds): Promise<string | null> {
+  const data = await liveWeeklyData(creds);
+  return data ? formatWeeklyDataForPrompt(data) : null;
+}
+
+/**
+ * The structured version of the live pull — same merge of Shopify commerce + GA4
+ * traffic, returned as `WeeklyData` so the dashboard can render real KPI cards
+ * (not just feed the prompt). Returns null when nothing is connected/yields data.
+ */
+export async function liveWeeklyData(creds?: LiveCreds): Promise<WeeklyData | null> {
   // Shopify creds: session cookie first, then env (custom-app token smoke test).
   const shop = creds?.shopify?.shop ?? process.env.SHOPIFY_SHOP_DOMAIN;
   const accessToken = creds?.shopify?.accessToken ?? process.env.SHOPIFY_ACCESS_TOKEN;
@@ -49,14 +59,13 @@ export async function liveStoreDataBlock(creds?: LiveCreds): Promise<string | nu
     commerce?.businessContext ??
     (shopifyCreds ? `Shopify store ${shopifyCreds.shop}` : "Store connected via Google Analytics");
 
-  const data: WeeklyData = {
+  return {
     windowLabel: thisWeek.label,
     businessContext,
     commerce: commerce ?? undefined,
     traffic: traffic ? [traffic] : undefined,
     sources,
   };
-  return formatWeeklyDataForPrompt(data);
 }
 
 /** Shopify orders + catalogue → DerivedMetrics for the current week (WoW vs prior). */
