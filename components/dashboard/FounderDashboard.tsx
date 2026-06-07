@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GrowthBrief, TrendDirection } from "@/lib/brief/schema";
 import type { Advice } from "@/lib/advise/schema";
+import type { HeadlineMetric, WeeklyData } from "@/lib/metrics/types";
 import { SAMPLE_BRIEF } from "@/lib/brief/sample";
 
 const F = {
@@ -37,6 +38,10 @@ const HISTORY_WEEKS = 62; // ~14 months — only used in the ?demo=1 walk-throug
 
 const dirColor = (d: TrendDirection) => (d === "up" ? C.up : d === "down" ? C.down : C.muted);
 const dirArrow = (d: TrendDirection) => (d === "up" ? "↑" : d === "down" ? "↓" : "→");
+
+// Render the structured verdict back into text so follow-up turns know what was said.
+const verdictAsText = (a: Advice): string =>
+  `${a.headline}\n\n${a.summary}\n\nMy recommended move: ${a.recommended_move}`;
 
 type SourceId = "shopify" | "ga4" | "website";
 type SourceStatus = "not_connected" | "syncing" | "connected";
@@ -255,6 +260,115 @@ function AdviceCard({ advice, live }: { advice: Advice; live: boolean }) {
   );
 }
 
+// ── Live metrics panel (real connected store) ────────────────────────────────
+function fmtMetricValue(m: HeadlineMetric): string {
+  const sym = m.currency ?? "";
+  if (m.format === "currency") return `${sym}${Math.round(m.current).toLocaleString()}`;
+  if (m.format === "percent") return `${(m.current * 100).toFixed(1)}%`;
+  return Math.round(m.current).toLocaleString();
+}
+function metricDelta(m: HeadlineMetric): { text: string; dir: TrendDirection } | null {
+  if (m.previous == null || m.previous === 0) return null;
+  const ch = (m.current - m.previous) / m.previous;
+  const dir: TrendDirection = ch > 0.005 ? "up" : ch < -0.005 ? "down" : "flat";
+  return { text: `${Math.abs(ch * 100).toFixed(0)}% WoW`, dir };
+}
+
+type MetricsState = "idle" | "loading" | "ready" | "empty" | "error";
+
+function LiveMetricsPanel({ state, data }: { state: MetricsState; data: WeeklyData | null }) {
+  if (state === "idle") return null;
+  const traffic = data?.traffic?.[0];
+  const products = data?.commerce?.products?.topByRevenue ?? [];
+
+  return (
+    <div style={{ marginTop: 18 }}>
+      <Eyebrow>Live from your store{data?.windowLabel ? ` · ${data.windowLabel}` : ""}</Eyebrow>
+
+      {state === "loading" && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="syn-shimmer" style={{ height: 64, border: `1px solid ${C.border}`, borderRadius: 12 }} />
+          ))}
+        </div>
+      )}
+
+      {state === "empty" && (
+        <div style={{ background: C.card, border: `1px dashed ${C.border2}`, borderRadius: 14, padding: "18px 20px", fontFamily: F.sans, fontSize: 13.5, color: C.muted, lineHeight: 1.5 }}>
+          No activity in the last completed week yet. Once there are orders (or live traffic), your real KPIs show here — and the Ask answers from them.
+        </div>
+      )}
+
+      {state === "error" && (
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px 20px", fontFamily: F.sans, fontSize: 13.5, color: C.muted }}>
+          Couldn&apos;t load your metrics just now — the Ask still works. Refresh to retry.
+        </div>
+      )}
+
+      {state === "ready" && data && (
+        <div style={{ display: "grid", gap: 12 }}>
+          {data.commerce?.headline?.length ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
+              {data.commerce.headline.map((h, i) => {
+                const d = metricDelta(h);
+                return (
+                  <div key={i} style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px", background: C.card2 }}>
+                    <div style={{ fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.06em", color: C.faint, textTransform: "uppercase" }}>{h.label}</div>
+                    <div style={{ fontFamily: F.mono, fontSize: 18, marginTop: 6, color: C.text, fontWeight: 500 }}>{fmtMetricValue(h)}</div>
+                    {d && (
+                      <div style={{ fontFamily: F.mono, fontSize: 11, marginTop: 3, color: dirColor(d.dir) }}>{dirArrow(d.dir)} {d.text}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {traffic && (
+            <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", background: C.card2 }}>
+              <div style={{ fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.06em", color: C.faint, textTransform: "uppercase", marginBottom: 9 }}>Website traffic{traffic.source ? ` · ${traffic.source}` : ""}</div>
+              <div style={{ display: "flex", gap: 22, flexWrap: "wrap", alignItems: "baseline" }}>
+                {traffic.sessions !== undefined && (
+                  <span style={{ fontFamily: F.mono, fontSize: 14, color: C.text }}>{traffic.sessions.toLocaleString()} <span style={{ color: C.faint, fontSize: 11 }}>sessions</span></span>
+                )}
+                {traffic.users !== undefined && (
+                  <span style={{ fontFamily: F.mono, fontSize: 14, color: C.text }}>{traffic.users.toLocaleString()} <span style={{ color: C.faint, fontSize: 11 }}>users</span></span>
+                )}
+                {traffic.conversionRate !== undefined && (
+                  <span style={{ fontFamily: F.mono, fontSize: 14, color: C.text }}>{(traffic.conversionRate * 100).toFixed(1)}% <span style={{ color: C.faint, fontSize: 11 }}>conversion</span></span>
+                )}
+              </div>
+              {traffic.sourceMix?.length ? (
+                <div style={{ marginTop: 11, display: "flex", gap: 7, flexWrap: "wrap" }}>
+                  {traffic.sourceMix.slice(0, 5).map((s, i) => (
+                    <span key={i} style={{ fontFamily: F.sans, fontSize: 11.5, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 100, padding: "4px 10px" }}>
+                      {s.name} {Math.round(s.share * 100)}%
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          {products.length > 0 && (
+            <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", background: C.card2 }}>
+              <div style={{ fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.06em", color: C.faint, textTransform: "uppercase", marginBottom: 10 }}>Top products this week</div>
+              <div style={{ display: "grid", gap: 7 }}>
+                {products.slice(0, 4).map((p, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+                    <span style={{ fontFamily: F.sans, fontSize: 13.5, color: C.text }}>{p.title}</span>
+                    <span style={{ fontFamily: F.mono, fontSize: 12.5, color: C.muted, whiteSpace: "nowrap" }}>{p.unitsSold.toLocaleString()} units</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function FounderDashboard() {
   // Default = real/blank. ?demo=1 turns on the simulated walk-through (recording).
@@ -279,6 +393,43 @@ export default function FounderDashboard() {
     return () => { off = true; };
   }, [demo]);
 
+  // On Shopify connect, backfill the store's history into mubit so the Ask recalls
+  // THEIR real past from the first question (the "no cold start" differentiator).
+  type MemoryState = "idle" | "building" | "ready" | "unconfigured" | "error";
+  const [memory, setMemory] = useState<{ state: MemoryState; weeks: number }>({ state: "idle", weeks: 0 });
+  const backfillStarted = useRef(false);
+  useEffect(() => {
+    if (demo || !realStatus?.shopify.connected || backfillStarted.current) return;
+    backfillStarted.current = true;
+    setMemory({ state: "building", weeks: 0 });
+    fetch("/api/connect/backfill", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+      .then((r) => r.json())
+      .then((j: { ok?: boolean; configured?: boolean; weeksIngested?: number }) => {
+        if (j.ok) setMemory({ state: "ready", weeks: j.weeksIngested ?? 0 });
+        else if (j.configured === false) setMemory({ state: "unconfigured", weeks: 0 });
+        else setMemory({ state: "error", weeks: 0 });
+      })
+      .catch(() => setMemory({ state: "error", weeks: 0 }));
+  }, [demo, realStatus?.shopify.connected]);
+
+  // Pull the connected store's real KPIs so they show the instant you connect.
+  const [metrics, setMetrics] = useState<WeeklyData | null>(null);
+  const [metricsState, setMetricsState] = useState<MetricsState>("idle");
+  const metricsStarted = useRef(false);
+  useEffect(() => {
+    if (demo || !(realStatus?.shopify.connected || realStatus?.ga4.connected) || metricsStarted.current) return;
+    metricsStarted.current = true;
+    setMetricsState("loading");
+    fetch("/api/connect/metrics")
+      .then((r) => r.json())
+      .then((j: { ok?: boolean; data?: WeeklyData | null }) => {
+        if (j.ok && j.data) { setMetrics(j.data); setMetricsState("ready"); }
+        else if (j.ok) setMetricsState("empty");
+        else setMetricsState("error");
+      })
+      .catch(() => setMetricsState("error"));
+  }, [demo, realStatus?.shopify.connected, realStatus?.ga4.connected]);
+
   const [connected, setConnected] = useState<Partial<Record<SourceId, boolean>>>({});
   const [syncSource, setSyncSource] = useState<SourceId | null>(null);
   const [progress, setProgress] = useState(0);
@@ -291,6 +442,15 @@ export default function FounderDashboard() {
   const [advice, setAdvice] = useState<Advice | null>(null);
   const [adviceLive, setAdviceLive] = useState(false);
   const [askErr, setAskErr] = useState("");
+  // Follow-up thread: interrogate the verdict, grounded in the same evidence.
+  const [askedQuestion, setAskedQuestion] = useState("");
+  const [askContext, setAskContext] = useState<{ dataBlock: string; memories: string[]; sources?: string[] } | null>(null);
+  const [askNotice, setAskNotice] = useState(""); // calm "connect first" / "not enough data" message
+  const [showEvidence, setShowEvidence] = useState(false); // transparency view toggle
+  const [followups, setFollowups] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const [followInput, setFollowInput] = useState("");
+  const [following, setFollowing] = useState(false);
+  const [followErr, setFollowErr] = useState("");
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const submitAsk = useCallback(
@@ -300,11 +460,31 @@ export default function FounderDashboard() {
       if (!q || asking) return;
       setAsking(true);
       setAskErr("");
+      setAskNotice("");
+      // A new top-level question starts a fresh thread.
+      setFollowups([]);
+      setFollowErr("");
+      setShowEvidence(false);
       try {
         const r = await fetch("/api/advice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q, demo }) });
-        const j = (await r.json()) as { advice?: Advice; live?: boolean };
-        if (j.advice) { setAdvice(j.advice); setAdviceLive(Boolean(j.live)); }
-        else setAskErr("Couldn't get an answer — try again.");
+        const j = (await r.json()) as {
+          advice?: Advice;
+          live?: boolean;
+          context?: { dataBlock: string; memories: string[]; sources?: string[] };
+          needsConnect?: boolean;
+          needsData?: boolean;
+          message?: string;
+        };
+        if (j.advice) {
+          setAdvice(j.advice);
+          setAdviceLive(Boolean(j.live));
+          setAskedQuestion(q);
+          setAskContext(j.context ?? null);
+        } else if (j.needsConnect || j.needsData) {
+          // Honest empty/not-connected state — no fabricated answer.
+          setAdvice(null);
+          setAskNotice(j.message ?? "Connect your store and add some data, then ask again.");
+        } else setAskErr("Couldn't get an answer — try again.");
       } catch {
         setAskErr("Network error — try again.");
       } finally {
@@ -312,6 +492,40 @@ export default function FounderDashboard() {
       }
     },
     [askInput, asking, demo],
+  );
+
+  const submitFollowup = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      const q = followInput.trim();
+      if (!q || following || !advice) return;
+      setFollowing(true);
+      setFollowErr("");
+      const priorTurns = followups;
+      const messages = [
+        { role: "user" as const, content: askedQuestion },
+        { role: "assistant" as const, content: verdictAsText(advice) },
+        ...priorTurns,
+        { role: "user" as const, content: q },
+      ];
+      setFollowups([...priorTurns, { role: "user", content: q }]); // optimistic
+      setFollowInput("");
+      try {
+        const r = await fetch("/api/advice/followup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages, context: askContext, demo }),
+        });
+        const j = (await r.json()) as { ok?: boolean; reply?: string };
+        if (j.ok && j.reply) setFollowups((f) => [...f, { role: "assistant", content: j.reply as string }]);
+        else setFollowErr("Couldn't answer that — try again.");
+      } catch {
+        setFollowErr("Network error — try again.");
+      } finally {
+        setFollowing(false);
+      }
+    },
+    [followInput, following, advice, askedQuestion, followups, askContext, demo],
   );
 
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
@@ -327,10 +541,19 @@ export default function FounderDashboard() {
     : connectedCount > 0
     ? "ready"
     : "empty";
-  // Real mode: a store is actually connected via the signed session cookie.
-  const realConnected = !demo && Boolean(realStatus?.shopify.connected);
+  // Real mode: at least one source is connected via the signed session cookie.
+  const realConnected = !demo && Boolean(realStatus?.shopify.connected || realStatus?.ga4.connected);
   // The Ask is live in the demo (example store) OR once a real store is connected.
   const askEnabled = demo || realConnected;
+  // Human label for what's connected — drives the "reading your ___" copy.
+  const connectedSourceLabel = (() => {
+    const s = realStatus?.shopify.connected;
+    const g = realStatus?.ga4.connected;
+    if (s && g) return "Shopify sales and Google Analytics traffic";
+    if (s) return "real Shopify data";
+    if (g) return "Google Analytics traffic";
+    return "connected data";
+  })();
   const weeksDone = Math.round((progress / 100) * HISTORY_WEEKS);
 
   const loadBrief = useCallback(async () => {
@@ -417,7 +640,7 @@ export default function FounderDashboard() {
       : phase === "syncing"
       ? { h: "Building your store's memory…", p: `Reading ${HISTORY_WEEKS} weeks of history so your first brief already knows your past.` }
       : realConnected
-      ? { h: "You're connected.", p: "Synapse is reading your store. Ask it about any decision below — it answers from your real data and everything it remembers." }
+      ? { h: "You're connected.", p: `Synapse is reading your ${connectedSourceLabel}. Ask it about any decision below — it answers from your real data and everything it remembers.` }
       : { h: "Welcome to Synapse.", p: "Connect your store below and Synapse reads your whole history, then writes a weekly Growth Brief that ends in one clear move — informed by your past, not a blank slate." };
 
   return (
@@ -425,7 +648,9 @@ export default function FounderDashboard() {
       <style>{`
         @keyframes synGlow { 0%,100% { box-shadow: 0 0 0 1px ${C.accent}55, 0 0 22px -6px ${C.accent}66; } 50% { box-shadow: 0 0 0 1px ${C.accent}aa, 0 0 34px -4px ${C.accent}99; } }
         @keyframes synShimmer { 0% { background-position: -360px 0; } 100% { background-position: 360px 0; } }
+        @keyframes synPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.7); } }
         .syn-move { animation: synGlow 3.6s ease-in-out infinite; }
+        .syn-pulse { animation: synPulse 1s ease-in-out infinite; }
         .syn-in::placeholder { color: ${C.faint}; }
         .syn-shimmer { background: linear-gradient(90deg, ${C.card} 0%, rgba(255,255,255,0.05) 50%, ${C.card} 100%); background-size: 360px 100%; animation: synShimmer 1.4s linear infinite; }
       `}</style>
@@ -433,10 +658,10 @@ export default function FounderDashboard() {
       <div style={{ width: "100%", maxWidth: 920 }}>
         {/* Header */}
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28, gap: 12, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "inherit" }}>
             <SynMark />
             <span style={{ fontFamily: F.serif, fontWeight: 700, fontSize: 20, letterSpacing: "-0.01em" }}>Synapse</span>
-          </div>
+          </a>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             {demo && phase !== "empty" && (
               <button type="button" onClick={reset} style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: "0.06em", color: C.faint, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 100, padding: "5px 11px", cursor: "pointer" }}>
@@ -487,8 +712,20 @@ export default function FounderDashboard() {
               <Eyebrow>Your store is connected</Eyebrow>
               <div style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginTop: 4 }}>Ask Synapse anything about your next move.</div>
               <p style={{ margin: "10px auto 0", maxWidth: 480, fontFamily: F.sans, fontSize: 14.5, color: C.muted, lineHeight: 1.55 }}>
-                Synapse is reading your real Shopify data. Put a decision to it below — pricing, restock, ad spend — and it answers from your numbers and everything it remembers.
+                Synapse is reading your {connectedSourceLabel}. Put a decision to it below — pricing, restock, ad spend — and it answers from your numbers and everything it remembers.
               </p>
+              {memory.state !== "idle" && (
+                <div style={{ marginTop: 16, display: "inline-flex", alignItems: "center", gap: 9, fontFamily: F.mono, fontSize: 11.5, letterSpacing: "0.02em", color: memory.state === "ready" ? C.up : memory.state === "error" ? C.down : C.accent, border: `1px solid ${(memory.state === "ready" ? C.up : memory.state === "error" ? C.down : C.accent) + "55"}`, borderRadius: 100, padding: "6px 14px", background: C.card2 }}>
+                  <span className={memory.state === "building" ? "syn-pulse" : undefined} style={{ width: 7, height: 7, borderRadius: 7, background: memory.state === "ready" ? C.up : memory.state === "error" ? C.down : C.accent, flex: "0 0 auto" }} />
+                  {memory.state === "building" && "Reading your history into memory…"}
+                  {memory.state === "ready" && `Memory ready — ${memory.weeks} week${memory.weeks === 1 ? "" : "s"} of your history loaded`}
+                  {memory.state === "unconfigured" && "Memory layer connects soon"}
+                  {memory.state === "error" && "Couldn't load history — the Ask still works"}
+                </div>
+              )}
+              <div style={{ textAlign: "left" }}>
+                <LiveMetricsPanel state={metricsState} data={metrics} />
+              </div>
             </div>
           )}
 
@@ -564,7 +801,112 @@ export default function FounderDashboard() {
             ) : null}
             {askErr && <div style={{ marginTop: 12, fontFamily: F.sans, fontSize: 13, color: C.down }}>{askErr}</div>}
           </div>
+
+          {/* Honest empty/not-connected notice — never a fabricated answer. */}
+          {askNotice && !advice && (
+            <div style={{ marginTop: 14, background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px 20px", display: "flex", alignItems: "flex-start", gap: 11 }}>
+              <span style={{ width: 7, height: 7, marginTop: 6, borderRadius: 7, background: C.faint, flex: "0 0 auto" }} />
+              <span style={{ fontFamily: F.sans, fontSize: 14, color: C.muted, lineHeight: 1.55 }}>{askNotice}</span>
+            </div>
+          )}
+
           {advice && <AdviceCard advice={advice} live={adviceLive} />}
+
+          {/* Transparency — the exact evidence behind the answer (proves the memory works). */}
+          {advice && askContext && (
+            <div style={{ marginTop: 12 }}>
+              <button
+                type="button"
+                onClick={() => setShowEvidence((v) => !v)}
+                style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: "0.04em", color: C.muted, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 100, padding: "6px 13px", cursor: "pointer" }}
+              >
+                {showEvidence ? "▾ Hide what Synapse looked at" : "▸ What Synapse looked at"}
+              </button>
+              {showEvidence && (
+                <div style={{ marginTop: 12, background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px 18px", display: "grid", gap: 16 }}>
+                  <div>
+                    <div style={{ fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: C.accent, marginBottom: 8 }}>
+                      Memory recalled{askContext.memories.length ? ` · ${askContext.memories.length}` : ""}
+                    </div>
+                    {askContext.memories.length > 0 ? (
+                      <>
+                        <ul style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 7 }}>
+                          {askContext.memories.map((m, i) => (
+                            <li key={i} style={{ fontFamily: F.sans, fontSize: 13.5, lineHeight: 1.5, color: C.text }}>{m}</li>
+                          ))}
+                        </ul>
+                        <div style={{ marginTop: 8, fontFamily: F.sans, fontSize: 12, color: C.faint, lineHeight: 1.45 }}>
+                          Surfaced by mubit from this store&apos;s full history — only the slice relevant to this question.
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ fontFamily: F.sans, fontSize: 13, color: C.muted }}>No prior memory yet — this answer is from current data alone. It&apos;ll compound as history builds.</div>
+                    )}
+                  </div>
+                  {askContext.sources?.length ? (
+                    <div>
+                      <div style={{ fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: C.faint, marginBottom: 8 }}>Data considered</div>
+                      <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                        {askContext.sources.map((s, i) => (
+                          <span key={i} style={{ fontFamily: F.sans, fontSize: 12, color: C.text, border: `1px solid ${C.border}`, borderRadius: 100, padding: "4px 11px" }}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Follow-up thread — interrogate the verdict; Synapse defends it. */}
+          {advice && (
+            <div style={{ marginTop: 16 }}>
+              {followups.length > 0 && (
+                <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
+                  {followups.map((m, i) =>
+                    m.role === "user" ? (
+                      <div key={i} style={{ justifySelf: "end", maxWidth: "85%", background: `${C.accent}1c`, border: `1px solid ${C.accent}44`, borderRadius: "14px 14px 4px 14px", padding: "10px 14px", fontFamily: F.sans, fontSize: 14, color: C.text, lineHeight: 1.45 }}>
+                        {m.content}
+                      </div>
+                    ) : (
+                      <div key={i} style={{ justifySelf: "start", maxWidth: "94%", background: C.card, border: `1px solid ${C.border}`, borderRadius: "14px 14px 14px 4px", padding: "13px 16px", fontFamily: F.sans, fontSize: 14.5, color: C.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                        {m.content}
+                      </div>
+                    ),
+                  )}
+                  {following && (
+                    <div style={{ justifySelf: "start", display: "inline-flex", alignItems: "center", gap: 8, fontFamily: F.mono, fontSize: 12, color: C.muted, padding: "4px 2px" }}>
+                      <span className="syn-pulse" style={{ width: 7, height: 7, borderRadius: 7, background: C.accent }} />
+                      Synapse is thinking…
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <form onSubmit={submitFollowup} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <input
+                  value={followInput}
+                  onChange={(e) => setFollowInput(e.target.value)}
+                  placeholder="Ask a follow-up — “why?”, “what’s the risk?”, “what if I’m wrong?”"
+                  className="syn-in"
+                  style={{ ...inputStyle, flex: 1, minWidth: 240, height: 42 }}
+                  disabled={following}
+                />
+                <button type="submit" style={{ ...btnGhost, opacity: following || !followInput.trim() ? 0.5 : 1, cursor: following || !followInput.trim() ? "default" : "pointer" }} disabled={following || !followInput.trim()}>
+                  {following ? "…" : "Send"}
+                </button>
+              </form>
+
+              {followups.length === 0 && (
+                <div style={{ marginTop: 9, display: "flex", gap: 7, flexWrap: "wrap" }}>
+                  {["Why?", "What's the biggest risk?", "What if I'm wrong?", "What would change your mind?"].map((q) => (
+                    <button key={q} type="button" onClick={() => setFollowInput(q)} disabled={following} style={{ fontFamily: F.sans, fontSize: 11.5, color: C.muted, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 100, padding: "5px 11px", cursor: "pointer" }}>{q}</button>
+                  ))}
+                </div>
+              )}
+              {followErr && <div style={{ marginTop: 10, fontFamily: F.sans, fontSize: 13, color: C.down }}>{followErr}</div>}
+            </div>
+          )}
         </section>
 
         {/* Brief history */}

@@ -25,3 +25,35 @@ export async function recallForStore(question: string, founderId?: string): Prom
     return null;
   }
 }
+
+/**
+ * Write an Ask + its verdict back to the store's memory, so advice COMPOUNDS:
+ * the next question can recall what Synapse advised before. Defensive — a memory
+ * write must never break the answer (the client also swallows its own errors).
+ */
+export async function rememberAsk(opts: {
+  question: string;
+  stance: string;
+  recommendedMove: string;
+  founderId?: string;
+}): Promise<void> {
+  const id = opts.founderId ?? process.env.ASK_FOUNDER_ID ?? process.env.SHOPIFY_FOUNDER_ID;
+  const cfg = mubitConfigFromEnv();
+  if (!cfg || !id) return;
+  try {
+    const client = new MubitClient(cfg);
+    const slug = opts.question.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 48).replace(/^-+|-+$/g, "");
+    await client.remember(
+      founderAgentId(id),
+      {
+        text: `Asked: "${opts.question}" → Synapse advised ${opts.stance.toUpperCase()}: ${opts.recommendedMove}`,
+        intent: "lesson",
+        itemId: `ask-${id}-${slug || "q"}`,
+        metadata: { type: "ask", stance: opts.stance },
+      },
+      { userId: id, runId: founderRunId(id) },
+    );
+  } catch {
+    // never blocks the answer
+  }
+}

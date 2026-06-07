@@ -765,6 +765,19 @@ export default function SynapseLanding() {
         ))}
       </div>
 
+      {/* live product entry — natural path from marketing → the actual app */}
+      <div style={{ position: "fixed", top: m ? 12 : 18, left: m ? 12 : 20, zIndex: 100, display: "flex", alignItems: "center", gap: m ? 6 : 10,
+        borderRadius: 100, padding: m ? "5px 5px 5px 12px" : "5px 6px 5px 15px",
+        background: t.dark ? "rgba(10,20,45,0.45)" : "rgba(255,255,255,0.5)",
+        backdropFilter: "blur(14px) saturate(1.4)", WebkitBackdropFilter: "blur(14px) saturate(1.4)",
+        border: `1px solid ${t.hair2}`, boxShadow: "0 10px 34px rgba(0,0,0,0.22)" }}>
+        {!m && <span style={{ fontFamily: SYN.mono, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: t.muted }}>Already a founder?</span>}
+        <a href="/dashboard" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: SYN.sans, fontSize: m ? 11.5 : 13, fontWeight: 600,
+          textDecoration: "none", borderRadius: 100, padding: m ? "6px 11px" : "7px 14px", background: t.accent, color: t.onAccent || "#fff", whiteSpace: "nowrap" }}>
+          Open the app <span style={{ fontSize: m ? 13 : 15 }}>→</span>
+        </a>
+      </div>
+
       {/* HERO */}
       {m ? <MobileHero controlIndex={active} /> : <HeroStage><ProductHero controlIndex={active} /></HeroStage>}
 
