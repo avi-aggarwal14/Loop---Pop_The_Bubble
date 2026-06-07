@@ -1,7 +1,8 @@
 import { askAdvice } from "@/lib/advise/generate";
-import { EXAMPLE_DATA_BLOCK, EXAMPLE_MEMORIES, SAMPLE_ADVICE } from "@/lib/advise/example";
+import { SAMPLE_ADVICE } from "@/lib/advise/example";
 import { recallForStore, rememberAsk } from "@/lib/advise/recall";
 import { liveStoreDataBlock } from "@/lib/advise/store-data";
+import { DEMO_FOUNDER_ID, SAMPLE_MEMORIES, sampleDataBlock } from "@/lib/demo/sample-store";
 import { CONNECT_COOKIE, parseCookieHeader, readConnections } from "@/lib/connect/session";
 
 // "Ask Synapse" — POST { question } → a memory-backed verdict.
@@ -52,10 +53,13 @@ export async function POST(req: Request): Promise<Response> {
   let sources: string[];
 
   if (demo) {
-    dataBlock = EXAMPLE_DATA_BLOCK;
-    recalledMemories = EXAMPLE_MEMORIES;
-    realStore = false;
-    sources = ["Example dataset"];
+    // Sample store (Luma & Lane): real data block + REAL mubit recall of the seeded
+    // history; scripted memories only as a stage-safe fallback.
+    dataBlock = sampleDataBlock();
+    const recalled = await recallForStore(question, DEMO_FOUNDER_ID).catch(() => null);
+    recalledMemories = recalled && recalled.length ? recalled : SAMPLE_MEMORIES;
+    realStore = false; // a sample store — never claimed as a real merchant
+    sources = ["Sample store", ...(recalled && recalled.length ? ["mubit memory"] : [])];
   } else {
     if (!hasConnection) {
       return Response.json({ ok: true, needsConnect: true, message: "Connect your store first — then I'll answer from your real data." });
@@ -91,12 +95,15 @@ export async function POST(req: Request): Promise<Response> {
     const { advice } = await askAdvice({ question, recalledMemories, dataBlock });
     // Compound: remember this Ask + verdict for a real connected store, so the
     // next question can recall it. Awaited but defensive — never breaks the answer.
-    if (realStore && founderId) {
+    // Compound: remember this Ask + verdict so the next question recalls it. For a
+    // real store under its founder id; for the demo under the shared sample-store id.
+    const rememberFor = realStore && founderId ? founderId : demo ? DEMO_FOUNDER_ID : null;
+    if (rememberFor) {
       await rememberAsk({
         question,
         stance: advice.stance,
         recommendedMove: advice.recommended_move,
-        founderId,
+        founderId: rememberFor,
       }).catch(() => {});
     }
     // Hand back the exact evidence used, so the dashboard can ground follow-up

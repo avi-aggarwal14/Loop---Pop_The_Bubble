@@ -11,6 +11,7 @@
     "generate-brief": "tsx scripts/generate-brief.ts",
     "shopify:brief": "tsx scripts/shopify-live-brief.ts",
     "seed:shopify": "tsx scripts/seed-shopify.ts",
+    "seed:demo-memory": "tsx scripts/seed-demo-memory.ts",
     "sync:store": "tsx scripts/sync-store.ts",
     "shopify": "shopify",
     "shopify:version": "shopify version",
