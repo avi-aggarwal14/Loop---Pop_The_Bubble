@@ -444,7 +444,9 @@ export default function FounderDashboard() {
   const [askErr, setAskErr] = useState("");
   // Follow-up thread: interrogate the verdict, grounded in the same evidence.
   const [askedQuestion, setAskedQuestion] = useState("");
-  const [askContext, setAskContext] = useState<{ dataBlock: string; memories: string[] } | null>(null);
+  const [askContext, setAskContext] = useState<{ dataBlock: string; memories: string[]; sources?: string[] } | null>(null);
+  const [askNotice, setAskNotice] = useState(""); // calm "connect first" / "not enough data" message
+  const [showEvidence, setShowEvidence] = useState(false); // transparency view toggle
   const [followups, setFollowups] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [followInput, setFollowInput] = useState("");
   const [following, setFollowing] = useState(false);
@@ -458,17 +460,30 @@ export default function FounderDashboard() {
       if (!q || asking) return;
       setAsking(true);
       setAskErr("");
+      setAskNotice("");
       // A new top-level question starts a fresh thread.
       setFollowups([]);
       setFollowErr("");
+      setShowEvidence(false);
       try {
         const r = await fetch("/api/advice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q, demo }) });
-        const j = (await r.json()) as { advice?: Advice; live?: boolean; context?: { dataBlock: string; memories: string[] } };
+        const j = (await r.json()) as {
+          advice?: Advice;
+          live?: boolean;
+          context?: { dataBlock: string; memories: string[]; sources?: string[] };
+          needsConnect?: boolean;
+          needsData?: boolean;
+          message?: string;
+        };
         if (j.advice) {
           setAdvice(j.advice);
           setAdviceLive(Boolean(j.live));
           setAskedQuestion(q);
           setAskContext(j.context ?? null);
+        } else if (j.needsConnect || j.needsData) {
+          // Honest empty/not-connected state — no fabricated answer.
+          setAdvice(null);
+          setAskNotice(j.message ?? "Connect your store and add some data, then ask again.");
         } else setAskErr("Couldn't get an answer — try again.");
       } catch {
         setAskErr("Network error — try again.");
@@ -786,7 +801,62 @@ export default function FounderDashboard() {
             ) : null}
             {askErr && <div style={{ marginTop: 12, fontFamily: F.sans, fontSize: 13, color: C.down }}>{askErr}</div>}
           </div>
+
+          {/* Honest empty/not-connected notice — never a fabricated answer. */}
+          {askNotice && !advice && (
+            <div style={{ marginTop: 14, background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px 20px", display: "flex", alignItems: "flex-start", gap: 11 }}>
+              <span style={{ width: 7, height: 7, marginTop: 6, borderRadius: 7, background: C.faint, flex: "0 0 auto" }} />
+              <span style={{ fontFamily: F.sans, fontSize: 14, color: C.muted, lineHeight: 1.55 }}>{askNotice}</span>
+            </div>
+          )}
+
           {advice && <AdviceCard advice={advice} live={adviceLive} />}
+
+          {/* Transparency — the exact evidence behind the answer (proves the memory works). */}
+          {advice && askContext && (
+            <div style={{ marginTop: 12 }}>
+              <button
+                type="button"
+                onClick={() => setShowEvidence((v) => !v)}
+                style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: "0.04em", color: C.muted, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 100, padding: "6px 13px", cursor: "pointer" }}
+              >
+                {showEvidence ? "▾ Hide what Synapse looked at" : "▸ What Synapse looked at"}
+              </button>
+              {showEvidence && (
+                <div style={{ marginTop: 12, background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px 18px", display: "grid", gap: 16 }}>
+                  <div>
+                    <div style={{ fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: C.accent, marginBottom: 8 }}>
+                      Memory recalled{askContext.memories.length ? ` · ${askContext.memories.length}` : ""}
+                    </div>
+                    {askContext.memories.length > 0 ? (
+                      <>
+                        <ul style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 7 }}>
+                          {askContext.memories.map((m, i) => (
+                            <li key={i} style={{ fontFamily: F.sans, fontSize: 13.5, lineHeight: 1.5, color: C.text }}>{m}</li>
+                          ))}
+                        </ul>
+                        <div style={{ marginTop: 8, fontFamily: F.sans, fontSize: 12, color: C.faint, lineHeight: 1.45 }}>
+                          Surfaced by mubit from this store&apos;s full history — only the slice relevant to this question.
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ fontFamily: F.sans, fontSize: 13, color: C.muted }}>No prior memory yet — this answer is from current data alone. It&apos;ll compound as history builds.</div>
+                    )}
+                  </div>
+                  {askContext.sources?.length ? (
+                    <div>
+                      <div style={{ fontFamily: F.mono, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: C.faint, marginBottom: 8 }}>Data considered</div>
+                      <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                        {askContext.sources.map((s, i) => (
+                          <span key={i} style={{ fontFamily: F.sans, fontSize: 12, color: C.text, border: `1px solid ${C.border}`, borderRadius: 100, padding: "4px 11px" }}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Follow-up thread — interrogate the verdict; Synapse defends it. */}
           {advice && (
