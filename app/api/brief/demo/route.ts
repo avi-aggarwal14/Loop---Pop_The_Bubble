@@ -2,6 +2,9 @@ import { generateBrief } from "@/lib/brief/generate";
 import { WEEK_ONE, WEEK_TWO } from "@/lib/metrics/fixtures";
 import type { WeeklyData } from "@/lib/metrics/types";
 import { SAMPLE_BRIEF, SAMPLE_BRIEF_WEEK2 } from "@/lib/brief/sample";
+import { DEMO_FOUNDER_ID, SAMPLE_MEMORIES, syntheticWeeklyData } from "@/lib/demo/sample-store";
+import { recallForStore, rememberBrief } from "@/lib/advise/recall";
+import { BRIEF_RECALL_QUERY } from "@/lib/mubit/memory";
 
 /**
  * Demo endpoint for the /brief dashboard's compounding flow.
@@ -27,12 +30,32 @@ const DEFAULT_WEEK2_MEMORY = [
 ];
 
 export async function POST(req: Request): Promise<Response> {
-  let body: { week?: unknown; recalledMemories?: unknown } = {};
+  let body: { week?: unknown; recalledMemories?: unknown; sample?: unknown } = {};
   try {
     body = (await req.json()) as typeof body;
   } catch {
     /* no body → defaults */
   }
+
+  // Sample-store mode (the /dashboard demo): generate a REAL brief from the Luma &
+  // Lane sample data + REAL mubit recall, and remember it so the loop compounds.
+  // Falls back to scripted memory if mubit is empty/slow, and to SAMPLE_BRIEF on error.
+  if (body.sample === true) {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return Response.json({ brief: SAMPLE_BRIEF, live: false, reason: "no_api_key" });
+    }
+    try {
+      const recalled = await recallForStore(BRIEF_RECALL_QUERY, DEMO_FOUNDER_ID).catch(() => null);
+      const recalledMemories = recalled && recalled.length ? recalled : SAMPLE_MEMORIES;
+      const { brief, usage } = await generateBrief({ data: syntheticWeeklyData(), recalledMemories });
+      await rememberBrief(brief, DEMO_FOUNDER_ID).catch(() => {});
+      return Response.json({ brief, live: true, usage, recalledFromMubit: Boolean(recalled && recalled.length) });
+    } catch (err) {
+      console.error("[brief/demo:sample] generation failed:", err);
+      return Response.json({ brief: SAMPLE_BRIEF, live: false, reason: "error" });
+    }
+  }
+
   const week = body.week === 1 ? 1 : 2;
   const recalledMemories =
     week === 2
