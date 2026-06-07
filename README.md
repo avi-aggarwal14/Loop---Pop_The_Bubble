@@ -161,14 +161,17 @@ silently drop signups. Details are in `docs/google-sheets-waitlist.md`.
 npm install
 npm run dev -- --port 3000
 npm run typecheck
-npm test
+npm test                # 32 tests
 npm run build
-npm run generate-brief
-npm run shopify:brief
+npm run generate-brief  # seeded brief (ANTHROPIC_API_KEY)
+npm run shopify:brief   # live Shopify brief (SHOPIFY_SHOP_DOMAIN + SHOPIFY_ACCESS_TOKEN)
+npm run sync:store      # backfill a real store's history into mubit (SHOPIFY_* + MUBIT_API_KEY)
+npm run website:brief   # website scraper → brief (WEBSITE_URL + ANTHROPIC_API_KEY)
+npm run vercel:drain    # mint a Vercel drain secret + Drain URL
 ```
 
-`npm run generate-brief` needs `ANTHROPIC_API_KEY`. `npm run shopify:brief`
-needs `SHOPIFY_SHOP_DOMAIN` and `SHOPIFY_ACCESS_TOKEN`.
+`npm run generate-brief` needs `ANTHROPIC_API_KEY`. `npm run shopify:brief` and
+`npm run sync:store` need `SHOPIFY_SHOP_DOMAIN` and `SHOPIFY_ACCESS_TOKEN`.
 
 ## What Needs To Be Built Next
 
@@ -180,6 +183,7 @@ The demo/video flow is recording-ready. The real product path still needs:
   `synapse-demo-store` install. Next: persist the connection in Supabase (it's in a
   session cookie today) and pull real orders for a store with data.
 - Token encryption/Vault before production.
-- GA4 OAuth credentials and first traffic pull.
+- ✅ (Done) GA4 OAuth credentials configured in production (`ga4.configurable:true`).
+  Next: complete the connect round-trip and verify the first traffic pull.
 - Optional Vercel Web Analytics drain setup.
 - Real dashboard wired to stored briefs and `POST /api/briefs/[id]/action`.

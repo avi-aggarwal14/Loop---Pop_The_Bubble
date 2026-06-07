@@ -10,18 +10,21 @@ http://localhost:3000/ad/1
 http://localhost:3000/ad/2
 http://localhost:3000/ad/3
 http://localhost:3000/ad/4
-http://localhost:3000/ad/5
 http://localhost:3000/ad/6
 ```
 
+Five screens. (`/ad/5` — the old four-step memory timeline — was removed and now
+redirects to `/ad/6`, so skip it.)
+
 `/ad/1` is the validation chat: the founder says they plan to decrease Red Bull
 Coconut & Berry sales, then clicks the validate icon and Synapse replies not to.
-`/ad/2` is the clean product-only slide with the supplied can centered. `/ad/3`
+`/ad/2` is the clean product-only slide with the supplied can centered — clicking
+the can zooms it up through a white veil and routes to `/ad/3`. `/ad/3`
 is the analytics slide with multiple charts and a clickable Synapse prediction
-card. `/ad/4` is the full memory-backed prediction and the "Why Synapse believes
-this" block clicks through to `/ad/5`, a four-step memory timeline. `/ad/6` is
-the final verdict. All screens are fixed-viewport recording surfaces: there
-should be no scrolling in the demo.
+card. `/ad/4` is the full memory-backed prediction; its "Why Synapse believes
+this" / "See final verdict" block clicks through to `/ad/6`, the final verdict.
+All screens are fixed-viewport recording surfaces: there should be no scrolling
+in the demo. Optional narration is in `synapse-demo-voiceover-script.md`.
 
 The flow uses four Red Bull images in `public/demo-assets`: the original
 Coconut & Berry can, two supplied product images used as memory/forecast
@@ -121,21 +124,9 @@ The prediction is backed by current stats and past memory.
 Show `/ad/4`. This is the full explanation: stockout likely inside the next
 order cycle. It cites the current product stats, the weekend acceleration,
 TikTok source concentration, conversion quality, inventory runway, and remembered
-patterns from prior limited-edition drops. Click **Why Synapse believes this**
-to move into the detailed reasoning screen.
+patterns from prior limited-edition drops. Click **See final verdict** to move on.
 
-Scene 5:
-
-```text
-Synapse opens the remembered causal chain.
-```
-
-Show `/ad/5`. Click through the four timeline steps across the top: velocity,
-source, funnel, and inventory. Each step changes the detail text below and shows
-the relevant remembered launch pattern on the right beside the can. Click
-**Final verdict**.
-
-Scene 6:
+Scene 5 (final):
 
 ```text
 Synapse gives the final decision.
@@ -153,15 +144,13 @@ Use OBS to record the browser, then edit in CapCut Desktop or Clipchamp.
 Keep it simple:
 
 - 4-6 seconds on `/ad/1`, including the validate click
-- 2-3 seconds on `/ad/2`
+- 2-3 seconds on `/ad/2`, including the can-zoom click into `/ad/3`
 - 7-10 seconds on `/ad/3`
-- 6-8 seconds on `/ad/4`
-- 8-12 seconds on `/ad/5`
+- 8-12 seconds on `/ad/4`
 - 5-7 seconds on `/ad/6`
 - click both chart drilldowns on `/ad/3` if you want the fuller data moment
 - subtle zoom toward the charts
 - hover the prediction card before clicking through
-- click through the `/ad/5` timeline steps if you want the memory proof moment
 - no voiceover
 - clean music
 - export one 16:9 version for LinkedIn and one cropped 9:16 version for Reels

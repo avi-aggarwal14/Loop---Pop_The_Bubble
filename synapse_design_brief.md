@@ -133,8 +133,11 @@ Avoid:
 The current no-talking demo video is the Red Bull Coconut & Berry story:
 
 ```text
-/ad/1 -> /ad/2 -> /ad/3 -> /ad/4 -> /ad/5 -> /ad/6
+/ad/1 -> /ad/2 -> /ad/3 -> /ad/4 -> /ad/6
 ```
+
+(Five recordable screens; the old `/ad/5` memory timeline was removed and now
+redirects to `/ad/6`.)
 
 It is implemented in `app/ad/[step]/page.tsx` and documented in
 `demo/shopify-demo-video-brief.md`.
@@ -146,11 +149,11 @@ Screens:
 2. **Product hero** - clean Red Bull Coconut & Berry can shot.
 3. **Shopify pull** - synthetic product-level stats, revenue by source,
    conversion path pill/modal, and stockout prediction card.
-4. **Full prediction** - stockout likely inside the next order cycle.
-5. **Memory timeline** - four clickable steps: velocity, source, funnel,
-   inventory.
-6. **Final verdict** - increase Coconut & Berry; decrease other drinks predicted
-   by memory to fall off.
+4. **Full prediction** - stockout likely inside the next order cycle; its
+   "See final verdict" block clicks through to the verdict.
+5. **Final verdict** (`/ad/6`) - increase Coconut & Berry; decrease other drinks
+   predicted by memory to fall off. *(The former memory-timeline `/ad/5` was
+   removed and redirects here.)*
 
 Demo assets:
 
@@ -182,4 +185,4 @@ npm run build
 npm test
 ```
 
-`npm test` currently passes 28/28.
+`npm test` currently passes 32/32.
